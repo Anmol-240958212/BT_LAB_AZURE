@@ -1,0 +1,29 @@
+# Excluded per user request
+DOCS/
+docs/
+inspo.png
+
+# OS and system files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Frontend dependencies and builds
+FRONTEND/node_modules/
+FRONTEND/dist/
+FRONTEND/.angular/
+FRONTEND/.vscode/
+FRONTEND/npm-debug.log*
+FRONTEND/yarn-debug.log*
+FRONTEND/yarn-error.log*
+
+# Maven & Java compiled output
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+**/.idea/
+**/*.iml
+**/*.class

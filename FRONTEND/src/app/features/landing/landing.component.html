@@ -1,0 +1,1222 @@
+<!-- ==========================================================================
+     VAULT ONE — ENTERPRISE TERM DEPOSIT & CORE BANKING PLATFORM
+     Designed for Ultra-High Yields, Institutional Trust & Complete Safety
+     ========================================================================== -->
+
+<div class="landing-page-root">
+
+  <!-- ========================================================================
+       1. NAVIGATION HEADER
+       ======================================================================== -->
+  <header class="landing-header" [class.header-scrolled]="isScrolled">
+    <div class="header-inner">
+      <!-- Brand Logo using /logo.png -->
+      <a routerLink="/" class="brand-logo" id="landing-brand-logo">
+        <img src="/logo.png" alt="vaultOne Logo" class="brand-logo-img" />
+        <span class="brand-name">vaultOne</span>
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <nav class="desktop-nav" aria-label="Main Navigation">
+        <a (click)="scrollTo('hero')" class="nav-link active">Home</a>
+        <a (click)="scrollTo('features')" class="nav-link">Features</a>
+        <a (click)="scrollTo('calculator')" class="nav-link">FD Calculator</a>
+        <a (click)="scrollTo('rates')" class="nav-link">Rates &amp; Schemes</a>
+        <a (click)="scrollTo('solutions')" class="nav-link">Solutions</a>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="header-actions">
+        <!-- Currency Toggle -->
+        <button (click)="toggleCurrency()" class="btn-currency" title="Toggle Display Currency (₹ INR / $ USD)">
+          <span [class.active-curr]="currency === 'INR'">₹</span>
+          <span class="curr-sep">/</span>
+          <span [class.active-curr]="currency === 'USD'">$</span>
+        </button>
+
+        <!-- 1 Collapsible Dark/Light Mode Switcher Button -->
+        <div class="theme-dropdown-container">
+          <button
+            type="button"
+            class="btn-theme-collapsible"
+            (click)="toggleThemeMenu($event)"
+            [title]="isDark ? 'Theme: Dark Mode (Click to change)' : 'Theme: Light Mode (Click to change)'"
+            aria-label="Toggle theme selection"
+          >
+            <app-icon [name]="isDark ? 'moon' : 'sun'" [size]="14"></app-icon>
+            <app-icon name="chevron-down" [size]="11" class="theme-caret" [class.caret-open]="themeMenuOpen"></app-icon>
+          </button>
+
+          <!-- Collapsible Dropdown Menu -->
+          <div class="theme-dropdown-menu animate-fade-in" *ngIf="themeMenuOpen" (click)="$event.stopPropagation()">
+            <button
+              type="button"
+              class="theme-menu-item"
+              [class.item-active]="currentThemeMode === 'light'"
+              (click)="selectTheme('light')"
+            >
+              <app-icon name="sun" [size]="13"></app-icon>
+              <span>Light Mode</span>
+              <app-icon name="check" [size]="12" *ngIf="currentThemeMode === 'light'" class="item-check"></app-icon>
+            </button>
+
+            <button
+              type="button"
+              class="theme-menu-item"
+              [class.item-active]="currentThemeMode === 'dark'"
+              (click)="selectTheme('dark')"
+            >
+              <app-icon name="moon" [size]="13"></app-icon>
+              <span>Dark Mode</span>
+              <app-icon name="check" [size]="12" *ngIf="currentThemeMode === 'dark'" class="item-check"></app-icon>
+            </button>
+
+            <button
+              type="button"
+              class="theme-menu-item"
+              [class.item-active]="currentThemeMode === 'system'"
+              (click)="selectTheme('system')"
+            >
+              <app-icon name="monitor" [size]="13"></app-icon>
+              <span>System Default</span>
+              <app-icon name="check" [size]="12" *ngIf="currentThemeMode === 'system'" class="item-check"></app-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Dynamic Auth Buttons -->
+        <ng-container *ngIf="!isLoggedIn; else loggedInTpl">
+          <a routerLink="/login" class="nav-link-sign-in" id="landing-sign-in-btn">Sign In</a>
+          <a routerLink="/register" class="btn-open-account" id="landing-open-account-btn">
+            <span>Open an account</span>
+            <app-icon name="arrow-up-right" [size]="14"></app-icon>
+          </a>
+        </ng-container>
+
+        <ng-template #loggedInTpl>
+          <a routerLink="/dashboard" class="btn-dashboard-pill" id="landing-dashboard-btn">
+            <app-icon name="dashboard" [size]="14"></app-icon>
+            <span>Dashboard ({{ displayName }})</span>
+          </a>
+        </ng-template>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" aria-label="Toggle Navigation Menu">
+          <app-icon [name]="mobileMenuOpen ? 'x' : 'menu'" [size]="22"></app-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer Navigation -->
+    <div class="mobile-drawer" *ngIf="mobileMenuOpen">
+      <div class="mobile-nav-links">
+        <a (click)="scrollTo('hero')" class="mobile-nav-link">Home</a>
+        <a (click)="scrollTo('features')" class="mobile-nav-link">Features</a>
+        <a (click)="scrollTo('calculator')" class="mobile-nav-link">FD Calculator</a>
+        <a (click)="scrollTo('rates')" class="mobile-nav-link">Rates &amp; Schemes</a>
+        <a (click)="scrollTo('solutions')" class="mobile-nav-link">Solutions</a>
+      </div>
+      <div class="mobile-drawer-actions">
+        <ng-container *ngIf="!isLoggedIn; else mobileLoggedInTpl">
+          <a routerLink="/login" (click)="closeMobileMenu()" class="btn-mobile-secondary">Sign In</a>
+          <a routerLink="/register" (click)="closeMobileMenu()" class="btn-mobile-primary">
+            <span>Open an account</span>
+            <app-icon name="arrow-up-right" [size]="15"></app-icon>
+          </a>
+        </ng-container>
+        <ng-template #mobileLoggedInTpl>
+          <a routerLink="/dashboard" (click)="closeMobileMenu()" class="btn-mobile-primary">Go to Dashboard</a>
+        </ng-template>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- ========================================================================
+       2. HERO SECTION (1:1 FROM INSPO.PNG)
+       ======================================================================== -->
+  <section class="hero-section" id="hero">
+    <!-- Emerald Grid Overlay & Lighting Glow -->
+    <div class="hero-grid-bg"></div>
+    <div class="hero-glow-spot"></div>
+
+    <div class="hero-container">
+      <!-- Hero Headline & Subtitle -->
+      <div class="hero-content">
+        <div class="hero-tagline-badge">
+          <span class="badge-dot"></span>
+          <span>Sovereign &amp; Insured Term Deposit Platform</span>
+        </div>
+
+        <h1 class="hero-title">
+          Shaping Financial futures with<br class="hero-br"> expertise and care.
+        </h1>
+
+        <p class="hero-subtitle">
+          We offer a comprehensive suite of wealth and treasury solutions, from guaranteed term deposits
+          to automated daily compounding, all engineered for institutional safety and maximum yield.
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="hero-cta-group">
+          <a routerLink="/register" class="btn-hero-primary" id="hero-get-started-btn">
+            Get Started
+          </a>
+          <button (click)="scrollTo('calculator')" class="btn-hero-secondary" id="hero-demo-btn">
+            <app-icon name="calculator" [size]="16"></app-icon>
+            <span>FD Calculator</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           HERO VISUAL SHOWCASE: PHONE MOCKUP + 3 FLOATING STAT CARDS
+           (1:1 COMPOSITION MATCHING INSPO.PNG)
+           ==================================================================== -->
+      <div class="hero-showcase-wrapper">
+
+        <!-- FLOATING CARD 1: LEFT TOP (INCOME / ACCRUED INTEREST) -->
+        <div class="floating-card floating-card-top-left animate-float-slow">
+          <div class="float-card-header">
+            <span class="float-stat-val">
+              {{ currency === 'INR' ? '+₹37,400.00' : '+$374.00' }}
+            </span>
+            <span class="float-badge-green">
+              <app-icon name="trending-up" [size]="11"></app-icon>
+              <span>+3.4%</span>
+            </span>
+          </div>
+          <span class="float-stat-label">Income this month</span>
+        </div>
+
+        <!-- FLOATING CARD 2: LEFT MIDDLE (USERS / CUMULATIVE FD) -->
+        <div class="floating-card floating-card-mid-left animate-float-mid">
+          <!-- Stacked Avatars -->
+          <div class="avatar-stack-row">
+            <div class="avatar-stack">
+              <img src="/assets/images/avatar_woman.jpg" alt="Investor Avatar" class="stack-avatar" />
+              <img src="/assets/images/avatar_senior.jpg" alt="Senior Investor Avatar" class="stack-avatar" />
+              <div class="stack-avatar stack-avatar-more">50+</div>
+            </div>
+            <span class="asset-pair-tag">Cumulative FD</span>
+          </div>
+          <div class="float-card-main-val">
+            <span class="pair-rate-val">
+              {{ currency === 'INR' ? '₹4,19,840.00' : '$41,984.00' }}
+            </span>
+            <span class="float-badge-green">+18.25%</span>
+          </div>
+          <button class="btn-float-invest" (click)="scrollTo('calculator')">
+            Invest Now
+          </button>
+        </div>
+
+        <!-- FLOATING CARD 3: RIGHT (MATURITY BALANCE) -->
+        <div class="floating-card floating-card-right animate-float-fast">
+          <span class="float-card-subhead">Total Maturity</span>
+          <div class="float-balance-row">
+            <span class="float-balance-num">
+              {{ currency === 'INR' ? '64,57,300.00' : '64,573.00' }}
+            </span>
+            <span class="float-badge-green">+57%</span>
+          </div>
+          <div class="float-secure-note">
+            <app-icon name="shield" [size]="12" color="#4ade80"></app-icon>
+            <span>8.5% Max Yield • DICGC Insured</span>
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             CENTERPHONE / ANALYTICS MOCKUP (EXACT MATCH OF INSPO.PNG)
+             ================================================================== -->
+        <div class="hero-phone-mockup">
+          <!-- Phone Speaker & Camera Notch -->
+          <div class="phone-notch"></div>
+
+          <!-- Inside Phone Screen Content -->
+          <div class="phone-screen">
+            <!-- App Header Inside Phone -->
+            <div class="phone-app-header">
+              <span class="phone-header-title">Statistic</span>
+              <div class="phone-header-icons">
+                <button class="phone-icon-btn" aria-label="Search">
+                  <app-icon name="search" [size]="15" color="#94a3b8"></app-icon>
+                </button>
+                <button class="phone-icon-btn notification-btn" aria-label="Notifications">
+                  <app-icon name="bell" [size]="15" color="#94a3b8"></app-icon>
+                  <span class="notification-dot"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Timeframe Filter Pills -->
+            <div class="timeframe-pills">
+              <button
+                *ngFor="let tf of tfList"
+                (click)="setTimeframe(tf)"
+                class="timeframe-pill"
+                [class.pill-active]="activeTimeframeKey === tf"
+              >
+                {{ tf | titlecase }}
+              </button>
+            </div>
+
+            <!-- Total Spendings / Deposits Value -->
+            <div class="portfolio-summary-block">
+              <span class="portfolio-label">Total Spendings</span>
+              <div class="portfolio-val-row">
+                <span class="portfolio-currency-symbol">
+                  {{ currency === 'INR' ? '₹' : '$' }}
+                </span>
+                <span class="portfolio-amount">
+                  {{ currency === 'INR' ? (activeTimeframe.balanceInr | number:'1.2-2') : (activeTimeframe.balanceUsd | number:'1.2-2') }}
+                </span>
+                <span class="phone-growth-tag">{{ activeTimeframe.growthPct }}</span>
+              </div>
+            </div>
+
+            <!-- SVG Wave & Area Chart -->
+            <div class="phone-chart-container">
+              <svg class="chart-svg" viewBox="0 0 420 100" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#4ade80" stop-opacity="0.35"/>
+                    <stop offset="60%" stop-color="#2dd4bf" stop-opacity="0.10"/>
+                    <stop offset="100%" stop-color="#071b15" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="strokeGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#2dd4bf"/>
+                    <stop offset="50%" stop-color="#4ade80"/>
+                    <stop offset="100%" stop-color="#a3e635"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Area Fill Under Curve -->
+                <polygon
+                  [attr.points]="activeTimeframe.fillPoints"
+                  fill="url(#chartGradient)"
+                />
+
+                <!-- Vibrant Neon Wave Curve -->
+                <polyline
+                  [attr.points]="activeTimeframe.points"
+                  fill="none"
+                  stroke="url(#strokeGradient)"
+                  stroke-width="3.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Interactive Data Point Dot -->
+                <circle
+                  [attr.cx]="activeTimeframe.hoverPoint.x"
+                  [attr.cy]="activeTimeframe.hoverPoint.y"
+                  r="5.5"
+                  fill="#ffffff"
+                  stroke="#4ade80"
+                  stroke-width="3"
+                  class="chart-pulsing-point"
+                />
+              </svg>
+
+              <!-- Floating Tooltip Pill (matching inspo.png "$ 69.00") -->
+              <div
+                class="chart-tooltip-badge"
+                [style.left.px]="activeTimeframe.hoverPoint.x - 30"
+                [style.top.px]="activeTimeframe.hoverPoint.y - 34"
+              >
+                <span>{{ activeTimeframe.hoverPoint.label }}</span>
+              </div>
+
+              <!-- Payout Transaction Pill (matching inspo.png "Devil Ron") -->
+              <div class="chart-transfer-chip">
+                <img src="/assets/images/avatar_senior.jpg" alt="Customer" class="chip-avatar" />
+                <div class="chip-meta">
+                  <span class="chip-title">Interest Payout</span>
+                  <span class="chip-date">15-10-2026</span>
+                </div>
+                <div class="chip-sparkline">
+                  <svg width="34" height="14" viewBox="0 0 34 14" fill="none">
+                    <path d="M1 10L9 3L17 11L25 5L33 12" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <span class="chip-amount-negative">
+                  {{ currency === 'INR' ? '-₹18,985.00' : '-$18,985.00' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Bottom Sheet Peek: Transaction History -->
+            <div class="phone-bottom-sheet">
+              <div class="sheet-drag-handle"></div>
+              <div class="sheet-header">
+                <span class="sheet-title">Transaction History</span>
+                <a (click)="scrollTo('rates')" class="sheet-link">View all &gt;</a>
+              </div>
+              <div class="sheet-item-preview">
+                <div class="sheet-item-left">
+                  <div class="sheet-item-icon">
+                    <app-icon name="coins" [size]="14" color="#4ade80"></app-icon>
+                  </div>
+                  <div class="sheet-item-text">
+                    <span class="sheet-item-name">Quarterly Interest Compounded</span>
+                    <span class="sheet-item-sub">Credit to Term Deposit #9041</span>
+                  </div>
+                </div>
+                <span class="sheet-item-amount positive">+₹8,560.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       3. CLIENTS & PARTNERS TRUST BAR (1:1 MATCHING INSPO.PNG)
+       ======================================================================== -->
+  <section class="partners-section">
+    <div class="section-container">
+      <h2 class="partners-label">Our Recent Clients &amp; Partners</h2>
+      <div class="partners-grid">
+        <!-- Boltshift Logo -->
+        <div class="partner-logo-item">
+          <svg class="partner-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .77.34.42.78L11 21z"/>
+          </svg>
+          <span class="partner-text">Boltshift</span>
+        </div>
+
+        <!-- Lightbox Logo -->
+        <div class="partner-logo-item">
+          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          <span class="partner-text">Lightbox</span>
+        </div>
+
+        <!-- FeatherDev Logo -->
+        <div class="partner-logo-item">
+          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
+            <line x1="16" y1="8" x2="2" y2="22"/>
+            <line x1="17.5" y1="15" x2="9" y2="15"/>
+          </svg>
+          <span class="partner-text">FeatherDev</span>
+        </div>
+
+        <!-- GlobalBank Logo -->
+        <div class="partner-logo-item">
+          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <span class="partner-text">GlobalBank</span>
+        </div>
+
+        <!-- Nietzsche Logo -->
+        <div class="partner-logo-item">
+          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+          </svg>
+          <span class="partner-text">Nietzsche</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       4. POWERFUL FEATURES SECTION (EXACT COMPOSITION & HIGHLIGHT FROM INSPO.PNG)
+       ======================================================================== -->
+  <section class="features-section" id="features">
+    <div class="section-container">
+      <!-- Section Header: Left Title, Right Description -->
+      <div class="features-header-split">
+        <h2 class="features-main-title">
+          Powerful Banking Features<br>To Realize Product Vision
+        </h2>
+        <p class="features-header-desc">
+          Empower your financial growth with vaultOne the leading finance software platform designed
+          to streamline investments, wealth management, and automated fixed deposits.
+        </p>
+      </div>
+
+      <!-- 3 Primary Feature Cards (As shown in inspo.png) -->
+      <div class="features-trio-grid">
+
+        <!-- Card 1: Light Card (Smart Portfolio Management) -->
+        <div class="feature-card feature-card-light">
+          <div class="feature-icon-badge light-badge">
+            <app-icon name="pie-chart" [size]="20" color="#1e293b"></app-icon>
+          </div>
+          <h3 class="feature-card-title">Smart Portfolio Management</h3>
+          <p class="feature-card-desc">
+            Easily track, optimize, and grow your investments with intelligent portfolio insights,
+            maturity projections, and automated yield tracking.
+          </p>
+        </div>
+
+        <!-- Card 2: DARK EMERALD HIGHLIGHT CARD (Exact match of inspo.png!) -->
+        <div class="feature-card feature-card-dark-highlight">
+          <div class="feature-icon-badge dark-badge">
+            <app-icon name="smartphone" [size]="20" color="#092820"></app-icon>
+          </div>
+          <h3 class="feature-card-title text-white">Seamless Access Across Devices</h3>
+          <p class="feature-card-desc text-sage">
+            Manage your wealth and financial operations securely from any device, anytime with
+            biometric authentication, continuous sync, and instant verification.
+          </p>
+        </div>
+
+        <!-- Card 3: Light Card (Fast & Secure Transactions) -->
+        <div class="feature-card feature-card-light">
+          <div class="feature-icon-badge light-badge">
+            <app-icon name="shield" [size]="20" color="#1e293b"></app-icon>
+          </div>
+          <h3 class="feature-card-title">Fast &amp; Secure Transactions</h3>
+          <p class="feature-card-desc">
+            Experience lightning-fast payments, instant deposit creation, and seamless
+            fund settlements with top-grade institutional security.
+          </p>
+        </div>
+      </div>
+
+      <!-- Secondary Trio: Commercial Banking Pillars -->
+      <div class="features-secondary-grid">
+        <!-- Card 4: Automated Daily Compounding -->
+        <div class="feature-card feature-card-subtle">
+          <div class="feature-icon-badge light-badge">
+            <app-icon name="zap" [size]="20" color="#255f48"></app-icon>
+          </div>
+          <h3 class="feature-card-title">Automated Daily Compounding</h3>
+          <p class="feature-card-desc">
+            Precision financial algorithms calculate daily interest accruals and execute quarterly
+            compounding reinvestment cycles to maximize your effective yield.
+          </p>
+        </div>
+
+        <!-- Card 5: Tiered Relationship Yields -->
+        <div class="feature-card feature-card-subtle">
+          <div class="feature-icon-badge light-badge">
+            <app-icon name="trending-up" [size]="20" color="#255f48"></app-icon>
+          </div>
+          <h3 class="feature-card-title">Tiered Relationship Yields</h3>
+          <p class="feature-card-desc">
+            Enjoy premium yield tiers across flexible tenures from 7 days to 10 years,
+            including a 50 bps bonus for senior citizens and preferred client benefits.
+          </p>
+        </div>
+
+        <!-- Card 6: Complete Capital Protection -->
+        <div class="feature-card feature-card-subtle">
+          <div class="feature-icon-badge light-badge">
+            <app-icon name="lock" [size]="20" color="#255f48"></app-icon>
+          </div>
+          <h3 class="feature-card-title">Institutional Capital Safety</h3>
+          <p class="feature-card-desc">
+            All customer term deposits are backed by statutory DICGC deposit insurance and
+            fortified by 256-bit encryption and strict regulatory compliance.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       5. SOCIAL PROOF & STATS SECTION (1:1 FROM INSPO.PNG RIGHT SCREEN)
+       ======================================================================== -->
+  <section class="stats-social-proof-section">
+    <div class="section-container">
+      <div class="stats-section-header">
+        <h2 class="stats-main-heading">Trusted by thousands across the globe</h2>
+        <p class="stats-sub-heading">
+          Join the global community of thousands who have trusted us, relying on our exceptional
+          services and unwavering commitment to their success.
+        </p>
+      </div>
+
+      <div class="stats-split-layout">
+        <!-- Left: Real Photography with Floating Stat Pill -->
+        <div class="stats-image-container">
+          <img
+            src="/assets/images/banking_customer_stats.jpg"
+            alt="Customer checking banking portfolio"
+            class="stats-featured-image"
+          />
+          <!-- Floating Badge on Photo -->
+          <div class="photo-floating-pill">
+            <div class="photo-pill-icon">
+              <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
+            </div>
+            <div class="photo-pill-text">
+              <span class="photo-pill-num">2,420+</span>
+              <span class="photo-pill-desc">Verified Deposits Today</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: 4-Stat Metric Grid (1:1 with inspo.png) -->
+        <div class="metrics-grid">
+          <!-- Metric 1 -->
+          <div class="metric-card">
+            <div class="metric-number">3000+</div>
+            <div class="metric-title">Monthly users</div>
+            <div class="metric-caption">
+              Join over 3000+ satisfied users worldwide compounding wealth securely.
+            </div>
+          </div>
+
+          <!-- Metric 2 -->
+          <div class="metric-card">
+            <div class="metric-number">
+              {{ currency === 'INR' ? '₹950M+' : '$9 million' }}
+            </div>
+            <div class="metric-title">Funding raised</div>
+            <div class="metric-caption">
+              Total term deposits actively secured under custodian protection and audited reserves.
+            </div>
+          </div>
+
+          <!-- Metric 3 -->
+          <div class="metric-card">
+            <div class="metric-number">99.9%</div>
+            <div class="metric-title">Uptime percentage</div>
+            <div class="metric-caption">
+              Trust our product with a 99.9% uptime guarantee and resilient banking infrastructure.
+            </div>
+          </div>
+
+          <!-- Metric 4 -->
+          <div class="metric-card">
+            <div class="metric-number">8.5%</div>
+            <div class="metric-title">Peak interest rate</div>
+            <div class="metric-caption">
+              Industry-leading term deposit returns with quarterly compound yield and senior citizen perks.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       6. INTERACTIVE LIVE FIXED DEPOSIT CALCULATOR WIDGET
+       ======================================================================== -->
+  <section class="calculator-section" id="calculator">
+    <div class="section-container">
+      <div class="calc-header-center">
+        <span class="section-kicker">Interactive Yield Simulator</span>
+        <h2 class="calc-title">Explore Your Growth Potential</h2>
+        <p class="calc-subtitle">
+          Calculate your returns in real time using vaultOne's official interest matrix.
+          Compare simple vs quarterly compounding interest up to the 8.50% ceiling.
+        </p>
+      </div>
+
+      <div class="calc-box-card">
+        <div class="calc-inputs-col">
+          <!-- Deposit Amount Slider -->
+          <div class="calc-field-group">
+            <div class="calc-field-header">
+              <label for="deposit-slider" class="calc-label">Deposit Principal Amount</label>
+              <span class="calc-live-val">₹ {{ depositAmount | number }}</span>
+            </div>
+            <input
+              id="deposit-slider"
+              type="range"
+              min="10000"
+              max="2000000"
+              step="10000"
+              [(ngModel)]="depositAmount"
+              class="calc-slider"
+            />
+            <div class="calc-preset-pills">
+              <button (click)="setDepositPreset(50000)" class="preset-pill" [class.preset-active]="depositAmount === 50000">₹50K</button>
+              <button (click)="setDepositPreset(100000)" class="preset-pill" [class.preset-active]="depositAmount === 100000">₹1L</button>
+              <button (click)="setDepositPreset(200000)" class="preset-pill" [class.preset-active]="depositAmount === 200000">₹2L</button>
+              <button (click)="setDepositPreset(500000)" class="preset-pill" [class.preset-active]="depositAmount === 500000">₹5L</button>
+              <button (click)="setDepositPreset(1000000)" class="preset-pill" [class.preset-active]="depositAmount === 1000000">₹10L</button>
+            </div>
+          </div>
+
+          <!-- Tenure Slider -->
+          <div class="calc-field-group">
+            <div class="calc-field-header">
+              <label for="tenure-slider" class="calc-label">Deposit Tenure</label>
+              <span class="calc-live-val">
+                {{ tenureMonths }} Months ({{ (tenureMonths / 12) | number:'1.1-1' }} Yrs)
+              </span>
+            </div>
+            <input
+              id="tenure-slider"
+              type="range"
+              min="3"
+              max="120"
+              step="3"
+              [(ngModel)]="tenureMonths"
+              class="calc-slider"
+            />
+            <div class="calc-preset-pills">
+              <button (click)="setTenurePreset(12)" class="preset-pill" [class.preset-active]="tenureMonths === 12">1 Year</button>
+              <button (click)="setTenurePreset(24)" class="preset-pill" [class.preset-active]="tenureMonths === 24">2 Years</button>
+              <button (click)="setTenurePreset(36)" class="preset-pill" [class.preset-active]="tenureMonths === 36">3 Years</button>
+              <button (click)="setTenurePreset(60)" class="preset-pill" [class.preset-active]="tenureMonths === 60">5 Years</button>
+            </div>
+          </div>
+
+          <!-- Customer Category Pills -->
+          <div class="calc-field-group">
+            <label class="calc-label">Depositor Category</label>
+            <div class="category-pill-group">
+              <button
+                type="button"
+                class="category-btn"
+                [class.cat-active]="customerType === 'GENERAL'"
+                (click)="customerType = 'GENERAL'"
+              >
+                <span>General Citizen</span>
+                <span class="cat-perk">Base Rate</span>
+              </button>
+              <button
+                type="button"
+                class="category-btn"
+                [class.cat-active]="customerType === 'SENIOR'"
+                (click)="customerType = 'SENIOR'"
+              >
+                <span>Senior Citizen</span>
+                <span class="cat-perk text-lime">+0.50% p.a.</span>
+              </button>
+              <button
+                type="button"
+                class="category-btn"
+                [class.cat-active]="customerType === 'STAFF'"
+                (click)="customerType = 'STAFF'"
+              >
+                <span>Preferred / Staff</span>
+                <span class="cat-perk text-lime">+0.75% p.a.</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Scheme Type Switcher -->
+          <div class="calc-field-group">
+            <label class="calc-label">Compounding Scheme</label>
+            <div class="scheme-toggle-box">
+              <button
+                type="button"
+                class="scheme-toggle-btn"
+                [class.scheme-active]="schemeType === 'COMPOUND'"
+                (click)="schemeType = 'COMPOUND'"
+              >
+                Compound Interest (Quarterly Reinvestment)
+              </button>
+              <button
+                type="button"
+                class="scheme-toggle-btn"
+                [class.scheme-active]="schemeType === 'SIMPLE'"
+                (click)="schemeType = 'SIMPLE'"
+              >
+                Simple Interest (Regular Payout)
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Output Card -->
+        <div class="calc-results-col">
+          <div class="results-inner-card">
+            <div class="results-header">
+              <span class="results-label">Estimated Maturity Amount</span>
+              <div class="results-amount-display">
+                ₹ {{ maturityAmount | number }}
+              </div>
+              <div class="rate-badge-row">
+                <span class="rate-pill-applied">
+                  {{ appliedInterestRate }}% p.a.
+                </span>
+                <span class="apy-pill-applied" *ngIf="schemeType === 'COMPOUND'">
+                  {{ effectiveApy }}% APY
+                </span>
+              </div>
+            </div>
+
+            <!-- Rate Cap Notice -->
+            <div class="rate-cap-notice" *ngIf="rateCapWarning">
+              <app-icon name="info" [size]="14" color="#d97706"></app-icon>
+              <span>Promotional rate capped at 8.50% maximum regulatory ceiling.</span>
+            </div>
+
+            <!-- Breakdown Table -->
+            <div class="results-breakdown-list">
+              <div class="breakdown-item">
+                <span class="breakdown-label">Principal Amount</span>
+                <span class="breakdown-val">₹ {{ depositAmount | number }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Total Interest Earned</span>
+                <span class="breakdown-val text-green">+₹ {{ totalInterest | number }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Tenure Duration</span>
+                <span class="breakdown-val">{{ tenureMonths }} Months</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">Compounding Cycle</span>
+                <span class="breakdown-val">{{ schemeType === 'COMPOUND' ? 'Quarterly Compounding' : 'Simple Interest' }}</span>
+              </div>
+            </div>
+
+            <!-- Calculator CTAs -->
+            <div class="results-action-group">
+              <a routerLink="/register" class="btn-calc-primary">
+                <span>Book This Fixed Deposit</span>
+                <app-icon name="arrow-up-right" [size]="14"></app-icon>
+              </a>
+              <a routerLink="/fixed-deposit/calculator" class="btn-calc-secondary">
+                <span>Advanced Yield Calculator</span>
+                <app-icon name="arrow-right" [size]="14"></app-icon>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       7. OFFICIAL TENURE & INTEREST RATES MATRIX
+       ======================================================================== -->
+  <section class="rates-section" id="rates">
+    <div class="section-container">
+      <div class="rates-header-center">
+        <span class="section-kicker">Guaranteed Returns</span>
+        <h2 class="rates-title">Term Deposit Pricing Matrix</h2>
+        <p class="rates-subtitle">
+          Transparent, competitive interest rates backed by scheduled daily accruals and regulatory deposit insurance.
+        </p>
+      </div>
+
+      <div class="rates-table-wrapper">
+        <table class="rates-table">
+          <thead>
+            <tr>
+              <th>Tenure Slab</th>
+              <th>Standard Rate (p.a.)</th>
+              <th>Senior Citizens (p.a.)</th>
+              <th>Compounding Schedule</th>
+              <th>Premature Liquidity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tenure-cell">7 Days to 45 Days</td>
+              <td>4.50%</td>
+              <td><span class="rate-perk">5.00%</span></td>
+              <td>Simple at Maturity</td>
+              <td>0.50% Penalty</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">46 Days to 179 Days</td>
+              <td>5.25%</td>
+              <td><span class="rate-perk">5.75%</span></td>
+              <td>Simple at Maturity</td>
+              <td>0.50% Penalty</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">180 Days to 364 Days</td>
+              <td>6.00%</td>
+              <td><span class="rate-perk">6.50%</span></td>
+              <td>Quarterly Compounding</td>
+              <td>0.75% Penalty</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">1 Year to &lt; 2 Years</td>
+              <td>6.80%</td>
+              <td><span class="rate-perk">7.30%</span></td>
+              <td>Quarterly Compounding</td>
+              <td>1.00% Penalty</td>
+            </tr>
+            <tr class="highlight-row">
+              <td class="tenure-cell">
+                <strong>2 Years to &lt; 5 Years</strong>
+                <span class="popular-pill">Most Popular</span>
+              </td>
+              <td><strong>7.25%</strong></td>
+              <td><span class="rate-perk font-bold">7.75%</span></td>
+              <td>Quarterly Compounding</td>
+              <td>1.00% Penalty</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">5 Years to 10 Years (Tax Saver)</td>
+              <td>7.60%</td>
+              <td><span class="rate-perk">8.10%</span></td>
+              <td>Quarterly Compounding</td>
+              <td>5-Year Lock-in</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       8. TAILORED BANKING SOLUTIONS SHOWCASE (PURE BUSINESS / CLIENT FOCUS)
+       ======================================================================== -->
+  <section class="architecture-section" id="solutions">
+    <div class="section-container">
+      <div class="arch-header-center">
+        <span class="section-kicker">Tailored Wealth Solutions</span>
+        <h2 class="arch-title">Banking Built for Every Stage of Growth</h2>
+        <p class="arch-subtitle">
+          From high-yield personal savings to institutional corporate treasury operations,
+          vaultOne delivers commercial precision with personal care.
+        </p>
+
+        <!-- Solutions Tab Switcher -->
+        <div class="role-nav-pills">
+          <button
+            class="role-pill"
+            [class.role-active]="activeRoleTab === 'PERSONAL'"
+            (click)="activeRoleTab = 'PERSONAL'"
+          >
+            <app-icon name="user" [size]="14"></app-icon>
+            <span>Personal Banking</span>
+          </button>
+          <button
+            class="role-pill"
+            [class.role-active]="activeRoleTab === 'WEALTH'"
+            (click)="activeRoleTab = 'WEALTH'"
+          >
+            <app-icon name="award" [size]="14"></app-icon>
+            <span>Wealth &amp; Senior Privilege</span>
+          </button>
+          <button
+            class="role-pill"
+            [class.role-active]="activeRoleTab === 'INSTITUTIONAL'"
+            (click)="activeRoleTab = 'INSTITUTIONAL'"
+          >
+            <app-icon name="shield" [size]="14"></app-icon>
+            <span>Corporate Treasury</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Personal Banking -->
+      <div class="arch-card animate-fade-in" *ngIf="activeRoleTab === 'PERSONAL'">
+        <div class="arch-card-split">
+          <div class="arch-text-col">
+            <div class="arch-role-badge">PERSONAL DEPOSITORS</div>
+            <h3 class="arch-card-heading">Effortless Wealth Compounding for Individuals</h3>
+            <p class="arch-card-body">
+              Grow your surplus capital with guaranteed returns. Open cumulative or regular payout
+              term deposits in seconds, monitor daily interest compounding, and download tax-ready
+              interest certificates on demand.
+            </p>
+            <ul class="arch-checklist">
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Instant paperless onboarding with digital identity verification</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Automatic quarterly reinvestment for exponential compound growth</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Transparent premature withdrawal with instant settlement to your account</span>
+              </li>
+            </ul>
+            <a routerLink="/register" class="btn-arch-cta">Open Personal Account ↗</a>
+          </div>
+
+          <div class="arch-preview-col">
+            <div class="arch-mock-window">
+              <div class="window-bar">
+                <span class="win-dot red"></span>
+                <span class="win-dot yellow"></span>
+                <span class="win-dot green"></span>
+                <span class="win-title">vaultOne Personal Portfolio</span>
+              </div>
+              <div class="window-body">
+                <div class="mock-stat-tile">
+                  <span class="tile-label">Total Active Deposits</span>
+                  <span class="tile-val">₹ 14,50,000.00</span>
+                  <span class="tile-sub">3 Term Deposits • 8.10% Effective APY</span>
+                </div>
+                <div class="mock-table-mini">
+                  <div class="mock-tr mock-th">
+                    <span>Deposit Scheme</span>
+                    <span>Principal</span>
+                    <span>Maturity</span>
+                    <span>Status</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>Tax-Saver 5Y</span>
+                    <span>₹ 5,00,000</span>
+                    <span>₹ 7,32,450</span>
+                    <span class="status-active">ACTIVE</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>Cumulative 3Y</span>
+                    <span>₹ 2,50,000</span>
+                    <span>₹ 3,18,900</span>
+                    <span class="status-active">ACTIVE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Wealth & Senior Privilege -->
+      <div class="arch-card animate-fade-in" *ngIf="activeRoleTab === 'WEALTH'">
+        <div class="arch-card-split">
+          <div class="arch-text-col">
+            <div class="arch-role-badge officer-badge">SENIOR &amp; PREFERRED PRIVILEGE</div>
+            <h3 class="arch-card-heading">Elevated Yields &amp; Priority Wealth Management</h3>
+            <p class="arch-card-body">
+              Designed for senior citizens and high-net-worth investors seeking premium capital preservation.
+              Benefit from an additional 50 bps yield bonus, flexible monthly pension interest payouts, and
+              dedicated relationship advisory.
+            </p>
+            <ul class="arch-checklist">
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Exclusive +0.50% interest bonus on all deposit tenures</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Custom monthly or quarterly payout options directly into savings</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Priority relationship desk and doorstep service assistance</span>
+              </li>
+            </ul>
+            <a routerLink="/register" class="btn-arch-cta">Explore Privilege Banking ↗</a>
+          </div>
+
+          <div class="arch-preview-col">
+            <div class="arch-mock-window">
+              <div class="window-bar">
+                <span class="win-dot red"></span>
+                <span class="win-dot yellow"></span>
+                <span class="win-dot green"></span>
+                <span class="win-title">Senior Privilege Portfolio</span>
+              </div>
+              <div class="window-body">
+                <div class="mock-stat-tile officer-tile">
+                  <span class="tile-label">Quarterly Interest Credited</span>
+                  <span class="tile-val">+₹ 48,250.00</span>
+                  <span class="tile-sub">Senior Rate Applied: 8.10% p.a. • Fully Insured</span>
+                </div>
+                <div class="mock-table-mini">
+                  <div class="mock-tr mock-th">
+                    <span>Beneficiary</span>
+                    <span>Scheme</span>
+                    <span>Monthly Credit</span>
+                    <span>Status</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>Retirement Fund</span>
+                    <span>Senior Care FD</span>
+                    <span>₹ 16,080 / mo</span>
+                    <span class="status-active">CREDITED</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>Family Trust</span>
+                    <span>Cumulative 5Y</span>
+                    <span>Compounded</span>
+                    <span class="status-active">GROWING</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Corporate Treasury -->
+      <div class="arch-card animate-fade-in" *ngIf="activeRoleTab === 'INSTITUTIONAL'">
+        <div class="arch-card-split">
+          <div class="arch-text-col">
+            <div class="arch-role-badge admin-badge">INSTITUTIONAL &amp; CORPORATE</div>
+            <h3 class="arch-card-heading">Treasury Liquidity &amp; Commercial Yield Optimization</h3>
+            <p class="arch-card-body">
+              For enterprises, corporations, and startups managing operational reserves. Automate surplus
+              cash deployments, maintain multi-signatory authorization, and enjoy instant liquidity sweeps
+              without market exposure.
+            </p>
+            <ul class="arch-checklist">
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Automated liquidity sweeps and bulk term deposit placements</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Multi-signatory corporate approvals and audit-compliant reporting</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>Custom tenure matching for corporate tax and dividend commitments</span>
+              </li>
+            </ul>
+            <a routerLink="/login" class="btn-arch-cta">Corporate Sign In ↗</a>
+          </div>
+
+          <div class="arch-preview-col">
+            <div class="arch-mock-window">
+              <div class="window-bar">
+                <span class="win-dot red"></span>
+                <span class="win-dot yellow"></span>
+                <span class="win-dot green"></span>
+                <span class="win-title">Corporate Treasury Terminal</span>
+              </div>
+              <div class="window-body">
+                <div class="mock-stat-tile admin-tile">
+                  <span class="tile-label">Treasury Reserves Placed</span>
+                  <span class="tile-val">₹ 125,000,000.00</span>
+                  <span class="tile-sub">Weighted Yield: 7.75% • Sovereign &amp; DICGC Insured</span>
+                </div>
+                <div class="mock-table-mini">
+                  <div class="mock-tr mock-th">
+                    <span>Allocation</span>
+                    <span>Tenure</span>
+                    <span>Maturity Date</span>
+                    <span>Status</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>Q4 Tax Reserves</span>
+                    <span>90 Days</span>
+                    <span>15-Jan-2027</span>
+                    <span class="status-active">LOCKED</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>Capex Facility</span>
+                    <span>180 Days</span>
+                    <span>15-Apr-2027</span>
+                    <span class="status-active">LOCKED</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       9. HIGH-CONVERSION CTA BANNER
+       ======================================================================== -->
+  <section class="cta-banner-section">
+    <div class="section-container">
+      <div class="cta-banner-box">
+        <div class="cta-banner-grid-glow"></div>
+        <div class="cta-banner-content">
+          <span class="cta-kicker">Guaranteed Capital Growth</span>
+          <h2 class="cta-title">Ready to maximize your returns with vaultOne?</h2>
+          <p class="cta-subtitle">
+            Open an account in under 3 minutes with digital KYC. Enjoy automated compounding, high returns up to 8.5% p.a.,
+            and institutional security.
+          </p>
+          <div class="cta-buttons">
+            <a routerLink="/register" class="btn-cta-primary" id="cta-open-account-btn">
+              <span>Open an Account Now</span>
+              <app-icon name="arrow-up-right" [size]="16"></app-icon>
+            </a>
+            <a routerLink="/login" class="btn-cta-secondary" id="cta-sign-in-btn">
+              Sign In to Portal
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       10. ENTERPRISE FOOTER (PURE BUSINESS & REGULATORY TRUST)
+       ======================================================================== -->
+  <footer class="landing-footer">
+    <div class="section-container">
+      <div class="footer-grid">
+        <!-- Col 1: Brand Info -->
+        <div class="footer-col brand-col">
+          <div class="footer-brand-logo">
+            <img src="/logo.png" alt="vaultOne Logo" class="footer-logo-img" />
+            <span class="footer-brand-name">vaultOne</span>
+          </div>
+          <p class="footer-desc">
+            Next-generation enterprise core banking platform and high-yield fixed deposit engine.
+            Delivering precision compounding and institutional capital security.
+          </p>
+          <div class="footer-badges">
+            <span class="footer-chip">256-Bit SSL</span>
+            <span class="footer-chip">DICGC Insured</span>
+            <span class="footer-chip">ISO 27001 Certified</span>
+          </div>
+        </div>
+
+        <!-- Col 2: Banking Products -->
+        <div class="footer-col">
+          <h4 class="footer-heading">Banking Products</h4>
+          <ul class="footer-links">
+            <li><a (click)="scrollTo('calculator')">Cumulative Term Deposits</a></li>
+            <li><a (click)="scrollTo('rates')">Tax-Saver 5Y Deposits</a></li>
+            <li><a (click)="scrollTo('rates')">Senior Citizen Privilege (+0.5%)</a></li>
+            <li><a (click)="scrollTo('calculator')">Monthly Payout Schemes</a></li>
+            <li><a (click)="scrollTo('features')">Corporate Treasury Deposits</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Wealth Solutions -->
+        <div class="footer-col">
+          <h4 class="footer-heading">Wealth Solutions</h4>
+          <ul class="footer-links">
+            <li><a (click)="scrollTo('features')">Portfolio Intelligence</a></li>
+            <li><a (click)="scrollTo('features')">Automated Daily Compounding</a></li>
+            <li><a (click)="scrollTo('calculator')">FD Yield Calculator</a></li>
+            <li><a (click)="scrollTo('rates')">Premature Liquidity Options</a></li>
+            <li><a (click)="scrollTo('features')">Tax Deduction Certificates</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 4: Portals -->
+        <div class="footer-col">
+          <h4 class="footer-heading">Client Portals</h4>
+          <ul class="footer-links">
+            <li><a routerLink="/login">Personal Banking Sign In</a></li>
+            <li><a routerLink="/register">Open New Account</a></li>
+            <li><a routerLink="/login">Corporate Treasury Portal</a></li>
+            <li><a routerLink="/login">Relationship Desk</a></li>
+            <li><a routerLink="/fixed-deposit/calculator">Public Yield Simulator</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom-bar">
+        <div class="footer-regulatory-note">
+          vaultOne Financial Technologies Inc. • Licensed Core Banking &amp; Term Deposit Platform • Member DICGC
+        </div>
+        <div class="footer-copyright">
+          &copy; 2026 vaultOne Inc. All rights reserved. Term deposits are subject to statutory insurance limits.
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div>
