@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: vaultone-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: Shrey@26
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./AUTHMODULET1/authandcustDB.sql:/docker-entrypoint-initdb.d/01-authandcust.sql:ro
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/02-init.sql:ro
+      - mysql_data:/var/lib/mysql
+
+volumes:
+  mysql_data:
