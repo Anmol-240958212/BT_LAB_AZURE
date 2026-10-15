@@ -30,6 +30,9 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private com.example.auth.service.OtpService otpService;
+
     @PostMapping("/register")
     @Operation(summary = "Register a new customer",
                description = "Initiates the registration process for a new customer. An OTP is sent to the provided email or phone number for verification.")
@@ -42,8 +45,17 @@ public class AuthController {
 
         authService.register(request);
 
-        return ResponseEntity.ok(
-                "Registration request received. OTP sent.");
+        String identifier = (request.getEmail() != null && !request.getEmail().isBlank())
+                ? request.getEmail()
+                : request.getPhoneNumber();
+        String otp = otpService.getLatestOtp(identifier);
+
+        String message = "Registration request received. OTP sent.";
+        if (otp != null) {
+            message += " [SIMULATED OTP: " + otp + "]";
+        }
+
+        return ResponseEntity.ok(message);
     }
 
     @PostMapping("/verify-otp")

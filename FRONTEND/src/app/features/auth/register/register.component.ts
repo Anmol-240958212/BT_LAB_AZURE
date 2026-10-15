@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { timeout } from 'rxjs/operators';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -92,12 +93,20 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
           <span>OTP dispatched to <strong>{{ registerForm.value.email }}</strong></span>
         </div>
 
+        <div *ngIf="simulatedOtp" class="sim-otp-banner mb-3">
+          <div class="sim-otp-header">
+            <span class="sim-badge">DEV SIMULATION</span>
+            <span class="sim-text">One-Time Password: <strong>{{ simulatedOtp }}</strong></span>
+          </div>
+          <span class="sim-hint">Code auto-populated for easy testing.</span>
+        </div>
+
         <app-input
           id="reg-otp"
           label="6-Digit Verification Code"
           placeholder="e.g. 123456"
           [(ngModel)]="otpCode"
-          hint="Check backend console or email simulator for OTP"
+          hint="Check backend console or use the simulated code above"
         ></app-input>
 
         <div class="flex-col mt-4">
@@ -150,6 +159,37 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
       flex-direction: column;
       gap: var(--space-3);
     }
+    .sim-otp-banner {
+      background-color: var(--color-bg-base);
+      border: 1px solid var(--color-border-focus);
+      border-radius: var(--radius-card);
+      padding: var(--space-3);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .sim-otp-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .sim-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 2px 6px;
+      background-color: var(--color-accent-subtle);
+      color: var(--color-accent);
+      border-radius: 4px;
+    }
+    .sim-text {
+      font-size: var(--text-xs);
+      color: var(--color-text-primary);
+    }
+    .sim-hint {
+      font-size: 11px;
+      color: var(--color-text-muted);
+    }
     .auth-switch-link {
       margin-top: var(--space-6);
       text-align: center;
@@ -166,6 +206,7 @@ export class RegisterComponent implements OnInit {
   loading = false;
   otpStep = false;
   otpCode = '';
+  simulatedOtp = '';
 
   constructor(
     private readonly fb: FormBuilder,
@@ -232,9 +273,16 @@ export class RegisterComponent implements OnInit {
     this.loading = true;
     const { username, email, phoneNumber, password } = this.registerForm.value;
 
-    this.authApi.register({ username, name: username, email, phoneNumber, password }).subscribe({
+    this.authApi.register({ username, name: username, email, phoneNumber, password }).pipe(
+      timeout(6000)
+    ).subscribe({
       next: (msg) => {
         this.loading = false;
+        const match = msg?.match(/\b(\d{6})\b/);
+        if (match) {
+          this.simulatedOtp = match[1];
+          this.otpCode = match[1];
+        }
         this.toastService.success(msg || 'OTP dispatched to email. Please verify.', 'Registration Request Accepted');
         this.otpStep = true;
       },

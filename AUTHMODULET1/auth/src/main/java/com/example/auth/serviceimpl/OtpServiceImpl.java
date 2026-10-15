@@ -18,6 +18,8 @@ public class OtpServiceImpl implements OtpService {
     private static final int OTP_EXPIRY_MINUTES = 5;
     private static final int MAX_ATTEMPTS = 5;
 
+    private static volatile String latestGeneratedOtp = null;
+
     @Override
     public void generateAndSendOtp(String identifier) {
 
@@ -33,6 +35,7 @@ public class OtpServiceImpl implements OtpService {
         );
 
         otpStore.put(identifier, otpData);
+        latestGeneratedOtp = otp;
 
         // OTP simulation
         System.out.println("=================================");
@@ -41,6 +44,17 @@ public class OtpServiceImpl implements OtpService {
         System.out.println("OTP: " + otp);
         System.out.println("Expires in: " + OTP_EXPIRY_MINUTES + " minutes");
         System.out.println("=================================");
+    }
+
+    @Override
+    public String getLatestOtp(String identifier) {
+        if (identifier != null) {
+            OtpData data = otpStore.get(identifier);
+            if (data != null) {
+                return data.otp();
+            }
+        }
+        return latestGeneratedOtp;
     }
 
     @Override
