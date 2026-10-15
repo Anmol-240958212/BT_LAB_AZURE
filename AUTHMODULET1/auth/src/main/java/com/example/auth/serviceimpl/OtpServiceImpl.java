@@ -19,6 +19,7 @@ public class OtpServiceImpl implements OtpService {
     private static final int MAX_ATTEMPTS = 5;
 
     private static volatile String latestGeneratedOtp = null;
+    private static volatile String latestIdentifier = null;
 
     @Override
     public void generateAndSendOtp(String identifier) {
@@ -36,6 +37,7 @@ public class OtpServiceImpl implements OtpService {
 
         otpStore.put(identifier, otpData);
         latestGeneratedOtp = otp;
+        latestIdentifier = identifier;
 
         // OTP simulation
         System.out.println("=================================");
@@ -55,6 +57,11 @@ public class OtpServiceImpl implements OtpService {
             }
         }
         return latestGeneratedOtp;
+    }
+
+    @Override
+    public String getLatestIdentifier() {
+        return latestIdentifier;
     }
 
     @Override

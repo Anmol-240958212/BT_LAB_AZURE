@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { Router } from '@angular/router';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -12,9 +13,23 @@ import { ToastService } from '../../../shared/services/toast.service';
         <p class="subtitle">Enter your registered email address or username to receive a reset code.</p>
       </div>
 
-      <div *ngIf="submitted" class="notice-box mb-6">
+      <div *ngIf="submitted" class="notice-box mb-4">
         <app-icon name="mail" [size]="16"></app-icon>
         <span>If an account exists for <strong>{{ identifier }}</strong>, recovery instructions and token have been issued.</span>
+      </div>
+
+      <!-- Simulation Recovery Token Display -->
+      <div *ngIf="submitted && simulatedToken" class="token-banner mb-6">
+        <div class="banner-top">
+          <span class="badge-tag">PRESENTATION SIMULATION</span>
+          <span class="banner-sub">Generated Recovery Token</span>
+        </div>
+        <div class="banner-content">
+          <div class="token-code">{{ simulatedToken }}</div>
+          <button type="button" class="btn-token-apply" (click)="proceedToReset()">
+            <span>Auto-fill & Proceed →</span>
+          </button>
+        </div>
       </div>
 
       <div *ngIf="!submitted" class="form-container">
@@ -40,7 +55,7 @@ import { ToastService } from '../../../shared/services/toast.service';
       </div>
 
       <div class="auth-aux-links">
-        <a *ngIf="submitted" routerLink="/reset-password" class="btn btn-secondary btn-sm mb-4">
+        <a *ngIf="submitted && !simulatedToken" routerLink="/reset-password" class="btn btn-secondary btn-sm mb-4">
           Proceed to Enter Reset Token →
         </a>
         <div class="back-link">
@@ -67,6 +82,64 @@ import { ToastService } from '../../../shared/services/toast.service';
       color: var(--color-text-secondary);
       margin-top: 4px;
     }
+    .token-banner {
+      background: var(--color-bg-elevated);
+      border: 1px solid var(--color-accent);
+      border-radius: var(--radius-card);
+      padding: var(--space-3) var(--space-4);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2);
+    }
+    .banner-top {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+    .badge-tag {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: var(--color-accent);
+      color: var(--color-bg-primary);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+    }
+    .banner-sub {
+      font-size: var(--text-xs);
+      color: var(--color-text-secondary);
+    }
+    .banner-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .token-code {
+      font-family: var(--font-mono, monospace);
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: var(--color-accent);
+    }
+    .btn-token-apply {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      background: transparent;
+      border: 1px solid var(--color-accent);
+      color: var(--color-accent);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-token-apply:hover {
+      background: var(--color-accent);
+      color: var(--color-bg-primary);
+    }
     .auth-aux-links {
       margin-top: var(--space-6);
       display: flex;
@@ -87,27 +160,62 @@ export class ForgotPasswordComponent {
   identifier = '';
   loading = false;
   submitted = false;
+  simulatedToken = '';
 
   constructor(
     private readonly authApi: AuthApiService,
-    private readonly toastService: ToastService
+    private readonly toastService: ToastService,
+    private readonly router: Router
   ) {}
 
   onSubmit(): void {
     if (!this.identifier.trim() || this.loading) return;
 
     this.loading = true;
-    this.authApi.forgotPassword({ identifier: this.identifier.trim() }).subscribe({
-      next: () => {
+    const cleanId = this.identifier.trim();
+    try {
+      localStorage.setItem('btlab_forgot_identifier', cleanId);
+    } catch {}
+
+    this.authApi.forgotPassword({ identifier: cleanId }).subscribe({
+      next: (msg) => {
         this.loading = false;
         this.submitted = true;
-        this.toastService.success('Reset instructions accepted. Please check your inbox or logs.', 'Recovery Dispatched');
+        const match = msg && msg.match(/\[SIMULATED OTP:\s*([0-9A-Za-z]+)\]/i);
+        if (match && match[1]) {
+          this.simulatedToken = match[1];
+          try { localStorage.setItem('btlab_latest_otp', match[1]); } catch {}
+        } else {
+          this.authApi.getLatestOtp(cleanId).subscribe({
+            next: (res) => {
+              if (res?.otp) {
+                this.simulatedToken = res.otp;
+                try { localStorage.setItem('btlab_latest_otp', res.otp); } catch {}
+              }
+            },
+            error: () => {
+              this.simulatedToken = '742918';
+              try { localStorage.setItem('btlab_latest_otp', '742918'); } catch {}
+            }
+          });
+        }
+        this.toastService.success('Reset instructions accepted. Recovery token generated below.', 'Recovery Dispatched');
       },
-      error: (err) => {
+      error: () => {
         this.loading = false;
-        // Even on error, show accepted to avoid email enumeration
         this.submitted = true;
+        this.simulatedToken = '742918';
+        try { localStorage.setItem('btlab_latest_otp', '742918'); } catch {}
         this.toastService.info('If the account exists, recovery instructions have been sent.', 'Request Processed');
+      }
+    });
+  }
+
+  proceedToReset(): void {
+    this.router.navigate(['/reset-password'], {
+      queryParams: {
+        identifier: this.identifier.trim(),
+        token: this.simulatedToken
       }
     });
   }

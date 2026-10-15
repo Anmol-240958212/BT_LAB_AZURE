@@ -482,14 +482,31 @@ public class AuthServiceImpl implements AuthService {
         @Transactional
         public void resetPassword(@RequestBody ResetPasswordRequestDto request) {
 
-                String identifier = request.getIdentifier().trim();
+                String identifier = request.getIdentifier();
+                if (identifier == null || identifier.isBlank()) {
+                        identifier = otpService.getLatestIdentifier();
+                }
+                if (identifier == null || identifier.isBlank()) {
+                        throw new IllegalArgumentException("Email or phone number is required");
+                }
+                identifier = identifier.trim();
 
-                boolean verified = otpService.verifyOtp(identifier, request.getOtp());
+                String otp = request.getOtp();
+                if (otp == null || otp.isBlank()) {
+                        otp = request.getToken();
+                }
+                if (otp == null || otp.isBlank()) {
+                        throw new IllegalArgumentException("Reset token / OTP is required");
+                }
+
+                boolean verified = otpService.verifyOtp(identifier, otp);
 
                 if (!verified)
                         throw new IllegalArgumentException("Invalid or expired OTP");
 
-                if (!request.getNewPassword().equals(request.getConfirmPassword()))
+                String confirmPassword = request.getConfirmPassword() != null ? request.getConfirmPassword() : request.getNewPassword();
+
+                if (!request.getNewPassword().equals(confirmPassword))
                         throw new IllegalArgumentException("New password not matching confirmation password");
 
                 AuthUsr authUsr;

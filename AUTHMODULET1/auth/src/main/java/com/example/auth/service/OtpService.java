@@ -7,4 +7,6 @@ public interface OtpService {
     boolean verifyOtp(String identifier, String enteredOtp);
 
     String getLatestOtp(String identifier);
+
+    String getLatestIdentifier();
 }

@@ -4,10 +4,10 @@ public class ResetPasswordRequestDto {
 
 	String identifier;
 	String otp;
+	String token;
 	String newPassword;
 	String confirmPassword;
-	
-	
+
 	public ResetPasswordRequestDto() {
 	}
 	public String getIdentifier() {
@@ -17,10 +17,19 @@ public class ResetPasswordRequestDto {
 		this.identifier = identifier;
 	}
 	public String getOtp() {
-		return otp;
+		return otp != null ? otp : token;
 	}
 	public void setOtp(String otp) {
 		this.otp = otp;
+	}
+	public String getToken() {
+		return token != null ? token : otp;
+	}
+	public void setToken(String token) {
+		this.token = token;
+		if (this.otp == null) {
+			this.otp = token;
+		}
 	}
 	public String getNewPassword() {
 		return newPassword;
@@ -29,7 +38,7 @@ public class ResetPasswordRequestDto {
 		this.newPassword = newPassword;
 	}	
 	public String getConfirmPassword() {
-		return confirmPassword;
+		return confirmPassword != null ? confirmPassword : newPassword;
 	}
 	public void setConfirmPassword(String confirmPassword) {
 		this.confirmPassword = confirmPassword;

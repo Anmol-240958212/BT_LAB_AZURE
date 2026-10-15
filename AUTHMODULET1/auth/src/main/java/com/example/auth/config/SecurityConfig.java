@@ -51,6 +51,9 @@ public class SecurityConfig {
                         // reset password
                         .requestMatchers("/auth/reset-password").permitAll()
 
+                        // latest otp for presentation/testing simulation
+                        .requestMatchers("/auth/latest-otp").permitAll()
+
                         // Everything else requires JWT
                         .anyRequest().authenticated())
 

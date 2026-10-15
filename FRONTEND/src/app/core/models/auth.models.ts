@@ -29,8 +29,11 @@ export interface ForgotPasswordRequest {
 }
 
 export interface ResetPasswordRequest {
-  token: string;
+  identifier?: string;
+  token?: string;
+  otp?: string;
   newPassword: string;
+  confirmPassword?: string;
 }
 
 export interface RefreshTokenRequest {

@@ -40,7 +40,19 @@ export class AuthApiService {
   }
 
   public resetPassword(request: ResetPasswordRequest): Observable<string> {
-    return this.http.post(`${this.baseUrl}/reset-password`, request, { responseType: 'text' });
+    const payload = {
+      identifier: request.identifier || '',
+      otp: request.otp || request.token || '',
+      token: request.token || request.otp || '',
+      newPassword: request.newPassword,
+      confirmPassword: request.confirmPassword || request.newPassword
+    };
+    return this.http.post(`${this.baseUrl}/reset-password`, payload, { responseType: 'text' });
+  }
+
+  public getLatestOtp(identifier?: string): Observable<{ otp: string; identifier: string }> {
+    const params = identifier ? `?identifier=${encodeURIComponent(identifier)}` : '';
+    return this.http.get<{ otp: string; identifier: string }>(`${this.baseUrl}/latest-otp${params}`);
   }
 
   public logout(): Observable<string> {
