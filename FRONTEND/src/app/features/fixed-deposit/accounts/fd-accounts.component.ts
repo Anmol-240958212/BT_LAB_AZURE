@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
-import { catchError, timeout } from 'rxjs/operators';
+import { catchError, timeout, finalize } from 'rxjs/operators';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
 import { AuthService } from '../../../core/auth.service';
 import { FixedDepositAccountResponse, FDWithdrawalResponse } from '../../../core/models/fd.models';
@@ -396,45 +396,12 @@ export class FDAccountsComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly userApi: UserApiService,
     private readonly toastService: ToastService,
-    public readonly router: Router
+    public readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
-    const role = this.authService.getRole();
-    if (role === 'CUSTOMER') {
-      if (this.isDemoUser()) {
-        this.allAccounts = [...this.mockAccounts];
-        this.applyFilters();
-        this.loadAccounts();
-      } else {
-        // Real customer account: start clean, enforce business logic
-        this.allAccounts = [];
-        this.filteredAccounts = [];
-        this.loading = true;
-        this.userApi.getMe().subscribe({
-          next: (profile) => {
-            if (profile && profile.customerId) {
-              this.userCustomerId = String(profile.customerId);
-              this.fetchCustomerAccounts();
-            } else {
-              this.loading = false;
-              this.allAccounts = [];
-              this.filteredAccounts = [];
-            }
-          },
-          error: () => {
-            this.loading = false;
-            this.allAccounts = [];
-            this.filteredAccounts = [];
-          }
-        });
-      }
-    } else {
-      // Bank Officer / Admin
-      this.allAccounts = [...this.mockAccounts];
-      this.filteredAccounts = [...this.allAccounts];
-      this.loadAccounts();
-    }
+    this.loadAccounts();
   }
 
   get canCreate(): boolean {
@@ -447,19 +414,21 @@ export class FDAccountsComponent implements OnInit {
 
     if (role === 'CUSTOMER') {
       if (this.isDemoUser()) {
-        if (isManualRefresh || this.allAccounts.length === 0) {
-          this.loading = true;
-        }
+        this.loading = true;
+        this.cdr.detectChanges();
         const fetch$ = this.selectedStatus === 'ALL'
           ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
           : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
         fetch$.pipe(
-          timeout(2500),
-          catchError(() => of([]))
+          timeout(3000),
+          catchError(() => of([])),
+          finalize(() => {
+            this.loading = false;
+            this.cdr.detectChanges();
+          })
         ).subscribe({
           next: (data) => {
-            this.loading = false;
             if (data && data.length > 0) {
               this.allAccounts = data;
             } else {
@@ -468,7 +437,6 @@ export class FDAccountsComponent implements OnInit {
             this.applyFilters();
           },
           error: () => {
-            this.loading = false;
             this.allAccounts = [...this.mockAccounts];
             this.applyFilters();
           }
@@ -479,7 +447,20 @@ export class FDAccountsComponent implements OnInit {
       // Real customer account
       if (!this.userCustomerId) {
         this.loading = true;
-        this.userApi.getMe().subscribe({
+        this.cdr.detectChanges();
+        this.userApi.getMe().pipe(
+          timeout(3000),
+          catchError((err) => {
+            console.warn('Could not fetch user profile for customer ID:', err);
+            return of(null);
+          }),
+          finalize(() => {
+            if (!this.userCustomerId) {
+              this.loading = false;
+              this.cdr.detectChanges();
+            }
+          })
+        ).subscribe({
           next: (profile) => {
             if (profile && profile.customerId) {
               this.userCustomerId = String(profile.customerId);
@@ -488,12 +469,14 @@ export class FDAccountsComponent implements OnInit {
               this.loading = false;
               this.allAccounts = [];
               this.filteredAccounts = [];
+              this.cdr.detectChanges();
             }
           },
           error: () => {
             this.loading = false;
             this.allAccounts = [];
             this.filteredAccounts = [];
+            this.cdr.detectChanges();
           }
         });
         return;
@@ -504,19 +487,21 @@ export class FDAccountsComponent implements OnInit {
     }
 
     // Bank Officer or Admin
-    if (isManualRefresh || this.allAccounts.length === 0) {
-      this.loading = true;
-    }
+    this.loading = true;
+    this.cdr.detectChanges();
     const fetch$ = this.selectedStatus === 'ALL'
       ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
       : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
     fetch$.pipe(
-      timeout(2500),
-      catchError(() => of([]))
+      timeout(3000),
+      catchError(() => of([])),
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      })
     ).subscribe({
       next: (data) => {
-        this.loading = false;
         if (data && data.length > 0) {
           this.allAccounts = data;
         } else if (this.allAccounts.length === 0) {
@@ -525,7 +510,6 @@ export class FDAccountsComponent implements OnInit {
         this.applyFilters();
       },
       error: () => {
-        this.loading = false;
         if (this.allAccounts.length === 0) {
           this.allAccounts = [...this.mockAccounts];
         }
@@ -539,9 +523,12 @@ export class FDAccountsComponent implements OnInit {
       this.loading = false;
       this.allAccounts = [];
       this.filteredAccounts = [];
+      this.cdr.detectChanges();
       return;
     }
+
     this.loading = true;
+    this.cdr.detectChanges();
 
     const fetch$ = this.selectedStatus === 'ALL'
       ? this.fdAccountApi.getAccountsByCustomer(this.userCustomerId)
@@ -549,18 +536,24 @@ export class FDAccountsComponent implements OnInit {
 
     fetch$.pipe(
       timeout(3500),
-      catchError(() => of([]))
+      catchError((err) => {
+        console.warn('Could not fetch customer accounts from FD API:', err);
+        return of([]);
+      }),
+      finalize(() => {
+        this.loading = false;
+        this.cdr.detectChanges();
+      })
     ).subscribe({
       next: (data) => {
-        this.loading = false;
-        // Strictly use real customer data. Fresh accounts with no accounts remain empty!
         this.allAccounts = data || [];
         this.applyFilters();
+        this.cdr.detectChanges();
       },
       error: () => {
-        this.loading = false;
         this.allAccounts = [];
         this.filteredAccounts = [];
+        this.cdr.detectChanges();
       }
     });
   }
@@ -576,25 +569,33 @@ export class FDAccountsComponent implements OnInit {
     const role = this.authService.getRole();
     if (role === 'CUSTOMER') {
       if (!this.isDemoUser()) {
-        // Real customer: strictly filter by their customer ID, NO mock data ever
+        // Real customer: strictly filter by their customer ID, NO mock data
         if (this.userCustomerId) {
-          const q = this.userCustomerId.trim().toLowerCase();
-          list = list.filter(a => a.customerId && a.customerId.toLowerCase().trim() === q);
+          const q = String(this.userCustomerId).trim().toLowerCase();
+          list = list.filter(a => {
+            if (!a.customerId) return false;
+            const cid = String(a.customerId).trim().toLowerCase();
+            return cid === q || cid.replace('cust-', '') === q.replace('cust-', '');
+          });
         } else {
           list = [];
         }
       } else {
         // Demo user
         if (this.userCustomerId) {
-          const q = this.userCustomerId.trim().toLowerCase();
-          list = list.filter(a => a.customerId && a.customerId.toLowerCase().trim() === q);
+          const q = String(this.userCustomerId).trim().toLowerCase();
+          list = list.filter(a => {
+            if (!a.customerId) return false;
+            const cid = String(a.customerId).trim().toLowerCase();
+            return cid === q || cid.replace('cust-', '') === q.replace('cust-', '');
+          });
         } else {
-          list = list.filter(a => a.customerId && (a.customerId.includes('9') || a.customerId.toLowerCase().includes('1001')));
+          list = list.filter(a => a.customerId && (String(a.customerId).includes('9') || String(a.customerId).toLowerCase().includes('1001')));
         }
       }
     } else if (this.customerFilter.trim()) {
       const q = this.customerFilter.trim().toLowerCase();
-      list = list.filter(a => a.customerId && a.customerId.toLowerCase().includes(q));
+      list = list.filter(a => a.customerId && String(a.customerId).toLowerCase().includes(q));
     }
 
     if (this.selectedStatus !== 'ALL') {
@@ -602,6 +603,7 @@ export class FDAccountsComponent implements OnInit {
     }
 
     this.filteredAccounts = list;
+    this.cdr.detectChanges();
   }
 
   viewDetails(account: FixedDepositAccountResponse): void {

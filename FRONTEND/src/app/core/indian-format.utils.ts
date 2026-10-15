@@ -287,11 +287,17 @@ export function isValidIndianPin(val: string | null | undefined): boolean {
 }
 
 /**
- * Formats Aadhaar number as XXXX XXXX XXXX
+ * Formats Aadhaar number as XXXX XXXX XXXX, or •••• •••• XXXX if masked
  */
 export function formatAadhaarNumber(value: string | null | undefined): string {
   if (!value) return '';
-  const digits = value.replace(/\D/g, '').substring(0, 12);
+  const trimmed = value.trim();
+  if (trimmed.includes('*') || trimmed.includes('•') || trimmed.includes('X') || trimmed.includes('x')) {
+    const digitsOnly = trimmed.replace(/\D/g, '');
+    const last4 = digitsOnly.length >= 4 ? digitsOnly.slice(-4) : (trimmed.slice(-4).replace(/\D/g, '') || '0000');
+    return `•••• •••• ${last4}`;
+  }
+  const digits = trimmed.replace(/\D/g, '').substring(0, 12);
   const parts: string[] = [];
   for (let i = 0; i < digits.length; i += 4) {
     parts.push(digits.substring(i, i + 4));
@@ -320,8 +326,13 @@ export const ID_RULES: Record<IdentificationType, IdTypeRule> = {
     format: (val: string) => formatAadhaarNumber(val),
     isValid: (val: string) => {
       if (!val) return false;
-      const digits = val.replace(/\D/g, '');
-      return digits.length === 12;
+      const trimmed = val.trim();
+      if (trimmed.includes('*') || trimmed.includes('•') || trimmed.includes('X') || trimmed.includes('x')) {
+        return true;
+      }
+      const digits = trimmed.replace(/\D/g, '');
+      // Valid if full 12 digits, or if 4-digit masked suffix
+      return digits.length === 12 || digits.length === 4;
     },
     errorMessage: 'Aadhaar number must be exactly 12 digits (e.g. 5432 9876 1234)'
   },
@@ -332,11 +343,15 @@ export const ID_RULES: Record<IdentificationType, IdTypeRule> = {
     hint: '10-character Permanent Account Number (5 letters, 4 digits, 1 letter)',
     format: (val: string) => {
       if (!val) return '';
+      const trimmed = val.trim();
+      if (trimmed.includes('*') || trimmed.includes('•')) return trimmed;
       return val.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
     },
     isValid: (val: string) => {
       if (!val) return false;
-      return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(val.trim().toUpperCase());
+      const trimmed = val.trim().toUpperCase();
+      if (trimmed.includes('*') || trimmed.includes('•') || trimmed.length <= 4) return true;
+      return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(trimmed);
     },
     errorMessage: 'PAN must be 10 characters: 5 letters, 4 digits, 1 letter (e.g. ABCDE1234F)'
   },
@@ -347,11 +362,15 @@ export const ID_RULES: Record<IdentificationType, IdTypeRule> = {
     hint: '8-character Indian Passport (1 letter followed by 7 digits)',
     format: (val: string) => {
       if (!val) return '';
+      const trimmed = val.trim();
+      if (trimmed.includes('*') || trimmed.includes('•')) return trimmed;
       return val.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8);
     },
     isValid: (val: string) => {
       if (!val) return false;
-      return /^[A-Z]{1}[0-9]{7}$/.test(val.trim().toUpperCase());
+      const trimmed = val.trim().toUpperCase();
+      if (trimmed.includes('*') || trimmed.includes('•') || trimmed.length <= 4) return true;
+      return /^[A-Z]{1}[0-9]{7}$/.test(trimmed);
     },
     errorMessage: 'Passport must be 8 characters: 1 letter followed by 7 digits (e.g. A1234567)'
   },
@@ -362,11 +381,15 @@ export const ID_RULES: Record<IdentificationType, IdTypeRule> = {
     hint: '10-character Voter ID / EPIC (3 letters followed by 7 digits)',
     format: (val: string) => {
       if (!val) return '';
+      const trimmed = val.trim();
+      if (trimmed.includes('*') || trimmed.includes('•')) return trimmed;
       return val.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
     },
     isValid: (val: string) => {
       if (!val) return false;
-      return /^[A-Z]{3}[0-9]{7}$/.test(val.trim().toUpperCase());
+      const trimmed = val.trim().toUpperCase();
+      if (trimmed.includes('*') || trimmed.includes('•') || trimmed.length <= 4) return true;
+      return /^[A-Z]{3}[0-9]{7}$/.test(trimmed);
     },
     errorMessage: 'Voter ID must be 10 characters: 3 letters followed by 7 digits (e.g. ABC1234567)'
   }
