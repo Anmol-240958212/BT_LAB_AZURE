@@ -195,8 +195,8 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
-      username: ['customer1', [Validators.required, Validators.minLength(3)]],
-      password: ['password123', [Validators.required, Validators.minLength(4)]]
+      username: ['alice@test.com', [Validators.required, Validators.minLength(3)]],
+      password: ['Pass@123', [Validators.required, Validators.minLength(4)]]
     });
 
     this.returnUrl = this.route.snapshot.queryParams['returnUrl'] || '/dashboard';
@@ -255,7 +255,18 @@ export class LoginComponent implements OnInit {
       },
       error: (err: any) => {
         this.loading = false;
-        if (err.status === 400 || err.status === 401 || err.status === 403) {
+        const status = err?.status || err?.error?.status;
+        const msg = String(err?.message || err?.error?.detail || err?.error || '');
+
+        if (
+          status === 400 ||
+          status === 401 ||
+          status === 403 ||
+          msg.includes('Invalid') ||
+          msg.includes('Bad Request') ||
+          msg.includes('Bad credentials') ||
+          msg.includes('CORS')
+        ) {
           this.toastService.error('Invalid username or password. Please try again.', 'Authentication Failed');
           return;
         }

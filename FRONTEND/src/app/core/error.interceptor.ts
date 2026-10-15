@@ -29,9 +29,6 @@ export class ErrorInterceptor implements HttpInterceptor {
               queryParams: { returnUrl: this.router.url }
             });
           }
-        } else if (error.status === 403 && !request.url.includes('/auth/')) {
-          // Forbidden access
-          this.router.navigate(['/unauthorized']);
         }
 
         let errorMessage = error.error?.detail || error.error?.message;
@@ -48,7 +45,11 @@ export class ErrorInterceptor implements HttpInterceptor {
           errorMessage = error.statusText || 'An unexpected error occurred';
         }
 
-        return throwError(() => new Error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage)));
+        const errObj = new Error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage));
+        (errObj as any).status = error.status;
+        (errObj as any).statusText = error.statusText;
+        (errObj as any).error = error.error;
+        return throwError(() => errObj);
       })
     );
   }

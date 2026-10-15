@@ -64,9 +64,13 @@ public class SecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource swaggerCors() {
         var cors = new org.springframework.web.cors.CorsConfiguration();
-        cors.setAllowedOrigins(java.util.List.of("http://localhost:8081", "http://127.0.0.1:8081"));
-        cors.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cors.setAllowedHeaders(java.util.List.of("Authorization", "Content-Type", "Accept"));
+        cors.setAllowedOriginPatterns(java.util.List.of(
+                "http://localhost:[*]",
+                "http://127.0.0.1:[*]"
+        ));
+        cors.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        cors.setAllowedHeaders(java.util.List.of("*"));
+        cors.setAllowCredentials(true);
         var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", cors);
         return source;
