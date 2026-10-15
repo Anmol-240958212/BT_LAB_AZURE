@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { UserApiService } from '../../../core/api/user-api.service';
+import { AuthService } from '../../../core/auth.service';
 import { UserProfileResponse } from '../../../core/models/auth.models';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -206,6 +207,7 @@ export class UserProfileComponent implements OnInit {
   constructor(
     private readonly fb: FormBuilder,
     private readonly userApi: UserApiService,
+    private readonly authService: AuthService,
     private readonly toastService: ToastService
   ) {}
 
@@ -234,21 +236,19 @@ export class UserProfileComponent implements OnInit {
       },
       error: () => {
         this.loading = false;
-        // Mock fallback for demonstration
+        const currentUsername = this.authService.getUsername() || '';
+        const currentRole = this.authService.getRole() || 'CUSTOMER';
         this.profile = {
-          username: 'officer1',
-          email: 'officer@vaultone.com',
-          phoneNumber: '+91 9876543210',
-          role: 'BANK_OFFICER',
-          customerId: 1001,
-          firstName: 'Aarav',
-          lastName: 'Sharma',
-          identificationType: 'AADHAAR',
-          identificationNumber: '542187654321',
-          addressLine1: '42 Financial District',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          postalCode: '400051'
+          username: currentUsername,
+          email: currentUsername.includes('@') ? currentUsername : '',
+          phoneNumber: '',
+          role: currentRole,
+          firstName: '',
+          lastName: '',
+          addressLine1: '',
+          city: '',
+          state: '',
+          postalCode: ''
         };
         this.populateForm(this.profile);
       }

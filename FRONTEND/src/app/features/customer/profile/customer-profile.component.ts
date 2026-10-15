@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { CustomerApiService } from '../../../core/api/customer-api.service';
+import { UserApiService } from '../../../core/api/user-api.service';
+import { AuthService } from '../../../core/auth.service';
 import { OpenAccountResponse } from '../../../core/models/auth.models';
 import { ToastService } from '../../../shared/services/toast.service';
 import { TableColumn } from '../../../shared/components/table/table.component';
@@ -210,7 +212,7 @@ import { TableColumn } from '../../../shared/components/table/table.component';
   `]
 })
 export class CustomerProfileComponent implements OnInit {
-  customerStatus = 'ACTIVE';
+  customerStatus = 'KYC_PENDING';
   kycForm!: FormGroup;
   accountForm!: FormGroup;
 
@@ -226,39 +228,34 @@ export class CustomerProfileComponent implements OnInit {
     { field: 'status', header: 'Status', type: 'badge' }
   ];
 
-  accounts: OpenAccountResponse[] = [
-    {
-      accountId: 1,
-      accountNumber: '100084920194',
-      status: 'ACTIVE',
-      productId: 101,
-      branchId: 501,
-      openedOn: '2026-01-15',
-      message: 'Account active'
-    }
-  ];
+  accounts: OpenAccountResponse[] = [];
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly customerApi: CustomerApiService,
+    private readonly userApi: UserApiService,
+    private readonly authService: AuthService,
     private readonly toastService: ToastService
   ) {}
 
   ngOnInit(): void {
+    const currentUsername = this.authService.getUsername() || '';
+    const initialEmail = currentUsername.includes('@') ? currentUsername : '';
+
     this.kycForm = this.fb.group({
-      firstName: ['Aarav', Validators.required],
-      lastName: ['Sharma', Validators.required],
-      dateOfBirth: ['1998-05-14', Validators.required],
+      firstName: ['', Validators.required],
+      lastName: ['', Validators.required],
+      dateOfBirth: ['', Validators.required],
       gender: ['MALE', Validators.required],
       identificationType: ['AADHAAR', Validators.required],
-      identificationNumber: ['542187654321', Validators.required],
-      addressLine1: ['42 Financial Boulevard, BKC', Validators.required],
-      city: ['Mumbai', Validators.required],
-      state: ['Maharashtra', Validators.required],
+      identificationNumber: ['', Validators.required],
+      addressLine1: ['', Validators.required],
+      city: ['', Validators.required],
+      state: ['', Validators.required],
       country: ['India'],
-      postalCode: ['400051', Validators.required],
-      mobileNumber: ['+91 9876543210'],
-      email: ['aarav.sharma@vaultone.com']
+      postalCode: ['', Validators.required],
+      mobileNumber: [''],
+      email: [initialEmail]
     });
 
     this.accountForm = this.fb.group({
@@ -278,10 +275,28 @@ export class CustomerProfileComponent implements OnInit {
       error: () => {}
     });
 
-    this.customerApi.getProfile().subscribe({
-      next: (profile) => {
-        if (profile) {
-          this.customerStatus = profile.status || this.customerStatus;
+    this.userApi.getMe().subscribe({
+      next: (user) => {
+        if (user) {
+          if (user.customerStatus) {
+            this.customerStatus = user.customerStatus;
+          }
+          const updates: Record<string, any> = {};
+          if (user.firstName) updates['firstName'] = user.firstName;
+          if (user.lastName) updates['lastName'] = user.lastName;
+          if (user.dateOfBirth) updates['dateOfBirth'] = user.dateOfBirth;
+          if (user.gender) updates['gender'] = user.gender;
+          if (user.identificationType) updates['identificationType'] = user.identificationType;
+          if (user.identificationNumber) updates['identificationNumber'] = user.identificationNumber;
+          if (user.addressLine1) updates['addressLine1'] = user.addressLine1;
+          if (user.city) updates['city'] = user.city;
+          if (user.state) updates['state'] = user.state;
+          if (user.country) updates['country'] = user.country;
+          if (user.postalCode) updates['postalCode'] = user.postalCode;
+          if (user.phoneNumber) updates['mobileNumber'] = user.phoneNumber;
+          if (user.email) updates['email'] = user.email;
+
+          this.kycForm.patchValue(updates);
         }
       },
       error: () => {}
@@ -293,12 +308,11 @@ export class CustomerProfileComponent implements OnInit {
     this.customerApi.getAccounts().subscribe({
       next: (data) => {
         this.loadingAccounts = false;
-        if (data && data.length > 0) {
-          this.accounts = data;
-        }
+        this.accounts = Array.isArray(data) ? data : [];
       },
       error: () => {
         this.loadingAccounts = false;
+        this.accounts = [];
       }
     });
   }
