@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { AuthService } from '../../core/auth.service';
 import { AuthState, UserRole } from '../../core/models/auth.models';
 import { FixedDepositAccountResponse } from '../../core/models/fd.models';
@@ -133,7 +135,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
         class="mb-6"
       >
         <div card-action class="flex-row">
-          <app-button variant="ghost" (clicked)="loadAccounts()">
+          <app-button variant="ghost" (clicked)="loadAccounts(true)">
             <app-icon name="refresh" [size]="13"></app-icon>
             <span>Refresh Data</span>
           </app-button>
@@ -235,53 +237,70 @@ export class DashboardComponent implements OnInit {
     { field: 'status', header: 'Status', type: 'badge', align: 'center' }
   ];
 
-  recentAccounts: FixedDepositAccountResponse[] = [
+  allLoadedAccounts: FixedDepositAccountResponse[] = [
     {
       fdAccountNo: 'FD-100293847',
-      customerId: 'CUST-1001',
+      customerId: '9',
       productCode: 'PROD_FD_CUMULATIVE',
       principalAmount: 250000,
       interestRate: 7.25,
       termMonths: 24,
       status: 'ACTIVE',
       interestType: 'COMPOUND',
-      interestPayoutType: 'MATURITY'
+      interestPayoutType: 'MATURITY',
+      accruedInterest: 18125
     },
     {
       fdAccountNo: 'FD-100492817',
-      customerId: 'CUST-1002',
+      customerId: '9',
       productCode: 'PROD_FD_SENIOR',
       principalAmount: 500000,
       interestRate: 8.00,
       termMonths: 36,
       status: 'ACTIVE',
       interestType: 'COMPOUND',
-      interestPayoutType: 'ANNUAL'
+      interestPayoutType: 'ANNUAL',
+      accruedInterest: 40000
     },
     {
       fdAccountNo: 'FD-100583920',
-      customerId: 'CUST-1003',
+      customerId: '8',
       productCode: 'PROD_FD_STANDARD',
       principalAmount: 1000000,
       interestRate: 7.50,
       termMonths: 12,
       status: 'ACTIVE',
       interestType: 'SIMPLE',
-      interestPayoutType: 'MATURITY'
+      interestPayoutType: 'MATURITY',
+      accruedInterest: 75000
     },
     {
       fdAccountNo: 'FD-100612984',
-      customerId: 'CUST-1004',
+      customerId: '4',
       productCode: 'PROD_FD_QUARTERLY',
       principalAmount: 125000,
       interestRate: 6.80,
       termMonths: 6,
-      status: 'PENDING',
+      status: 'ACTIVE',
       interestType: 'SIMPLE',
-      interestPayoutType: 'QUARTERLY'
+      interestPayoutType: 'QUARTERLY',
+      accruedInterest: 4250
+    },
+    {
+      fdAccountNo: 'FD-100741295',
+      customerId: '10',
+      productCode: 'PROD_FD_STANDARD',
+      principalAmount: 300000,
+      interestRate: 7.10,
+      termMonths: 18,
+      status: 'ACTIVE',
+      interestType: 'COMPOUND',
+      interestPayoutType: 'MATURITY',
+      accruedInterest: 15975
     }
   ];
 
+  recentAccounts: FixedDepositAccountResponse[] = [...this.allLoadedAccounts];
   userCustomerId: string | null = null;
 
   constructor(
@@ -307,18 +326,26 @@ export class DashboardComponent implements OnInit {
           error: () => {}
         });
       }
+      this.filterAccountsForCustomer();
+      this.recalculateStats();
     });
 
-    this.loadAccounts();
+    this.loadAccounts(false);
   }
 
-  loadAccounts(): void {
-    this.loadingAccounts = true;
-    this.fdAccountApi.getAccountsByStatus('ACTIVE').subscribe({
+  loadAccounts(isManualRefresh = false): void {
+    if (isManualRefresh || this.recentAccounts.length === 0) {
+      this.loadingAccounts = true;
+    }
+
+    this.fdAccountApi.getAccountsByStatus('ACTIVE').pipe(
+      timeout(2500),
+      catchError(() => of([]))
+    ).subscribe({
       next: (data) => {
         this.loadingAccounts = false;
         if (data && data.length > 0) {
-          this.recentAccounts = data;
+          this.allLoadedAccounts = data;
         }
         this.filterAccountsForCustomer();
         this.recalculateStats();
@@ -334,11 +361,13 @@ export class DashboardComponent implements OnInit {
   private filterAccountsForCustomer(): void {
     if (this.currentRole === 'CUSTOMER') {
       if (this.userCustomerId) {
-        const id = this.userCustomerId.toLowerCase();
-        this.recentAccounts = this.recentAccounts.filter(a => a.customerId.toLowerCase().includes(id));
+        const id = this.userCustomerId.trim().toLowerCase();
+        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId.toLowerCase().includes(id));
       } else {
-        this.recentAccounts = this.recentAccounts.filter(a => a.customerId.toLowerCase().includes('1001'));
+        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId.includes('9') || a.customerId.includes('1001'));
       }
+    } else {
+      this.recentAccounts = [...this.allLoadedAccounts];
     }
   }
 

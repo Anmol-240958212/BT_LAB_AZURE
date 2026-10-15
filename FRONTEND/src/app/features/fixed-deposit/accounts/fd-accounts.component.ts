@@ -1,5 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
 import { AuthService } from '../../../core/auth.service';
 import { FixedDepositAccountResponse, FDWithdrawalResponse } from '../../../core/models/fd.models';
@@ -419,13 +421,18 @@ export class FDAccountsComponent implements OnInit {
     return role === 'BANK_OFFICER' || role === 'ADMIN';
   }
 
-  loadAccounts(): void {
-    this.loading = true;
+  loadAccounts(isManualRefresh = false): void {
+    if (isManualRefresh || this.allAccounts.length === 0) {
+      this.loading = true;
+    }
     const fetch$ = this.selectedStatus === 'ALL'
       ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
       : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
-    fetch$.subscribe({
+    fetch$.pipe(
+      timeout(2500),
+      catchError(() => of([]))
+    ).subscribe({
       next: (data) => {
         this.loading = false;
         if (data && data.length > 0) {

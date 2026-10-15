@@ -37,6 +37,8 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    listener:
+      missing-topics-fatal: false
     consumer:
       bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
       group-id: fd-service-group
@@ -45,6 +47,9 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "com.BankingTech.demo"
+        reconnect.backoff.ms: 10000
+        reconnect.backoff.max.ms: 60000
+        retry.backoff.ms: 10000
 
 logging:
   level:
