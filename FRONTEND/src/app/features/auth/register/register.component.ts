@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { timeout } from 'rxjs/operators';
+import { finalize, timeout } from 'rxjs/operators';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -28,6 +28,11 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
 
       <!-- Step 1: Registration Form -->
       <form *ngIf="!otpStep" [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="register-form">
+        <div *ngIf="errorMessage" class="error-banner mb-3">
+          <app-icon name="alert-circle" [size]="16"></app-icon>
+          <span>{{ errorMessage }}</span>
+        </div>
+
         <app-input
           id="reg-username"
           label="Username"
@@ -190,6 +195,17 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
       font-size: 11px;
       color: var(--color-text-muted);
     }
+    .error-banner {
+      background-color: var(--color-danger-subtle, rgba(239, 68, 68, 0.15));
+      border: 1px solid var(--color-danger, #ef4444);
+      color: var(--color-danger, #fca5a5);
+      border-radius: var(--radius-card);
+      padding: var(--space-3);
+      font-size: var(--text-xs);
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
     .auth-switch-link {
       margin-top: var(--space-6);
       text-align: center;
@@ -207,12 +223,14 @@ export class RegisterComponent implements OnInit {
   otpStep = false;
   otpCode = '';
   simulatedOtp = '';
+  errorMessage = '';
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly authApi: AuthApiService,
     private readonly toastService: ToastService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -271,13 +289,23 @@ export class RegisterComponent implements OnInit {
     }
 
     this.loading = true;
+    this.errorMessage = '';
     const { username, email, phoneNumber, password } = this.registerForm.value;
 
-    this.authApi.register({ username, name: username, email, phoneNumber, password }).pipe(
-      timeout(6000)
+    this.authApi.register({
+      username,
+      name: username,
+      email,
+      phoneNumber: phoneNumber ? phoneNumber.trim() : null,
+      password
+    }).pipe(
+      timeout(8000),
+      finalize(() => {
+        this.loading = false;
+        this.cdr.markForCheck();
+      })
     ).subscribe({
       next: (msg) => {
-        this.loading = false;
         const match = msg?.match(/\b(\d{6})\b/);
         if (match) {
           this.simulatedOtp = match[1];
@@ -285,11 +313,12 @@ export class RegisterComponent implements OnInit {
         }
         this.toastService.success(msg || 'OTP dispatched to email. Please verify.', 'Registration Request Accepted');
         this.otpStep = true;
+        this.cdr.markForCheck();
       },
       error: (err) => {
-        this.loading = false;
-        const msg = err.message || 'Registration failed. Username or email may already be registered.';
-        this.toastService.error(msg, 'Registration Error');
+        this.errorMessage = err.message || 'Registration failed. Username, email, or phone may already be registered.';
+        this.toastService.error(this.errorMessage, 'Registration Error');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -298,17 +327,24 @@ export class RegisterComponent implements OnInit {
     if (!this.otpCode || this.loading) return;
 
     this.loading = true;
+    this.errorMessage = '';
     const email = this.registerForm.value.email;
 
-    this.authApi.verifyOtp({ email, otp: this.otpCode }).subscribe({
-      next: (msg) => {
+    this.authApi.verifyOtp({ email, otp: this.otpCode }).pipe(
+      timeout(8000),
+      finalize(() => {
         this.loading = false;
+        this.cdr.markForCheck();
+      })
+    ).subscribe({
+      next: (msg) => {
         this.toastService.success('Registration completed successfully! Please sign in.', 'Account Activated');
         this.router.navigate(['/login']);
       },
       error: (err) => {
-        this.loading = false;
-        this.toastService.error(err.message || 'Invalid or expired OTP', 'Verification Failed');
+        this.errorMessage = err.message || 'Invalid or expired OTP';
+        this.toastService.error(this.errorMessage, 'Verification Failed');
+        this.cdr.markForCheck();
       }
     });
   }

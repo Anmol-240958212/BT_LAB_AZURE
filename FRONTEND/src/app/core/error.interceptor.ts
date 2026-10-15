@@ -38,7 +38,12 @@ export class ErrorInterceptor implements HttpInterceptor {
               ? 'Backend service unavailable (502 Bad Gateway). Please start backend microservices.'
               : error.statusText;
           } else {
-            errorMessage = error.error;
+            try {
+              const parsed = JSON.parse(error.error);
+              errorMessage = parsed.detail || parsed.message || parsed.title || error.error;
+            } catch {
+              errorMessage = error.error;
+            }
           }
         }
         if (!errorMessage) {
