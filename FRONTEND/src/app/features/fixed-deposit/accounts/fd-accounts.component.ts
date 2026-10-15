@@ -25,11 +25,20 @@ import { UserApiService } from '../../../core/api/user-api.service';
             </p>
           </div>
           <app-button
+            *ngIf="canCreate"
             variant="primary"
             (clicked)="router.navigate(['/fixed-deposit/create'])"
           >
             <app-icon name="plus" [size]="14"></app-icon>
             <span>Open New FD</span>
+          </app-button>
+          <app-button
+            *ngIf="!canCreate"
+            variant="primary"
+            (clicked)="router.navigate(['/fixed-deposit/calculator'])"
+          >
+            <app-icon name="plus" [size]="14"></app-icon>
+            <span>Apply for Fixed Deposit</span>
           </app-button>
         </div>
 
@@ -86,6 +95,15 @@ import { UserApiService } from '../../../core/api/user-api.service';
                 Inspect
               </button>
               <button
+                *ngIf="account.status === 'PENDING' && canCreate"
+                type="button"
+                class="btn btn-primary btn-xs"
+                [disabled]="approvingNo === account.fdAccountNo"
+                (click)="approveFdAccount(account)"
+              >
+                {{ approvingNo === account.fdAccountNo ? 'Approving...' : 'Approve' }}
+              </button>
+              <button
                 *ngIf="account.status === 'ACTIVE' && canCreate"
                 type="button"
                 class="btn btn-danger btn-xs"
@@ -132,7 +150,11 @@ import { UserApiService } from '../../../core/api/user-api.service';
           </div>
           <div class="detail-row">
             <span class="detail-label">Status:</span>
-            <app-badge [variant]="selectedAccount.status === 'ACTIVE' ? 'active' : 'closed'" [text]="selectedAccount.status"></app-badge>
+            <app-badge [variant]="selectedAccount.status === 'ACTIVE' ? 'active' : (selectedAccount.status === 'PENDING' ? 'pending' : 'closed')" [text]="selectedAccount.status === 'PENDING' ? 'PENDING APPROVAL' : selectedAccount.status"></app-badge>
+          </div>
+          <div *ngIf="selectedAccount.status === 'PENDING'" class="alert alert-warning mt-3" style="grid-column: 1 / -1; padding: 10px 14px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px;">
+            <app-icon name="shield" [size]="16" color="#f59e0b"></app-icon>
+            <span>This deposit application is pending authorization and ledger activation by an authorized Bank Officer.</span>
           </div>
 
           <!-- Kafka Maturity Notification Delivery Status -->
@@ -489,7 +511,7 @@ export class FDAccountsComponent implements OnInit {
     this.loading = true;
     this.cdr.detectChanges();
     const fetch$ = this.selectedStatus === 'ALL'
-      ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
+      ? this.fdAccountApi.getAccountsByStatus('ALL')
       : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
     fetch$.pipe(
@@ -513,6 +535,33 @@ export class FDAccountsComponent implements OnInit {
           this.allAccounts = [...this.mockAccounts];
         }
         this.applyFilters();
+      }
+    });
+  }
+
+  approvingNo: string | null = null;
+
+  approveFdAccount(account: FixedDepositAccountResponse): void {
+    if (this.approvingNo) return;
+    this.approvingNo = account.fdAccountNo;
+    this.cdr.detectChanges();
+
+    this.fdAccountApi.approveAccount(account.fdAccountNo).pipe(
+      finalize(() => {
+        this.approvingNo = null;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
+      next: (res) => {
+        this.toastService.success(
+          `Fixed Deposit Account ${res.fdAccountNo} has been approved and activated!`,
+          'Account Approved'
+        );
+        this.loadAccounts(true);
+      },
+      error: (err) => {
+        const msg = err.error?.detail || err.error?.message || err.message || 'Failed to approve FD account';
+        this.toastService.error(msg, 'Approval Failed');
       }
     });
   }

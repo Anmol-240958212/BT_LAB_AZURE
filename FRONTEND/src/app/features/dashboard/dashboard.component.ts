@@ -73,11 +73,12 @@ import { TableColumn } from '../../shared/components/table/table.component';
           </app-button>
 
           <app-button
+            *ngIf="currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
             variant="secondary"
             (clicked)="navigate('/fixed-deposit/create')"
           >
             <app-icon name="plus" [size]="15"></app-icon>
-            <span>Open Fixed Deposit</span>
+            <span>Create New FD Account</span>
           </app-button>
 
           <app-button

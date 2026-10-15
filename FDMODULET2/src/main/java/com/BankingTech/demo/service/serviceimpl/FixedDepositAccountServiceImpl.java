@@ -251,6 +251,14 @@ public class FixedDepositAccountServiceImpl
         public List<FixedDepositAccountResponseDTO> getAccountsByStatus(
                         String status) {
 
+                if ("ALL".equalsIgnoreCase(status)) {
+                        return fixedDepositAccountRepository
+                                        .findAll()
+                                        .stream()
+                                        .map(this::convertToResponseDTO)
+                                        .toList();
+                }
+
                 return fixedDepositAccountRepository
                                 .findByFdAccountStatus(status)
                                 .stream()
@@ -264,9 +272,18 @@ public class FixedDepositAccountServiceImpl
                         String customerId,
                         String status) {
 
+                if ("ALL".equalsIgnoreCase(status)) {
+                        return fixedDepositAccountRepository
+                                        .findByFdAccountCustomerId(customerId)
+                                        .stream()
+                                        .map(this::convertToResponseDTO)
+                                        .toList();
+                }
+
                 return fixedDepositAccountRepository
                                 .findByFdAccountCustomerIdAndFdAccountStatus(
-                                                customerId, status)
+                                                customerId,
+                                                status)
                                 .stream()
                                 .map(this::convertToResponseDTO)
                                 .toList();

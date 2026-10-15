@@ -356,10 +356,10 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       roles: ['BANK_OFFICER', 'ADMIN']
     },
     {
-      label: 'Open Fixed Deposit',
+      label: 'Create FD Account',
       route: '/fixed-deposit/create',
       icon: 'plus',
-      roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN']
+      roles: ['BANK_OFFICER', 'ADMIN']
     },
     {
       label: 'FD Calculator',
