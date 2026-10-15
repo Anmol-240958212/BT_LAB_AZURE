@@ -222,9 +222,9 @@ export class DashboardComponent implements OnInit {
   authState: AuthState | null = null;
   currentRole: UserRole | null = null;
 
-  totalDepositValue = 1875000;
-  activeAccountCount = 5;
-  totalAccruedInterest = 89450;
+  totalDepositValue = 0;
+  activeAccountCount = 0;
+  totalAccruedInterest = 0;
   loadingAccounts = false;
 
   readonly fdColumns: TableColumn[] = [
@@ -300,7 +300,7 @@ export class DashboardComponent implements OnInit {
     }
   ];
 
-  recentAccounts: FixedDepositAccountResponse[] = [...this.allLoadedAccounts];
+  recentAccounts: FixedDepositAccountResponse[] = [];
   userCustomerId: string | null = null;
 
   constructor(
@@ -358,13 +358,20 @@ export class DashboardComponent implements OnInit {
     });
   }
 
+  private isDemoUser(): boolean {
+    const username = (this.authService.getUsername() || '').toLowerCase();
+    return username === 'alice@test.com' || username === 'alice' || username.startsWith('demo');
+  }
+
   private filterAccountsForCustomer(): void {
     if (this.currentRole === 'CUSTOMER') {
       if (this.userCustomerId) {
         const id = this.userCustomerId.trim().toLowerCase();
-        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId.toLowerCase().includes(id));
+        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId.toLowerCase().trim() === id);
+      } else if (this.isDemoUser()) {
+        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId === '9' || a.customerId.includes('1001'));
       } else {
-        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId.includes('9') || a.customerId.includes('1001'));
+        this.recentAccounts = [];
       }
     } else {
       this.recentAccounts = [...this.allLoadedAccounts];

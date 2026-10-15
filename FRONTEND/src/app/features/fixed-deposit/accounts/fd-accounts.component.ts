@@ -175,7 +175,7 @@ import { UserApiService } from '../../../core/api/user-api.service';
               id="with-transfer-acc"
               type="text"
               class="form-input"
-              placeholder="e.g. 100084920194"
+              placeholder="Enter linked account number"
               [(ngModel)]="transferAccount"
             />
           </div>
@@ -447,6 +447,11 @@ export class FDAccountsComponent implements OnInit {
     });
   }
 
+  private isDemoUser(): boolean {
+    const username = (this.authService.getUsername() || '').toLowerCase();
+    return username === 'alice@test.com' || username === 'alice' || username.startsWith('demo');
+  }
+
   applyFilters(): void {
     let list = [...this.allAccounts];
 
@@ -454,9 +459,11 @@ export class FDAccountsComponent implements OnInit {
     if (role === 'CUSTOMER') {
       if (this.userCustomerId) {
         const q = this.userCustomerId.trim().toLowerCase();
-        list = list.filter(a => a.customerId.toLowerCase().includes(q));
+        list = list.filter(a => a.customerId.toLowerCase().trim() === q);
+      } else if (this.isDemoUser()) {
+        list = list.filter(a => a.customerId.includes('9') || a.customerId.toLowerCase().includes('1001'));
       } else {
-        list = list.filter(a => a.customerId.toLowerCase().includes('1001'));
+        list = [];
       }
     } else if (this.customerFilter.trim()) {
       const q = this.customerFilter.trim().toLowerCase();
@@ -489,7 +496,7 @@ export class FDAccountsComponent implements OnInit {
 
   openWithdrawalModal(account: FixedDepositAccountResponse): void {
     this.selectedAccount = account;
-    this.transferAccount = '100084920194';
+    this.transferAccount = '';
     this.withdrawalResult = null;
     this.isWithdrawalModalOpen = true;
   }
