@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
 import { UserApiService } from '../../../core/api/user-api.service';
+import { AuthService } from '../../../core/auth.service';
 import { FixedDepositAccountRequest } from '../../../core/models/fd.models';
 import { ToastService } from '../../../shared/services/toast.service';
 import { Observable } from 'rxjs';
@@ -15,13 +16,13 @@ import { Observable } from 'rxjs';
       <div class="card mb-6">
         <div class="flex-between">
           <div>
-            <span class="section-tag">ACCOUNT ORIGINATION WORKFLOW</span>
+            <span class="section-tag">{{ isCustomer ? 'TERM DEPOSIT BOOKING' : 'ACCOUNT ORIGINATION WORKFLOW' }}</span>
             <h1 class="card-title mt-1">Open Fixed Deposit Account</h1>
             <p class="card-subtitle">
-              Issue a new term deposit instrument linked to customer KYC and branch ledger.
+              {{ isCustomer ? 'Lock in attractive interest yields and book your new fixed deposit.' : 'Issue a new term deposit instrument linked to customer KYC and branch ledger.' }}
             </p>
           </div>
-          <app-badge variant="role" text="Officer / Admin Action"></app-badge>
+          <app-badge variant="role" [text]="isCustomer ? 'Customer Self-Service' : 'Officer / Admin Action'"></app-badge>
         </div>
       </div>
 
@@ -35,7 +36,7 @@ import { Observable } from 'rxjs';
               placeholder="e.g. 10"
               formControlName="customerId"
               [required]="true"
-              hint="Customer must have ACTIVE KYC synced via Kafka"
+              [hint]="isCustomer ? 'Linked to your verified KYC profile' : 'Customer must have ACTIVE KYC synced via Kafka'"
             ></app-input>
 
             <div class="form-group">
@@ -190,10 +191,15 @@ export class FDCreateComponent implements OnInit {
   fdForm!: FormGroup;
   submitting = false;
 
+  get isCustomer(): boolean {
+    return this.authService.getRole() === 'CUSTOMER';
+  }
+
   constructor(
     private readonly fb: FormBuilder,
     private readonly fdAccountApi: FDAccountApiService,
     private readonly userApi: UserApiService,
+    private readonly authService: AuthService,
     private readonly toastService: ToastService,
     public readonly router: Router,
     private readonly route: ActivatedRoute
@@ -219,8 +225,11 @@ export class FDCreateComponent implements OnInit {
 
     this.userApi.getMe().subscribe({
       next: (profile) => {
-        if (profile?.customerId && !q['customerId']) {
+        if (profile?.customerId) {
           this.fdForm.patchValue({ customerId: String(profile.customerId) });
+          if (this.isCustomer) {
+            this.fdForm.get('customerId')?.disable();
+          }
         }
       },
       error: () => {}
@@ -234,7 +243,7 @@ export class FDCreateComponent implements OnInit {
     }
 
     this.submitting = true;
-    const formVal = this.fdForm.value;
+    const formVal = this.fdForm.getRawValue();
     const req: FixedDepositAccountRequest = {
       customerId: String(formVal.customerId).trim(),
       productCode: formVal.productCode,

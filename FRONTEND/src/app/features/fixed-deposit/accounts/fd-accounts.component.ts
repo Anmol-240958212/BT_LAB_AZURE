@@ -25,7 +25,6 @@ import { UserApiService } from '../../../core/api/user-api.service';
             </p>
           </div>
           <app-button
-            *ngIf="canCreate"
             variant="primary"
             (clicked)="router.navigate(['/fixed-deposit/create'])"
           >

@@ -14,7 +14,7 @@ const routes: Routes = [
     path: 'create',
     component: FDCreateComponent,
     canActivate: [RoleGuard],
-    data: { roles: ['BANK_OFFICER', 'ADMIN'] }
+    data: { roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN'] }
   },
   {
     path: 'transactions',
