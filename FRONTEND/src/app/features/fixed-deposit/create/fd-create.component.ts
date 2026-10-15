@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
+import { UserApiService } from '../../../core/api/user-api.service';
 import { FixedDepositAccountRequest } from '../../../core/models/fd.models';
 import { ToastService } from '../../../shared/services/toast.service';
 import { Observable } from 'rxjs';
@@ -30,10 +31,11 @@ import { Observable } from 'rxjs';
           <div class="grid-3">
             <app-input
               id="fd-cust-id"
-              label="Customer Identifier"
-              placeholder="e.g. CUST-1001"
+              label="Customer Identifier *"
+              placeholder="e.g. 10"
               formControlName="customerId"
               [required]="true"
+              hint="Customer must have ACTIVE KYC synced via Kafka"
             ></app-input>
 
             <div class="form-group">
@@ -48,11 +50,11 @@ import { Observable } from 'rxjs';
 
             <app-input
               id="fd-branch-code"
-              label="Branch Code"
-              placeholder="e.g. BR-501"
+              label="Branch Code (3 digits) *"
+              placeholder="e.g. 001"
               formControlName="branchCode"
               [required]="true"
-              hint="Required for account number plugin"
+              hint="Exactly 3 digits required (e.g. 001, 501)"
             ></app-input>
           </div>
 
@@ -107,11 +109,12 @@ import { Observable } from 'rxjs';
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="fd-frequency">Compounding Frequency</label>
+              <label class="form-label" for="fd-frequency">Compounding Frequency *</label>
               <select id="fd-frequency" class="form-select" formControlName="interestFrequency">
+                <option value="MONTHLY">Monthly</option>
                 <option value="QUARTERLY">Quarterly</option>
-                <option value="ANNUAL">Annual</option>
                 <option value="HALF_YEARLY">Half Yearly</option>
+                <option value="ANNUAL">Annual</option>
               </select>
             </div>
           </div>
@@ -190,6 +193,7 @@ export class FDCreateComponent implements OnInit {
   constructor(
     private readonly fb: FormBuilder,
     private readonly fdAccountApi: FDAccountApiService,
+    private readonly userApi: UserApiService,
     private readonly toastService: ToastService,
     public readonly router: Router,
     private readonly route: ActivatedRoute
@@ -197,18 +201,29 @@ export class FDCreateComponent implements OnInit {
 
   ngOnInit(): void {
     const q = this.route.snapshot.queryParams;
+    const initialBranch = q['branchCode'] || '001';
+    const initialCust = q['customerId'] || '10';
 
     this.fdForm = this.fb.group({
-      customerId: ['CUST-1001', Validators.required],
+      customerId: [initialCust, Validators.required],
       productCode: ['PROD_FD_CUMULATIVE', Validators.required],
-      branchCode: ['BR-501', Validators.required],
+      branchCode: [initialBranch, [Validators.required, Validators.pattern(/^\d{3}$/)]],
       principalAmount: [q['principal'] ? Number(q['principal']) : 100000, [Validators.required, Validators.min(1000)]],
       interestRate: [q['rate'] ? Number(q['rate']) : 7.25, [Validators.required, Validators.min(0.1), Validators.max(8.5)]],
       termMonths: [q['term'] ? Number(q['term']) : 12, [Validators.required, Validators.min(1)]],
       interestType: [q['interestType'] || 'COMPOUND', Validators.required],
       interestPayoutType: ['MATURITY', Validators.required],
-      interestFrequency: ['QUARTERLY'],
+      interestFrequency: ['QUARTERLY', Validators.required],
       createWithTxn: [true]
+    });
+
+    this.userApi.getMe().subscribe({
+      next: (profile) => {
+        if (profile?.customerId && !q['customerId']) {
+          this.fdForm.patchValue({ customerId: String(profile.customerId) });
+        }
+      },
+      error: () => {}
     });
   }
 
@@ -221,9 +236,9 @@ export class FDCreateComponent implements OnInit {
     this.submitting = true;
     const formVal = this.fdForm.value;
     const req: FixedDepositAccountRequest = {
-      customerId: formVal.customerId,
+      customerId: String(formVal.customerId).trim(),
       productCode: formVal.productCode,
-      branchCode: formVal.branchCode,
+      branchCode: String(formVal.branchCode).trim(),
       principalAmount: Number(formVal.principalAmount),
       interestRate: Number(formVal.interestRate),
       termMonths: Number(formVal.termMonths),
@@ -243,12 +258,10 @@ export class FDCreateComponent implements OnInit {
         this.toastService.success(`Fixed Deposit Account ${accNo} created successfully!`, 'Account Originated');
         this.router.navigate(['/fixed-deposit/accounts']);
       },
-      error: (_err: any) => {
+      error: (err: any) => {
         this.submitting = false;
-        // Provide graceful simulation if backend is offline
-        const mockAccNo = 'FD-' + Math.floor(100000000 + Math.random() * 900000000);
-        this.toastService.success(`FD Account ${mockAccNo} originated successfully.`, 'Account Created');
-        this.router.navigate(['/fixed-deposit/accounts']);
+        const msg = err.error?.detail || err.error?.message || err.message || 'Fixed deposit creation failed. Ensure customer is KYC approved and synced via Kafka.';
+        this.toastService.error(msg, 'Account Origination Failed');
       }
     });
   }

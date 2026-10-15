@@ -130,6 +130,20 @@ import { ToastService } from '../../../shared/services/toast.service';
             <span class="detail-label">Status:</span>
             <app-badge [variant]="selectedAccount.status === 'ACTIVE' ? 'active' : 'closed'" [text]="selectedAccount.status"></app-badge>
           </div>
+
+          <!-- Kafka Maturity Notification Delivery Status -->
+          <div *ngIf="accountNotifications && accountNotifications.length > 0" class="mt-4 pt-4" style="border-top: 1px solid var(--color-border-subtle); grid-column: 1 / -1;">
+            <span class="detail-label" style="font-weight: 600; display: block; margin-bottom: 8px;">Kafka Maturity Notification & Email Status:</span>
+            <div *ngFor="let n of accountNotifications" class="notice-box mb-2" style="font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <strong>{{ n.notificationLogNotificationType }}</strong>
+                <app-badge [variant]="n.notificationLogStatus === 'SENT' ? 'active' : 'pending'" [text]="n.notificationLogStatus"></app-badge>
+              </div>
+              <div><strong>Recipient:</strong> {{ n.notificationLogRecipient || 'Not assigned' }}</div>
+              <div *ngIf="n.notificationLogSentAt"><strong>Delivered:</strong> {{ n.notificationLogSentAt | date:'medium' }}</div>
+              <div *ngIf="n.notificationLogErrorMessage" style="color: var(--color-danger);"><strong>Error:</strong> {{ n.notificationLogErrorMessage }}</div>
+            </div>
+          </div>
         </div>
 
         <div modal-footer>
@@ -284,6 +298,8 @@ export class FDAccountsComponent implements OnInit {
 
   isDetailModalOpen = false;
   isWithdrawalModalOpen = false;
+  accountNotifications: any[] = [];
+  loadingNotifications = false;
   selectedAccount: FixedDepositAccountResponse | null = null;
 
   transferAccount = '';
@@ -423,6 +439,18 @@ export class FDAccountsComponent implements OnInit {
   viewDetails(account: FixedDepositAccountResponse): void {
     this.selectedAccount = account;
     this.isDetailModalOpen = true;
+    this.accountNotifications = [];
+    this.loadingNotifications = true;
+    this.fdAccountApi.getAccountNotifications(account.fdAccountNo).subscribe({
+      next: (logs) => {
+        this.loadingNotifications = false;
+        this.accountNotifications = logs || [];
+      },
+      error: () => {
+        this.loadingNotifications = false;
+        this.accountNotifications = [];
+      }
+    });
   }
 
   openWithdrawalModal(account: FixedDepositAccountResponse): void {

@@ -46,4 +46,9 @@ export class FDAccountApiService {
   public withdrawFD(request: FDWithdrawalRequest): Observable<FDWithdrawalResponse> {
     return this.http.post<FDWithdrawalResponse>(`${this.baseUrl}/withdraw`, request);
   }
+
+  public getAccountNotifications(fdAccountNo: string): Observable<any[]> {
+    return this.http.get<any[]>(`/api/fd/notifications/account/${encodeURIComponent(fdAccountNo)}`);
+  }
 }
+

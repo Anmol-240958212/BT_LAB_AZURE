@@ -18,9 +18,21 @@ import { TableColumn } from '../../../shared/components/table/table.component';
             <h1 class="card-title mt-1">Customer KYC Profile & Bank Accounts</h1>
             <p class="card-subtitle">Manage regulatory verification documents and active deposit accounts.</p>
           </div>
-          <div class="flex-col" style="align-items: flex-end;">
-            <span class="status-label">KYC Verification Status</span>
-            <app-badge [variant]="customerStatus === 'ACTIVE' ? 'active' : 'pending'" [text]="customerStatus"></app-badge>
+          <div class="flex-col" style="align-items: flex-end; gap: var(--space-2);">
+            <div style="display: flex; align-items: center; gap: var(--space-3);">
+              <span class="status-label">KYC Verification Status</span>
+              <app-badge [variant]="customerStatus === 'ACTIVE' ? 'active' : 'pending'" [text]="customerStatus"></app-badge>
+            </div>
+            <app-button
+              *ngIf="customerStatus === 'ACTIVE'"
+              variant="secondary"
+              size="sm"
+              [disabled]="syncingKafka"
+              (clicked)="syncKafka()"
+            >
+              <app-icon name="refresh-cw" [size]="12"></app-icon>
+              <span>{{ syncingKafka ? 'Syncing...' : 'Sync with FD (Kafka)' }}</span>
+            </app-button>
           </div>
         </div>
       </div>
@@ -326,4 +338,22 @@ export class CustomerProfileComponent implements OnInit {
       }
     });
   }
+
+  syncingKafka = false;
+
+  syncKafka(): void {
+    if (this.syncingKafka) return;
+    this.syncingKafka = true;
+    this.customerApi.syncCustomer().subscribe({
+      next: (res) => {
+        this.syncingKafka = false;
+        this.toastService.success(res?.message || 'Customer profile successfully published to Kafka topic for FD sync.', 'Kafka Event Dispatched');
+      },
+      error: (err) => {
+        this.syncingKafka = false;
+        this.toastService.error(err.error?.message || err.message || 'Failed to dispatch customer snapshot to Kafka', 'Sync Failed');
+      }
+    });
+  }
 }
+

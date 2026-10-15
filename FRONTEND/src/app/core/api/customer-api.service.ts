@@ -39,4 +39,9 @@ export class CustomerApiService {
   public getAccounts(): Observable<OpenAccountResponse[]> {
     return this.http.get<OpenAccountResponse[]>(`${this.baseUrl}/account`);
   }
+
+  public syncCustomer(): Observable<{ message: string }> {
+    return this.http.post<{ message: string }>(`${this.baseUrl}/sync`, {});
+  }
 }
+
