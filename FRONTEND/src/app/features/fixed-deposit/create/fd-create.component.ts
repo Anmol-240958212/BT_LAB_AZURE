@@ -202,7 +202,7 @@ export class FDCreateComponent implements OnInit {
   ngOnInit(): void {
     const q = this.route.snapshot.queryParams;
     const initialBranch = q['branchCode'] || '001';
-    const initialCust = q['customerId'] || '10';
+    const initialCust = q['customerId'] || '';
 
     this.fdForm = this.fb.group({
       customerId: [initialCust, Validators.required],
