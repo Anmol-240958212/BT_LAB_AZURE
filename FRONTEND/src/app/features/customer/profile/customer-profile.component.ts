@@ -1,11 +1,50 @@
-import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
+import { finalize } from 'rxjs/operators';
 import { CustomerApiService } from '../../../core/api/customer-api.service';
 import { UserApiService } from '../../../core/api/user-api.service';
 import { AuthService } from '../../../core/auth.service';
 import { OpenAccountResponse } from '../../../core/models/auth.models';
 import { ToastService } from '../../../shared/services/toast.service';
 import { TableColumn } from '../../../shared/components/table/table.component';
+import {
+  INDIAN_STATES,
+  StateInfo,
+  ID_RULES,
+  IdentificationType,
+  IdTypeRule,
+  formatIndianMobile,
+  isValidIndianMobile,
+  isValidIndianPin
+} from '../../../core/indian-format.utils';
+
+function idValidator(component: CustomerProfileComponent) {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const val = control.value;
+    if (!val || !val.toString().trim()) {
+      return { required: true };
+    }
+    const rule = component.currentIdRule;
+    if (rule && !rule.isValid(val)) {
+      return { invalidId: true, message: rule.errorMessage };
+    }
+    return null;
+  };
+}
+
+function pinValidator(control: AbstractControl): ValidationErrors | null {
+  const val = control.value;
+  if (!val || !val.toString().trim()) {
+    return { required: true };
+  }
+  return isValidIndianPin(val) ? null : { invalidPin: true };
+}
+
+function mobileValidator(control: AbstractControl): ValidationErrors | null {
+  const val = control.value;
+  if (!val || !val.toString().trim()) return null;
+  return isValidIndianMobile(val) ? null : { invalidMobile: true };
+}
 
 @Component({
   selector: 'app-customer-profile',
@@ -82,7 +121,12 @@ import { TableColumn } from '../../../shared/components/table/table.component';
             <div class="grid-2">
               <div class="form-group">
                 <label class="form-label" for="kyc-id-type">Identification Type *</label>
-                <select id="kyc-id-type" class="form-select" formControlName="identificationType">
+                <select
+                  id="kyc-id-type"
+                  class="form-select"
+                  formControlName="identificationType"
+                  (change)="onIdTypeChange()"
+                >
                   <option value="AADHAAR">Aadhaar Card</option>
                   <option value="PAN">PAN Card</option>
                   <option value="PASSPORT">Passport</option>
@@ -92,10 +136,12 @@ import { TableColumn } from '../../../shared/components/table/table.component';
               <app-input
                 id="kyc-id-number"
                 label="Identification Number"
-                placeholder="e.g. 5432-9876-1234"
+                [placeholder]="currentIdRule.placeholder"
+                [hint]="currentIdRule.hint"
                 formControlName="identificationNumber"
                 [required]="true"
-                hint="Masked in list views per L3"
+                [error]="idNumberError"
+                (input)="onIdNumberInput($event)"
               ></app-input>
             </div>
 
@@ -108,14 +154,55 @@ import { TableColumn } from '../../../shared/components/table/table.component';
             ></app-input>
 
             <div class="grid-3">
-              <app-input id="kyc-city" label="City" formControlName="city" [required]="true"></app-input>
-              <app-input id="kyc-state" label="State" formControlName="state" [required]="true"></app-input>
-              <app-input id="kyc-postal" label="Postal Code" formControlName="postalCode" [required]="true"></app-input>
+              <div class="form-group">
+                <label class="form-label" for="kyc-state">State *</label>
+                <select
+                  id="kyc-state"
+                  class="form-select"
+                  formControlName="state"
+                  (change)="onStateChange()"
+                >
+                  <option value="" disabled>Select State</option>
+                  <option *ngFor="let s of stateList" [value]="s.state">{{ s.state }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="kyc-city">City *</label>
+                <select
+                  id="kyc-city"
+                  class="form-select"
+                  formControlName="city"
+                  (change)="onCityChange()"
+                >
+                  <option value="" disabled>Select City</option>
+                  <option *ngFor="let c of availableCities" [value]="c.name">{{ c.name }}</option>
+                </select>
+              </div>
+              <app-input
+                id="kyc-postal"
+                label="Postal Code"
+                placeholder="e.g. 576104"
+                formControlName="postalCode"
+                [required]="true"
+                [error]="postalCodeError"
+                (input)="onPostalInput($event)"
+              ></app-input>
             </div>
 
             <div class="grid-2">
-              <app-input id="kyc-phone" label="Mobile Phone" formControlName="mobileNumber"></app-input>
-              <app-input id="kyc-email" label="Contact Email" formControlName="email"></app-input>
+              <app-input
+                id="kyc-phone"
+                label="Mobile Phone"
+                placeholder="+91 79829 23284"
+                formControlName="mobileNumber"
+                [error]="mobileNumberError"
+                (input)="onMobileInput($event)"
+              ></app-input>
+              <app-input
+                id="kyc-email"
+                label="Contact Email"
+                formControlName="email"
+              ></app-input>
             </div>
 
             <div class="mt-4">
@@ -219,6 +306,10 @@ export class CustomerProfileComponent implements OnInit {
   savingKyc = false;
   openingAccount = false;
   loadingAccounts = false;
+  syncingKafka = false;
+
+  readonly stateList: StateInfo[] = INDIAN_STATES;
+  availableCities: { name: string; pin: string }[] = [];
 
   readonly accountColumns: TableColumn[] = [
     { field: 'accountNumber', header: 'Account No.', type: 'mask-account' },
@@ -235,12 +326,51 @@ export class CustomerProfileComponent implements OnInit {
     private readonly customerApi: CustomerApiService,
     private readonly userApi: UserApiService,
     private readonly authService: AuthService,
-    private readonly toastService: ToastService
+    private readonly toastService: ToastService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
+
+  get currentIdRule(): IdTypeRule {
+    const type = (this.kycForm?.get('identificationType')?.value as IdentificationType) || 'AADHAAR';
+    return ID_RULES[type] || ID_RULES['AADHAAR'];
+  }
+
+  get idNumberError(): string | null {
+    const ctrl = this.kycForm?.get('identificationNumber');
+    if (ctrl?.touched && ctrl.errors) {
+      if (ctrl.errors['required']) return 'Identification Number is required';
+      if (ctrl.errors['invalidId']) return this.currentIdRule.errorMessage;
+    }
+    return null;
+  }
+
+  get postalCodeError(): string | null {
+    const ctrl = this.kycForm?.get('postalCode');
+    if (ctrl?.touched && ctrl.errors) {
+      if (ctrl.errors['required']) return 'Postal Code is required';
+      if (ctrl.errors['invalidPin']) return 'Must be a valid 6-digit Indian PIN code (e.g. 576104)';
+    }
+    return null;
+  }
+
+  get mobileNumberError(): string | null {
+    const ctrl = this.kycForm?.get('mobileNumber');
+    if (ctrl?.touched && ctrl.errors) {
+      if (ctrl.errors['invalidMobile']) {
+        return 'Please enter a valid 10-digit Indian mobile number (e.g. +91 79829 23284)';
+      }
+    }
+    return null;
+  }
 
   ngOnInit(): void {
     const currentUsername = this.authService.getUsername() || '';
     const initialEmail = currentUsername.includes('@') ? currentUsername : '';
+
+    // Initialize Karnataka as default state
+    const defaultState = this.stateList[0];
+    this.availableCities = [...defaultState.cities];
+    const defaultCity = defaultState.cities[0];
 
     this.kycForm = this.fb.group({
       firstName: ['', Validators.required],
@@ -248,13 +378,13 @@ export class CustomerProfileComponent implements OnInit {
       dateOfBirth: ['', Validators.required],
       gender: ['MALE', Validators.required],
       identificationType: ['AADHAAR', Validators.required],
-      identificationNumber: ['', Validators.required],
+      identificationNumber: ['', [idValidator(this)]],
       addressLine1: ['', Validators.required],
-      city: ['', Validators.required],
-      state: ['', Validators.required],
+      state: [defaultState.state, Validators.required],
+      city: [defaultCity.name, Validators.required],
       country: ['India'],
-      postalCode: ['', Validators.required],
-      mobileNumber: [''],
+      postalCode: [defaultCity.pin, [pinValidator]],
+      mobileNumber: ['', [mobileValidator]],
       email: [initialEmail]
     });
 
@@ -267,10 +397,79 @@ export class CustomerProfileComponent implements OnInit {
     this.loadAccounts();
   }
 
+  onIdTypeChange(): void {
+    const rule = this.currentIdRule;
+    const ctrl = this.kycForm.get('identificationNumber');
+    if (ctrl && ctrl.value) {
+      const formatted = rule.format(ctrl.value);
+      ctrl.setValue(formatted);
+    }
+    ctrl?.updateValueAndValidity();
+    this.cdr.detectChanges();
+  }
+
+  onIdNumberInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input) return;
+    const rule = this.currentIdRule;
+    const formatted = rule.format(input.value);
+    input.value = formatted;
+    this.kycForm.get('identificationNumber')?.setValue(formatted);
+  }
+
+  onMobileInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input) return;
+    const formatted = formatIndianMobile(input.value);
+    input.value = formatted;
+    this.kycForm.get('mobileNumber')?.setValue(formatted);
+  }
+
+  onPostalInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input) return;
+    const digits = input.value.replace(/\D/g, '').substring(0, 6);
+    input.value = digits;
+    this.kycForm.get('postalCode')?.setValue(digits);
+  }
+
+  onStateChange(): void {
+    const selectedStateName = this.kycForm.get('state')?.value;
+    const stateObj = this.stateList.find(s => s.state.toLowerCase() === (selectedStateName || '').toLowerCase());
+    if (stateObj) {
+      this.availableCities = stateObj.cities;
+      const defaultCity = stateObj.cities[0];
+      this.kycForm.patchValue({
+        state: stateObj.state,
+        city: defaultCity ? defaultCity.name : '',
+        postalCode: defaultCity ? defaultCity.pin : stateObj.defaultPin
+      });
+    }
+    this.kycForm.get('city')?.updateValueAndValidity();
+    this.kycForm.get('postalCode')?.updateValueAndValidity();
+    this.cdr.detectChanges();
+  }
+
+  onCityChange(): void {
+    const selectedCityName = this.kycForm.get('city')?.value;
+    const cityObj = this.availableCities.find(c => c.name.toLowerCase() === (selectedCityName || '').toLowerCase());
+    if (cityObj) {
+      this.kycForm.patchValue({
+        city: cityObj.name,
+        postalCode: cityObj.pin
+      });
+    }
+    this.kycForm.get('postalCode')?.updateValueAndValidity();
+    this.cdr.detectChanges();
+  }
+
   loadProfile(): void {
     this.customerApi.getCustomerStatus().subscribe({
       next: (res) => {
-        if (res?.status) this.customerStatus = res.status;
+        if (res?.status) {
+          this.customerStatus = res.status;
+          this.cdr.detectChanges();
+        }
       },
       error: () => {}
     });
@@ -286,17 +485,44 @@ export class CustomerProfileComponent implements OnInit {
           if (user.lastName) updates['lastName'] = user.lastName;
           if (user.dateOfBirth) updates['dateOfBirth'] = user.dateOfBirth;
           if (user.gender) updates['gender'] = user.gender;
-          if (user.identificationType) updates['identificationType'] = user.identificationType;
-          if (user.identificationNumber) updates['identificationNumber'] = user.identificationNumber;
+
+          // Identification
+          const idType = (user.identificationType as IdentificationType) || 'AADHAAR';
+          updates['identificationType'] = idType;
+          if (user.identificationNumber) {
+            const rule = ID_RULES[idType] || ID_RULES['AADHAAR'];
+            updates['identificationNumber'] = rule.format(user.identificationNumber);
+          }
+
           if (user.addressLine1) updates['addressLine1'] = user.addressLine1;
-          if (user.city) updates['city'] = user.city;
-          if (user.state) updates['state'] = user.state;
-          if (user.country) updates['country'] = user.country;
-          if (user.postalCode) updates['postalCode'] = user.postalCode;
-          if (user.phoneNumber) updates['mobileNumber'] = user.phoneNumber;
+
+          // State and City resolution
+          const stateStr = user.state || 'Karnataka';
+          const matchedState = this.stateList.find(s => s.state.toLowerCase() === stateStr.toLowerCase()) || this.stateList[0];
+          updates['state'] = matchedState.state;
+          this.availableCities = [...matchedState.cities];
+
+          const cityStr = user.city || (this.availableCities[0] ? this.availableCities[0].name : '');
+          const matchedCity = this.availableCities.find(c => c.name.toLowerCase() === cityStr.toLowerCase());
+          if (matchedCity) {
+            updates['city'] = matchedCity.name;
+          } else if (cityStr) {
+            const customPin = user.postalCode || matchedState.defaultPin;
+            this.availableCities.unshift({ name: cityStr, pin: customPin });
+            updates['city'] = cityStr;
+          }
+
+          // Postal Code autodetected from city or state
+          updates['postalCode'] = user.postalCode || (matchedCity ? matchedCity.pin : matchedState.defaultPin);
+
+          // Mobile Number formatted to Indian standard
+          if (user.phoneNumber) {
+            updates['mobileNumber'] = formatIndianMobile(user.phoneNumber);
+          }
           if (user.email) updates['email'] = user.email;
 
           this.kycForm.patchValue(updates);
+          this.cdr.detectChanges();
         }
       },
       error: () => {}
@@ -309,64 +535,90 @@ export class CustomerProfileComponent implements OnInit {
       next: (data) => {
         this.loadingAccounts = false;
         this.accounts = Array.isArray(data) ? data : [];
+        this.cdr.detectChanges();
       },
       error: () => {
         this.loadingAccounts = false;
         this.accounts = [];
+        this.cdr.detectChanges();
       }
     });
   }
 
   submitKyc(): void {
-    if (this.kycForm.invalid || this.savingKyc) return;
+    if (this.kycForm.invalid || this.savingKyc) {
+      this.kycForm.markAllAsTouched();
+      this.cdr.detectChanges();
+      return;
+    }
 
     this.savingKyc = true;
-    this.customerApi.submitProfile(this.kycForm.value).subscribe({
-      next: (res) => {
+    this.cdr.detectChanges();
+
+    this.customerApi.submitProfile(this.kycForm.value).pipe(
+      finalize(() => {
         this.savingKyc = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
+      next: (res) => {
         this.customerStatus = res.status || 'ACTIVE';
         this.toastService.success(res.message || 'KYC Profile successfully updated.', 'Profile Saved');
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        this.savingKyc = false;
         const msg = err.error?.detail || err.error?.message || err.message || 'Failed to submit KYC profile';
         this.toastService.error(msg, 'Submission Error');
+        this.cdr.detectChanges();
       }
     });
   }
 
   openAccount(): void {
-    if (this.accountForm.invalid || this.openingAccount) return;
+    if (this.accountForm.invalid || this.openingAccount) {
+      this.accountForm.markAllAsTouched();
+      return;
+    }
 
     this.openingAccount = true;
+    this.cdr.detectChanges();
     const { productId, branchId } = this.accountForm.value;
 
-    this.customerApi.openAccount({ productId: Number(productId), branchId: Number(branchId) }).subscribe({
-      next: (res) => {
+    this.customerApi.openAccount({ productId: Number(productId), branchId: Number(branchId) }).pipe(
+      finalize(() => {
         this.openingAccount = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
+      next: (res) => {
         this.toastService.success(`Account ${res.accountNumber} opened successfully!`, 'Account Created');
         this.accounts = [res, ...this.accounts];
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        this.openingAccount = false;
         this.toastService.error(err.message || 'Account creation request failed', 'Error');
+        this.cdr.detectChanges();
       }
     });
   }
 
-  syncingKafka = false;
-
   syncKafka(): void {
     if (this.syncingKafka) return;
     this.syncingKafka = true;
-    this.customerApi.syncCustomer().subscribe({
-      next: (res) => {
+    this.cdr.detectChanges();
+    this.customerApi.syncCustomer().pipe(
+      finalize(() => {
         this.syncingKafka = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
+      next: (res) => {
         this.toastService.success(res?.message || 'Customer profile successfully published to Kafka topic for FD sync.', 'Kafka Event Dispatched');
+        this.cdr.detectChanges();
       },
       error: (err) => {
-        this.syncingKafka = false;
         this.toastService.error(err.error?.message || err.message || 'Failed to dispatch customer snapshot to Kafka', 'Sync Failed');
+        this.cdr.detectChanges();
       }
     });
   }

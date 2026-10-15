@@ -58,6 +58,24 @@ public class AuthController {
         return ResponseEntity.ok(message);
     }
 
+    @GetMapping("/check-username")
+    @Operation(summary = "Check if username already exists in the database",
+               description = "Checks whether the given username is already registered in the system.")
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Username availability checked successfully.")
+    })
+    public ResponseEntity<java.util.Map<String, Object>> checkUsername(
+            @RequestParam String username) {
+
+        boolean exists = authService.checkUsernameExists(username);
+
+        return ResponseEntity.ok(java.util.Map.of(
+                "username", username != null ? username.trim() : "",
+                "exists", exists,
+                "available", !exists
+        ));
+    }
+
     @PostMapping("/verify-otp")
     @Operation(summary = "Verify OTP and complete registration",
                description = "Verifies the one-time password sent during registration and completes the registration process.")

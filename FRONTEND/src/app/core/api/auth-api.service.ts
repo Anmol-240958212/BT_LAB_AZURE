@@ -55,6 +55,11 @@ export class AuthApiService {
     return this.http.get<{ otp: string; identifier: string }>(`${this.baseUrl}/latest-otp${params}`);
   }
 
+  public checkUsername(username: string): Observable<{ username: string; exists: boolean; available: boolean }> {
+    const params = `?username=${encodeURIComponent(username)}`;
+    return this.http.get<{ username: string; exists: boolean; available: boolean }>(`${this.baseUrl}/check-username${params}`);
+  }
+
   public logout(): Observable<string> {
     return this.http.post(`${this.baseUrl}/logout`, {}, { responseType: 'text' });
   }

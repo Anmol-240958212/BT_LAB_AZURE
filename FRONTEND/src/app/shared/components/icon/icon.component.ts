@@ -211,6 +211,18 @@ import { Component, Input } from '@angular/core';
         <path d="M16 21h5v-5" />
       </ng-container>
 
+      <!-- Arrow Left -->
+      <ng-container *ngSwitchCase="'arrow-left'">
+        <path d="m12 19-7-7 7-7" />
+        <path d="M19 12H5" />
+      </ng-container>
+
+      <!-- Home -->
+      <ng-container *ngSwitchCase="'home'">
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <polyline points="9 22 9 12 15 12 15 22" />
+      </ng-container>
+
       <!-- Arrow Right -->
       <ng-container *ngSwitchCase="'arrow-right'">
         <path d="M5 12h14" />
@@ -443,6 +455,16 @@ export class AppIconComponent {
       case 'refresh':
       case 'reload':
         return 'refresh';
+      case 'arrow-left':
+      case 'back':
+      case 'prev':
+      case '←':
+        return 'arrow-left';
+      case 'home':
+      case 'house':
+      case 'homepage':
+      case '🏠':
+        return 'home';
       case 'arrow-right':
         return 'arrow-right';
       case 'arrow-up-right':

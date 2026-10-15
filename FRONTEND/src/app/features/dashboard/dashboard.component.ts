@@ -315,15 +315,27 @@ export class DashboardComponent implements OnInit {
       this.authState = state;
       this.currentRole = state.role;
       if (this.currentRole === 'CUSTOMER') {
+        if (!this.isDemoUser()) {
+          // Real customer: initialize empty
+          this.recentAccounts = [];
+          this.recalculateStats();
+        }
         this.userApi.getMe().subscribe({
           next: (profile) => {
             if (profile && profile.customerId) {
               this.userCustomerId = String(profile.customerId);
-              this.filterAccountsForCustomer();
+              this.loadAccounts();
+            } else {
+              this.loadingAccounts = false;
+              this.recentAccounts = [];
               this.recalculateStats();
             }
           },
-          error: () => {}
+          error: () => {
+            this.loadingAccounts = false;
+            this.recentAccounts = [];
+            this.recalculateStats();
+          }
         });
       }
       this.filterAccountsForCustomer();
@@ -334,6 +346,29 @@ export class DashboardComponent implements OnInit {
   }
 
   loadAccounts(isManualRefresh = false): void {
+    if (this.currentRole === 'CUSTOMER' && !this.isDemoUser()) {
+      if (!this.userCustomerId) return;
+      this.loadingAccounts = true;
+      this.fdAccountApi.getAccountsByCustomer(this.userCustomerId).pipe(
+        timeout(3500),
+        catchError(() => of([]))
+      ).subscribe({
+        next: (data) => {
+          this.loadingAccounts = false;
+          this.allLoadedAccounts = data || [];
+          this.filterAccountsForCustomer();
+          this.recalculateStats();
+        },
+        error: () => {
+          this.loadingAccounts = false;
+          this.allLoadedAccounts = [];
+          this.recentAccounts = [];
+          this.recalculateStats();
+        }
+      });
+      return;
+    }
+
     if (isManualRefresh || this.recentAccounts.length === 0) {
       this.loadingAccounts = true;
     }
@@ -365,13 +400,20 @@ export class DashboardComponent implements OnInit {
 
   private filterAccountsForCustomer(): void {
     if (this.currentRole === 'CUSTOMER') {
-      if (this.userCustomerId) {
-        const id = this.userCustomerId.trim().toLowerCase();
-        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId.toLowerCase().trim() === id);
-      } else if (this.isDemoUser()) {
-        this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId === '9' || a.customerId.includes('1001'));
+      if (!this.isDemoUser()) {
+        if (this.userCustomerId) {
+          const id = this.userCustomerId.trim().toLowerCase();
+          this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
+        } else {
+          this.recentAccounts = [];
+        }
       } else {
-        this.recentAccounts = [];
+        if (this.userCustomerId) {
+          const id = this.userCustomerId.trim().toLowerCase();
+          this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
+        } else {
+          this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId && (a.customerId === '9' || a.customerId.includes('1001')));
+        }
       }
     } else {
       this.recentAccounts = [...this.allLoadedAccounts];

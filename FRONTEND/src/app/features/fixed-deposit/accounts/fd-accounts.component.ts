@@ -312,7 +312,7 @@ export class FDAccountsComponent implements OnInit {
   processingWithdrawal = false;
   withdrawalResult: FDWithdrawalResponse | null = null;
 
-  allAccounts: FixedDepositAccountResponse[] = [
+  readonly mockAccounts: FixedDepositAccountResponse[] = [
     {
       fdAccountNo: 'FD-100293847',
       customerId: 'CUST-1001',
@@ -376,6 +376,7 @@ export class FDAccountsComponent implements OnInit {
     }
   ];
 
+  allAccounts: FixedDepositAccountResponse[] = [];
   filteredAccounts: FixedDepositAccountResponse[] = [];
 
   readonly columns: TableColumn[] = [
@@ -401,19 +402,39 @@ export class FDAccountsComponent implements OnInit {
   ngOnInit(): void {
     const role = this.authService.getRole();
     if (role === 'CUSTOMER') {
-      this.userApi.getMe().subscribe({
-        next: (profile) => {
-          if (profile && profile.customerId) {
-            this.userCustomerId = String(profile.customerId);
-            this.applyFilters();
+      if (this.isDemoUser()) {
+        this.allAccounts = [...this.mockAccounts];
+        this.applyFilters();
+        this.loadAccounts();
+      } else {
+        // Real customer account: start clean, enforce business logic
+        this.allAccounts = [];
+        this.filteredAccounts = [];
+        this.loading = true;
+        this.userApi.getMe().subscribe({
+          next: (profile) => {
+            if (profile && profile.customerId) {
+              this.userCustomerId = String(profile.customerId);
+              this.fetchCustomerAccounts();
+            } else {
+              this.loading = false;
+              this.allAccounts = [];
+              this.filteredAccounts = [];
+            }
+          },
+          error: () => {
+            this.loading = false;
+            this.allAccounts = [];
+            this.filteredAccounts = [];
           }
-        },
-        error: () => {}
-      });
+        });
+      }
+    } else {
+      // Bank Officer / Admin
+      this.allAccounts = [...this.mockAccounts];
+      this.filteredAccounts = [...this.allAccounts];
+      this.loadAccounts();
     }
-
-    this.filteredAccounts = [...this.allAccounts];
-    this.loadAccounts();
   }
 
   get canCreate(): boolean {
@@ -422,6 +443,67 @@ export class FDAccountsComponent implements OnInit {
   }
 
   loadAccounts(isManualRefresh = false): void {
+    const role = this.authService.getRole();
+
+    if (role === 'CUSTOMER') {
+      if (this.isDemoUser()) {
+        if (isManualRefresh || this.allAccounts.length === 0) {
+          this.loading = true;
+        }
+        const fetch$ = this.selectedStatus === 'ALL'
+          ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
+          : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
+
+        fetch$.pipe(
+          timeout(2500),
+          catchError(() => of([]))
+        ).subscribe({
+          next: (data) => {
+            this.loading = false;
+            if (data && data.length > 0) {
+              this.allAccounts = data;
+            } else {
+              this.allAccounts = [...this.mockAccounts];
+            }
+            this.applyFilters();
+          },
+          error: () => {
+            this.loading = false;
+            this.allAccounts = [...this.mockAccounts];
+            this.applyFilters();
+          }
+        });
+        return;
+      }
+
+      // Real customer account
+      if (!this.userCustomerId) {
+        this.loading = true;
+        this.userApi.getMe().subscribe({
+          next: (profile) => {
+            if (profile && profile.customerId) {
+              this.userCustomerId = String(profile.customerId);
+              this.fetchCustomerAccounts(isManualRefresh);
+            } else {
+              this.loading = false;
+              this.allAccounts = [];
+              this.filteredAccounts = [];
+            }
+          },
+          error: () => {
+            this.loading = false;
+            this.allAccounts = [];
+            this.filteredAccounts = [];
+          }
+        });
+        return;
+      }
+
+      this.fetchCustomerAccounts(isManualRefresh);
+      return;
+    }
+
+    // Bank Officer or Admin
     if (isManualRefresh || this.allAccounts.length === 0) {
       this.loading = true;
     }
@@ -437,12 +519,48 @@ export class FDAccountsComponent implements OnInit {
         this.loading = false;
         if (data && data.length > 0) {
           this.allAccounts = data;
+        } else if (this.allAccounts.length === 0) {
+          this.allAccounts = [...this.mockAccounts];
         }
         this.applyFilters();
       },
       error: () => {
         this.loading = false;
+        if (this.allAccounts.length === 0) {
+          this.allAccounts = [...this.mockAccounts];
+        }
         this.applyFilters();
+      }
+    });
+  }
+
+  private fetchCustomerAccounts(isManualRefresh = false): void {
+    if (!this.userCustomerId) {
+      this.loading = false;
+      this.allAccounts = [];
+      this.filteredAccounts = [];
+      return;
+    }
+    this.loading = true;
+
+    const fetch$ = this.selectedStatus === 'ALL'
+      ? this.fdAccountApi.getAccountsByCustomer(this.userCustomerId)
+      : this.fdAccountApi.getCustomerAccountsByStatus(this.userCustomerId, this.selectedStatus);
+
+    fetch$.pipe(
+      timeout(3500),
+      catchError(() => of([]))
+    ).subscribe({
+      next: (data) => {
+        this.loading = false;
+        // Strictly use real customer data. Fresh accounts with no accounts remain empty!
+        this.allAccounts = data || [];
+        this.applyFilters();
+      },
+      error: () => {
+        this.loading = false;
+        this.allAccounts = [];
+        this.filteredAccounts = [];
       }
     });
   }
@@ -457,21 +575,30 @@ export class FDAccountsComponent implements OnInit {
 
     const role = this.authService.getRole();
     if (role === 'CUSTOMER') {
-      if (this.userCustomerId) {
-        const q = this.userCustomerId.trim().toLowerCase();
-        list = list.filter(a => a.customerId.toLowerCase().trim() === q);
-      } else if (this.isDemoUser()) {
-        list = list.filter(a => a.customerId.includes('9') || a.customerId.toLowerCase().includes('1001'));
+      if (!this.isDemoUser()) {
+        // Real customer: strictly filter by their customer ID, NO mock data ever
+        if (this.userCustomerId) {
+          const q = this.userCustomerId.trim().toLowerCase();
+          list = list.filter(a => a.customerId && a.customerId.toLowerCase().trim() === q);
+        } else {
+          list = [];
+        }
       } else {
-        list = [];
+        // Demo user
+        if (this.userCustomerId) {
+          const q = this.userCustomerId.trim().toLowerCase();
+          list = list.filter(a => a.customerId && a.customerId.toLowerCase().trim() === q);
+        } else {
+          list = list.filter(a => a.customerId && (a.customerId.includes('9') || a.customerId.toLowerCase().includes('1001')));
+        }
       }
     } else if (this.customerFilter.trim()) {
       const q = this.customerFilter.trim().toLowerCase();
-      list = list.filter(a => a.customerId.toLowerCase().includes(q));
+      list = list.filter(a => a.customerId && a.customerId.toLowerCase().includes(q));
     }
 
     if (this.selectedStatus !== 'ALL') {
-      list = list.filter(a => a.status.toUpperCase() === this.selectedStatus.toUpperCase());
+      list = list.filter(a => a.status && a.status.toUpperCase() === this.selectedStatus.toUpperCase());
     }
 
     this.filteredAccounts = list;

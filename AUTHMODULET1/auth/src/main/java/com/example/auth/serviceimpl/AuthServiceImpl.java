@@ -779,4 +779,16 @@ public class AuthServiceImpl implements AuthService {
 
                 return false;
         }
+
+        @Override
+        @Transactional(readOnly = true)
+        public boolean checkUsernameExists(String username) {
+                if (username == null || username.trim().isBlank()) {
+                        return false;
+                }
+                String trimmed = username.trim();
+                return authUsrRepository.existsByUsername(trimmed)
+                                || authUsrRepository.existsByUsername(trimmed.toLowerCase())
+                                || authUsrRepository.existsByEmail(trimmed);
+        }
 }

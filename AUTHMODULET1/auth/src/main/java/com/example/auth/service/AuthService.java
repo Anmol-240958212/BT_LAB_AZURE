@@ -33,4 +33,6 @@ public interface AuthService {
     UserResponseDto updateUserProfile(String username, UserUpdateRequestDto request);
 
     EmployeeResponseDto createEmployee(String callerUsername, CreateEmployeeRequestDto request);
+
+    boolean checkUsernameExists(String username);
 }

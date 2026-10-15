@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { finalize, timeout } from 'rxjs/operators';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { formatIndianMobile, isValidIndianMobile } from '../../../core/indian-format.utils';
 
 function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
   const password = control.get('password');
@@ -12,6 +13,12 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
     return { passwordMismatch: true };
   }
   return null;
+}
+
+function indianPhoneValidator(control: AbstractControl): ValidationErrors | null {
+  const val = control.value;
+  if (!val || !val.toString().trim()) return null;
+  return isValidIndianMobile(val) ? null : { invalidIndianMobile: true };
 }
 
 @Component({
@@ -55,8 +62,10 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
         <app-input
           id="reg-phone"
           label="Phone Number (Optional)"
-          placeholder="+91 9876543210"
+          placeholder="+91 79829 23284"
           formControlName="phoneNumber"
+          [error]="phoneError"
+          (input)="onPhoneInput($event)"
         ></app-input>
 
         <app-input
@@ -238,12 +247,30 @@ export class RegisterComponent implements OnInit {
       {
         username: ['', [Validators.required, Validators.minLength(3)]],
         email: ['', [Validators.required, Validators.email]],
-        phoneNumber: [''],
+        phoneNumber: ['', [indianPhoneValidator]],
         password: ['', [Validators.required, Validators.minLength(6)]],
         confirmPassword: ['', [Validators.required]]
       },
       { validators: passwordMatchValidator }
     );
+  }
+
+  onPhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!input) return;
+    const formatted = formatIndianMobile(input.value);
+    input.value = formatted;
+    this.registerForm.get('phoneNumber')?.setValue(formatted);
+  }
+
+  get phoneError(): string | null {
+    const ctrl = this.registerForm.get('phoneNumber');
+    if (ctrl?.touched && ctrl.errors) {
+      if (ctrl.errors['invalidIndianMobile']) {
+        return 'Please enter a valid 10-digit Indian mobile number (e.g. +91 79829 23284)';
+      }
+    }
+    return null;
   }
 
   get usernameError(): string | null {

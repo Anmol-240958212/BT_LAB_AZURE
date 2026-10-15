@@ -54,6 +54,9 @@ public class SecurityConfig {
                         // latest otp for presentation/testing simulation
                         .requestMatchers("/auth/latest-otp").permitAll()
 
+                        // Check username availability
+                        .requestMatchers("/auth/check-username").permitAll()
+
                         // Everything else requires JWT
                         .anyRequest().authenticated())
 

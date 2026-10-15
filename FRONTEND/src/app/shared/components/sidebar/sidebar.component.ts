@@ -98,11 +98,6 @@ export interface NavItem {
             </button>
           </div>
         </div>
-
-        <div class="role-card">
-          <span class="role-caption">LOGGED IN ROLE</span>
-          <span class="role-pill">{{ currentRole || 'GUEST' }}</span>
-        </div>
       </div>
     </aside>
   `,
@@ -331,26 +326,6 @@ export interface NavItem {
     .opt-check {
       color: var(--color-accent);
       flex-shrink: 0;
-    }
-    .role-card {
-      background-color: var(--color-bg-elevated);
-      border: 1px solid var(--color-border-subtle);
-      border-radius: var(--radius-input);
-      padding: var(--space-2) var(--space-3);
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-    .role-caption {
-      font-size: 9px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      color: var(--color-text-muted);
-    }
-    .role-pill {
-      font-size: var(--text-xs);
-      font-weight: 600;
-      color: var(--color-accent);
     }
   `]
 })
