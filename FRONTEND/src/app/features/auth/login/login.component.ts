@@ -103,30 +103,32 @@ function generateDemoJwt(username: string, role: UserRole): string {
       flex-direction: column;
     }
     .login-header {
-      margin-bottom: var(--space-5);
+      margin-bottom: 8px;
     }
     .title {
-      font-size: var(--text-lg);
+      font-size: 16px;
       font-weight: 600;
       color: var(--color-text-primary);
+      line-height: 1.2;
     }
     .subtitle {
-      font-size: var(--text-sm);
+      font-size: 11px;
       color: var(--color-text-secondary);
-      margin-top: 4px;
+      margin-top: 2px;
+      line-height: 1.3;
     }
     .login-form {
       display: flex;
       flex-direction: column;
-      gap: var(--space-3);
+      gap: 8px;
     }
     .form-aux-row {
       display: flex;
       justify-content: flex-end;
-      margin-bottom: var(--space-2);
+      margin-bottom: 2px;
     }
     .forgot-link {
-      font-size: var(--text-xs);
+      font-size: 11px;
       color: var(--color-text-secondary);
       transition: color var(--transition-fast);
     }
@@ -134,8 +136,8 @@ function generateDemoJwt(username: string, role: UserRole): string {
       color: var(--color-accent);
     }
     .demo-profiles-bar {
-      margin-top: var(--space-5);
-      padding: 6px 12px;
+      margin-top: 10px;
+      padding: 5px 10px;
       background-color: var(--color-bg-base);
       border: 1px solid var(--color-border-subtle);
       border-radius: var(--radius-button);

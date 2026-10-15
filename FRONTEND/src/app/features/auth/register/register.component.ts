@@ -1,7 +1,8 @@
-import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { finalize, timeout } from 'rxjs/operators';
+import { Subscription, of } from 'rxjs';
+import { debounceTime, distinctUntilChanged, switchMap, catchError, finalize, timeout } from 'rxjs/operators';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
 import { formatIndianMobile, isValidIndianMobile } from '../../../core/indian-format.utils';
@@ -47,6 +48,7 @@ function indianPhoneValidator(control: AbstractControl): ValidationErrors | null
           formControlName="username"
           [required]="true"
           [error]="usernameError"
+          [hint]="usernameHint"
         ></app-input>
 
         <app-input
@@ -156,31 +158,33 @@ function indianPhoneValidator(control: AbstractControl): ValidationErrors | null
       flex-direction: column;
     }
     .register-header {
-      margin-bottom: var(--space-5);
+      margin-bottom: 8px;
     }
     .title {
-      font-size: var(--text-lg);
+      font-size: 16px;
       font-weight: 600;
       color: var(--color-text-primary);
+      line-height: 1.2;
     }
     .subtitle {
-      font-size: var(--text-sm);
+      font-size: 11px;
       color: var(--color-text-secondary);
-      margin-top: 4px;
+      margin-top: 2px;
+      line-height: 1.3;
     }
     .register-form {
       display: flex;
       flex-direction: column;
-      gap: var(--space-3);
+      gap: 6px;
     }
     .sim-otp-banner {
       background-color: var(--color-bg-base);
       border: 1px solid var(--color-border-focus);
       border-radius: var(--radius-card);
-      padding: var(--space-3);
+      padding: var(--space-2);
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      gap: 2px;
     }
     .sim-otp-header {
       display: flex;
@@ -191,7 +195,7 @@ function indianPhoneValidator(control: AbstractControl): ValidationErrors | null
       font-size: 9px;
       font-weight: 700;
       letter-spacing: 0.08em;
-      padding: 2px 6px;
+      padding: 1px 5px;
       background-color: var(--color-accent-subtle);
       color: var(--color-accent);
       border-radius: 4px;
@@ -201,7 +205,7 @@ function indianPhoneValidator(control: AbstractControl): ValidationErrors | null
       color: var(--color-text-primary);
     }
     .sim-hint {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--color-text-muted);
     }
     .error-banner {
@@ -209,30 +213,37 @@ function indianPhoneValidator(control: AbstractControl): ValidationErrors | null
       border: 1px solid var(--color-danger, #ef4444);
       color: var(--color-danger, #fca5a5);
       border-radius: var(--radius-card);
-      padding: var(--space-3);
-      font-size: var(--text-xs);
+      padding: 6px 10px;
+      font-size: 11px;
       display: flex;
       align-items: center;
-      gap: var(--space-2);
+      gap: 6px;
     }
     .auth-switch-link {
-      margin-top: var(--space-6);
+      margin-top: 8px;
       text-align: center;
-      font-size: var(--text-xs);
+      font-size: 11px;
       color: var(--color-text-secondary);
       display: flex;
       justify-content: center;
-      gap: var(--space-2);
+      gap: 6px;
     }
   `]
 })
-export class RegisterComponent implements OnInit {
+export class RegisterComponent implements OnInit, OnDestroy {
   registerForm!: FormGroup;
   loading = false;
   otpStep = false;
   otpCode = '';
   simulatedOtp = '';
   errorMessage = '';
+
+  // 5-second pause check state
+  checkingUsername = false;
+  usernameExists: boolean | null = null;
+  checkedUsername = '';
+  private usernameSub?: Subscription;
+  private usernameKeySub?: Subscription;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -253,6 +264,63 @@ export class RegisterComponent implements OnInit {
       },
       { validators: passwordMatchValidator }
     );
+
+    const usernameCtrl = this.registerForm.get('username');
+
+    // Immediately clear previous check / error state whenever user presses a new key
+    this.usernameKeySub = usernameCtrl?.valueChanges.subscribe(() => {
+      this.usernameExists = null;
+      if (usernameCtrl.errors?.['usernameTaken']) {
+        const { usernameTaken, ...rest } = usernameCtrl.errors;
+        usernameCtrl.setErrors(Object.keys(rest).length ? rest : null);
+      }
+      this.cdr.detectChanges();
+    });
+
+    // 5-second pause check (debounceTime: 5000ms) triggered when string is changed
+    this.usernameSub = usernameCtrl?.valueChanges
+      .pipe(
+        debounceTime(5000),
+        distinctUntilChanged(),
+        switchMap((rawVal) => {
+          const val = (rawVal || '').trim();
+          if (!val || val.length < 3) {
+            this.checkingUsername = false;
+            this.usernameExists = null;
+            this.cdr.detectChanges();
+            return of(null);
+          }
+          this.checkingUsername = true;
+          this.checkedUsername = val;
+          this.cdr.detectChanges();
+          return this.authApi.checkUsername(val).pipe(
+            timeout(6000),
+            catchError(() => of({ username: val, exists: false, available: true }))
+          );
+        })
+      )
+      .subscribe((res) => {
+        this.checkingUsername = false;
+        if (!res) {
+          this.usernameExists = null;
+        } else {
+          this.usernameExists = res.exists;
+          if (res.exists) {
+            usernameCtrl?.setErrors({ ...(usernameCtrl.errors || {}), usernameTaken: true });
+          } else {
+            if (usernameCtrl?.errors?.['usernameTaken']) {
+              const { usernameTaken, ...rest } = usernameCtrl.errors;
+              usernameCtrl.setErrors(Object.keys(rest).length ? rest : null);
+            }
+          }
+        }
+        this.cdr.detectChanges();
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.usernameSub?.unsubscribe();
+    this.usernameKeySub?.unsubscribe();
   }
 
   onPhoneInput(event: Event): void {
@@ -273,8 +341,21 @@ export class RegisterComponent implements OnInit {
     return null;
   }
 
+  get usernameHint(): string | null {
+    if (this.checkingUsername) {
+      return 'Checking username in database...';
+    }
+    if (this.usernameExists === false && !this.usernameError) {
+      return '✓ Username is available';
+    }
+    return null;
+  }
+
   get usernameError(): string | null {
     const ctrl = this.registerForm.get('username');
+    if (ctrl?.errors?.['usernameTaken']) {
+      return `Username "${this.checkedUsername}" already exists in the database. Please choose another.`;
+    }
     if (ctrl?.touched && ctrl.errors) {
       if (ctrl.errors['required']) return 'Username is required';
       if (ctrl.errors['minlength']) return 'Username must be at least 3 characters';

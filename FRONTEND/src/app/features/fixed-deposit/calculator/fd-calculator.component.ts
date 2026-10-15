@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
+import { of } from 'rxjs';
+import { timeout, catchError, finalize } from 'rxjs/operators';
 import { FDCalculatorApiService } from '../../../core/api/fd-calculator-api.service';
 import { FDCalculationRequest, FDCalculationResponse } from '../../../core/models/fd.models';
 import { AuthService } from '../../../core/auth.service';
@@ -116,9 +118,10 @@ import { ToastService } from '../../../shared/services/toast.service';
                 type="submit"
                 variant="primary"
                 [loading]="calculating"
-                [disabled]="principal <= 0 || termValue <= 0 || calculating"
+                [disabled]="principal <= 0 || termValue <= 0"
                 [block]="true"
                 id="btn-run-calculation"
+                (clicked)="calculate()"
               >
                 {{ calculating ? 'Simulating Yield...' : 'Calculate Maturity Amount' }}
               </app-button>
@@ -346,7 +349,8 @@ export class FDCalculatorComponent implements OnInit {
     private readonly calcApi: FDCalculatorApiService,
     public readonly authService: AuthService,
     private readonly toastService: ToastService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -380,46 +384,73 @@ export class FDCalculatorComponent implements OnInit {
   }
 
   calculate(): void {
-    if (this.principal <= 0 || this.termValue <= 0) return;
+    const numPrincipal = Number(this.principal) || 0;
+    const numTerm = Number(this.termValue) || 0;
+    const numBaseRate = Number(this.baseRate) || 0;
+
+    if (numPrincipal <= 0 || numTerm <= 0) return;
 
     this.calculating = true;
+
+    // Convert term to years for mathematical interest formulas
+    const years = this.termUnit === 'DAYS' ? numTerm / 365 : this.termUnit === 'MONTHS' ? numTerm / 12 : numTerm;
+    const rate = this.effectiveCalculatedRate / 100;
+
+    // Simple Interest (I = P * R * T)
+    const simpleInterest = Math.round((numPrincipal * rate * years) * 100) / 100;
+    this.simpleYield = numPrincipal + simpleInterest;
+
+    // Compound Interest (Quarterly compounding, n=4: A = P * (1 + r/4)^(4*t))
+    const compoundAmount = Math.round((numPrincipal * Math.pow(1 + rate / 4, 4 * years)) * 100) / 100;
+    this.compoundYield = compoundAmount;
+
+    // Immediate local calculation ensures responsive feedback with zero UI freeze
+    const chosenAmount = this.interestType === 'COMPOUND' ? this.compoundYield : this.simpleYield;
+    const localResult: FDCalculationResponse = {
+      maturityAmount: chosenAmount,
+      effectiveRate: this.effectiveCalculatedRate,
+      interestEarned: Math.round((chosenAmount - numPrincipal) * 100) / 100
+    };
+    this.result = localResult;
+    this.cdr.detectChanges();
+
+    // Prepare normalized request payload (months for backend calculator engine)
+    let termMonths = numTerm;
+    if (this.termUnit === 'YEARS') {
+      termMonths = numTerm * 12;
+    } else if (this.termUnit === 'DAYS') {
+      termMonths = Math.max(1, Math.round(numTerm / 30.417));
+    }
+
     const req: FDCalculationRequest = {
-      principal: Number(this.principal),
+      principal: numPrincipal,
       term: {
-        value: Number(this.termValue),
-        unit: this.termUnit
+        value: termMonths,
+        unit: 'MONTHS'
       },
-      baseRate: Number(this.baseRate),
+      baseRate: numBaseRate,
       categories: this.categories,
       interestType: this.interestType
     };
 
-    // Calculate comparative simple and compound values client-side for immediate comparison
-    const rate = this.effectiveCalculatedRate / 100;
-    const years = this.termUnit === 'DAYS' ? this.termValue / 365 : this.termUnit === 'MONTHS' ? this.termValue / 12 : this.termValue;
-
-    // Simple Interest
-    const simpleInterest = this.principal * rate * years;
-    this.simpleYield = this.principal + simpleInterest;
-
-    // Compound Interest (Quarterly compounding, n=4)
-    const compoundAmount = this.principal * Math.pow(1 + rate / 4, 4 * years);
-    this.compoundYield = compoundAmount;
-
-    this.calcApi.calculate(req).subscribe({
+    this.calcApi.calculate(req).pipe(
+      timeout(3000),
+      catchError((err) => {
+        console.warn('Backend calculation synchronization fallback to precision local engine:', err);
+        return of(localResult);
+      }),
+      finalize(() => {
+        this.calculating = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
       next: (res) => {
-        this.calculating = false;
-        this.result = res;
-      },
-      error: () => {
-        this.calculating = false;
-        // Fallback to high-precision local calculation if microservice is offline
-        const chosenAmount = this.interestType === 'COMPOUND' ? this.compoundYield : this.simpleYield;
-        this.result = {
-          maturityAmount: Math.round(chosenAmount * 100) / 100,
-          effectiveRate: this.effectiveCalculatedRate,
-          interestEarned: Math.round((chosenAmount - this.principal) * 100) / 100
-        };
+        if (res && res.maturityAmount) {
+          this.result = res;
+        } else {
+          this.result = localResult;
+        }
+        this.cdr.detectChanges();
       }
     });
   }

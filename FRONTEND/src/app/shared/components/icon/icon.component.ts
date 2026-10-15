@@ -285,6 +285,49 @@ import { Component, Input } from '@angular/core';
         <path d="M3 12A9 3 0 0 0 21 12" />
       </ng-container>
 
+      <!-- Edit / Pencil -->
+      <ng-container *ngSwitchCase="'edit'">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+      </ng-container>
+
+      <!-- Check Circle -->
+      <ng-container *ngSwitchCase="'check-circle'">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22 4 12 14.01 9 11.01" />
+      </ng-container>
+
+      <!-- Shield Check -->
+      <ng-container *ngSwitchCase="'shield-check'">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        <path d="m9 12 2 2 4-4" />
+      </ng-container>
+
+      <!-- Volume 2 (Unmuted) -->
+      <ng-container *ngSwitchCase="'volume-2'">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+      </ng-container>
+
+      <!-- Volume X (Muted) -->
+      <ng-container *ngSwitchCase="'volume-x'">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <line x1="23" y1="9" x2="17" y2="15" />
+        <line x1="17" y1="9" x2="23" y2="15" />
+      </ng-container>
+
+      <!-- Skip Forward -->
+      <ng-container *ngSwitchCase="'skip-forward'">
+        <polygon points="5 4 15 12 5 20 5 4" />
+        <line x1="19" y1="5" x2="19" y2="19" />
+      </ng-container>
+
+      <!-- Skip Back -->
+      <ng-container *ngSwitchCase="'skip-back'">
+        <polygon points="19 20 9 12 19 4 19 20" />
+        <line x1="5" y1="19" x2="5" y2="5" />
+      </ng-container>
+
       <!-- Default Fallback -->
       <ng-container *ngSwitchDefault>
         <circle cx="12" cy="12" r="10" />
@@ -505,6 +548,41 @@ export class AppIconComponent {
       case 'database':
       case 'storage':
         return 'database';
+      case 'volume':
+      case 'volume-2':
+      case 'sound':
+      case 'unmute':
+      case 'speaker':
+      case '🔊':
+        return 'volume-2';
+      case 'volume-x':
+      case 'mute':
+      case 'muted':
+      case 'silent':
+      case '🔇':
+        return 'volume-x';
+      case 'skip-forward':
+      case 'next':
+      case 'skip':
+      case '⏭':
+        return 'skip-forward';
+      case 'skip-back':
+      case 'prev-video':
+      case 'previous':
+      case '⏮':
+        return 'skip-back';
+      case 'edit':
+      case 'pencil':
+      case 'modify':
+      case '✏️':
+        return 'edit';
+      case 'check-circle':
+      case 'verified':
+      case 'tick-circle':
+        return 'check-circle';
+      case 'shield-check':
+      case 'secure-check':
+        return 'shield-check';
       default:
         return raw;
     }

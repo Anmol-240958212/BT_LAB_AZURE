@@ -99,11 +99,21 @@ public class FDCalculatorServiceImpl
         }
 
 
+        int termMonths = request.getTerm().getValue();
+        if (request.getTerm().getUnit() != null) {
+            String unit = request.getTerm().getUnit().toUpperCase();
+            if ("YEARS".equals(unit) || "YEAR".equals(unit)) {
+                termMonths = termMonths * 12;
+            } else if ("DAYS".equals(unit) || "DAY".equals(unit)) {
+                termMonths = Math.max(1, Math.round(termMonths / 30.417f));
+            }
+        }
+
         BigDecimal interest =
                 calculator.calculate(
                         request.getPrincipal(),
                         effectiveRate,
-                        request.getTerm().getValue()
+                        termMonths
                 );
 
 

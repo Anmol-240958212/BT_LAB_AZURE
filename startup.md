@@ -2,7 +2,7 @@
 
 > **Target Audience**: Human Developers & Autonomous AI Agents.  
 > **Supported Environments**: macOS, Linux, Windows (PowerShell / CMD), and Docker.  
-> **Architecture**: Distributed microservices architecture composed of MySQL 8.0, 2 Spring Boot microservices, and an Angular 19+ SPA frontend.
+> **Architecture**: Distributed microservices architecture composed of MySQL 8.0, Apache Kafka 4.1.0 (KRaft mode), 2 Spring Boot microservices, and an Angular 19+ SPA frontend.
 
 ---
 
@@ -20,6 +20,7 @@ Once all services are started, the entire platform is accessible via these URLs:
 | **Fixed Deposit Service** | Swagger UI | [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) | Interactive API tester for FD & Interest Engine |
 | **Fixed Deposit Service** | OpenAPI JSON | [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs) | OpenAPI 3.0 specification contract |
 | **Fixed Deposit Service** | Actuator Health | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) | Spring Boot health check (`{"status":"UP"}`) |
+| **Kafka Broker** | Event Stream | `localhost:9092` | Event broker for KYC events & FD maturity notifications |
 | **MySQL Database** | RDBMS | `localhost:3306` | Databases: `authandcust` & `banking_tech2` |
 
 ---
@@ -58,11 +59,15 @@ chmod +x start.sh AUTHMODULET1/auth/mvnw FDMODULET2/mvnw
 
 If running step-by-step or in environments where granular process control is preferred:
 
-#### Step 1: Ensure MySQL is Running & Databases are Seeded
+#### Step 1: Ensure MySQL & Kafka Broker are Running
 Default database credentials expected by Spring Boot:
 - Host: `localhost:3306`
 - User: `root` (or `$DB_USERNAME`)
 - Password: `Shrey@26` (or `$DB_PASSWORD`)
+
+Kafka broker:
+- Host: `localhost:9092`
+- Run via Docker: `docker compose up -d kafka`
 
 **If using local MySQL:**
 ```bash
@@ -76,11 +81,12 @@ mysql -u root -pShrey@26 -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE D
 Get-Content AUTHMODULET1\authandcustDB.sql | mysql -u root -pShrey@26 authandcust
 ```
 
-**If local MySQL is not installed (Using Docker):**
+**If using Docker for Kafka & MySQL:**
 ```bash
-docker compose up -d
+docker compose up -d kafka
+# (Optionally run 'docker compose up -d mysql' if local MySQL is not installed)
 ```
-*(The included `docker-compose.yml` automatically mounts `authandcustDB.sql` and provisions both databases).*
+*(The included `docker-compose.yml` provides KRaft Kafka 4.1.0 on port 9092 and provisions both MySQL databases).*
 
 ---
 
@@ -144,10 +150,11 @@ npm start
 ---
 
 #### Step 5: Verification & Output Generation
-The agent should verify readiness via HTTP requests:
+The agent should verify readiness via HTTP and network checks:
 1. `curl -s -I http://localhost:8080/swagger-ui/index.html` (returns 200 or 302)
 2. `curl -s http://localhost:8081/actuator/health` (returns `{"status":"UP"}`)
 3. `curl -s -I http://localhost:4200/` (returns 200)
+4. `nc -z 127.0.0.1 9092` (Kafka broker port listening)
 
 Once all checks pass, output the **Endpoints Summary table** and **Pre-Seeded Test Credentials table** to the user.
 
@@ -165,6 +172,7 @@ Or manually:
 pkill -f "ng serve" || true
 pkill -f "AUTHMODULET1" || pkill -f "auth-0.0.1" || true
 pkill -f "FDMODULET2" || pkill -f "demo-0.0.1" || true
+docker compose stop kafka || true
 ```
 
 #### On Windows (PowerShell):
@@ -174,6 +182,7 @@ pkill -f "FDMODULET2" || pkill -f "demo-0.0.1" || true
 Or manually:
 ```powershell
 Get-Process -Name "node", "java" -ErrorAction SilentlyContinue | Stop-Process -Force
+docker compose stop kafka
 ```
 
 ---
