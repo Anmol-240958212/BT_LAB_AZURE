@@ -12,9 +12,9 @@ Write-Host "=================================================================" -
 $dbUser = if ($env:DB_USERNAME) { $env:DB_USERNAME } else { "root" }
 $dbPass = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "Shrey@26" }
 
-# 1. Database Check & Setup
+# 1. Database & Kafka Check & Setup
 Write-Host ""
-Write-Host "[1/4] Checking MySQL Database on port 3306..." -ForegroundColor Yellow
+Write-Host "[1/4] Checking MySQL Database (port 3306) and Kafka (port 9092)..." -ForegroundColor Yellow
 $mysqlUp = $false
 
 try {
@@ -22,9 +22,9 @@ try {
     if ($LASTEXITCODE -eq 0) {
         $mysqlUp = $true
         Write-Host "  ✔ Local MySQL server is reachable." -ForegroundColor Green
-        mysql -u$dbUser -p$dbPass -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS banking_tech2;" 2>$null
+        mysql -u$dbUser -p$dbPass -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS banking_tech2; CREATE DATABASE IF NOT EXISTS fdmodule;" 2>$null
         Get-Content "$RootDir\AUTHMODULET1\authandcustDB.sql" | mysql -u$dbUser -p$dbPass authandcust 2>$null
-        Write-Host "  ✔ Databases 'authandcust' & 'banking_tech2' verified and seeded." -ForegroundColor Green
+        Write-Host "  ✔ Databases 'authandcust', 'banking_tech2' & 'fdmodule' verified and seeded." -ForegroundColor Green
     }
 } catch {
     $mysqlUp = $false
@@ -33,11 +33,25 @@ try {
 if (-not $mysqlUp) {
     if (Get-Command docker -ErrorAction SilentlyContinue) {
         Write-Host "  -> Attempting to start MySQL via Docker Compose..." -ForegroundColor Gray
-        docker compose up -d
+        docker compose up -d mysql
         Start-Sleep -Seconds 10
         Write-Host "  ✔ Docker MySQL container initiated." -ForegroundColor Green
     } else {
         Write-Host "  ⚠ WARNING: MySQL not detected on port 3306. Ensure MySQL service is running." -ForegroundColor Red
+    }
+}
+
+# Check Kafka
+$kafkaUp = (Test-NetConnection -ComputerName 127.0.0.1 -Port 9092 -WarningAction SilentlyContinue).TcpTestSucceeded
+if ($kafkaUp) {
+    Write-Host "  ✔ Kafka broker is running on port 9092." -ForegroundColor Green
+} else {
+    if (Get-Command docker -ErrorAction SilentlyContinue) {
+        Write-Host "  -> Kafka not detected on port 9092. Starting Kafka via Docker Compose..." -ForegroundColor Gray
+        docker compose up -d kafka
+        Write-Host "  ✔ Kafka container started." -ForegroundColor Green
+    } else {
+        Write-Host "  ⚠ WARNING: Kafka is not running on port 9092. Start Kafka or run 'docker compose up -d kafka'." -ForegroundColor Red
     }
 }
 

@@ -5,6 +5,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "banking.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class InterestCalculationScheduler {
 
     private final InterestCalculationService interestCalculationService;

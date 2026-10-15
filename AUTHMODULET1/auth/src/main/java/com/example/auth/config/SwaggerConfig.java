@@ -34,4 +34,15 @@ public class SwaggerConfig {
                     .scheme("bearer")
                     .bearerFormat("JWT")));
     }
+
+    @Bean
+    public org.springdoc.core.customizers.OpenApiCustomizer publicAuthOperations() {
+        return api -> {
+            for (String path : java.util.List.of("/auth/register", "/auth/verify-otp", "/auth/login",
+                    "/auth/refresh", "/auth/forgot-password", "/auth/reset-password")) {
+                var item = api.getPaths().get(path);
+                if (item != null) { item.readOperations().forEach(op -> op.setSecurity(java.util.List.of())); }
+            }
+        };
+    }
 }

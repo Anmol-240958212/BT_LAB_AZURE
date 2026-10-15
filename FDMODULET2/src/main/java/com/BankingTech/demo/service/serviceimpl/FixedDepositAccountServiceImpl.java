@@ -27,21 +27,26 @@ public class FixedDepositAccountServiceImpl
         private final FixedDepositAccountRepository fixedDepositAccountRepository;
         private final AccountNumberGenerator accountNumberGenerator;
         private final FDTransactionRepository fdTransactionRepository;
+        private final com.BankingTech.demo.service.FdCustomerValidationService customerValidation;
 
         public FixedDepositAccountServiceImpl(
                         FixedDepositAccountRepository fixedDepositAccountRepository,
                         AccountNumberGenerator accountNumberGenerator,
-                        FDTransactionRepository fdTransactionRepository) {
+                        FDTransactionRepository fdTransactionRepository,
+                        com.BankingTech.demo.service.FdCustomerValidationService customerValidation) {
 
                 this.fixedDepositAccountRepository = fixedDepositAccountRepository;
                 this.accountNumberGenerator = accountNumberGenerator;
                 this.fdTransactionRepository = fdTransactionRepository;
+                this.customerValidation = customerValidation;
         }
 
         @Override
         @Transactional
         public FixedDepositAccountResponseDTO createAccount(
                         FixedDepositAccountRequestDTO request) {
+
+                customerValidation.requireApprovedCustomer(request.getCustomerId());
 
                 String fdAccountNo = accountNumberGenerator.generate(
                                 request.getBranchCode());
@@ -92,6 +97,8 @@ public class FixedDepositAccountServiceImpl
         @Transactional
         public FDAccountCreationResponseDTO createAccountWithTransaction(
                         FixedDepositAccountRequestDTO request) {
+
+                customerValidation.requireApprovedCustomer(request.getCustomerId());
 
                 // 1. Generate FD account number.
                 String fdAccountNo = accountNumberGenerator.generate(

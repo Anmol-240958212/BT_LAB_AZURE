@@ -665,17 +665,17 @@ public class AuthServiceImpl implements AuthService {
                                 .orElseThrow(() -> new IllegalArgumentException(
                                                 "Authenticated caller not found"));
 
-                AuthRole adminRole = authRoleRepository.findByRoleCode("ADMIN")
+                AuthRole headAdminRole = authRoleRepository.findByRoleCode("HEAD_ADMIN")
                                 .orElseThrow(() -> new IllegalStateException(
-                                                "ADMIN role not configured"));
+                                                "HEAD_ADMIN role not configured"));
 
-                // Only ADMIN may create employees; assigned role is STAFF
+                // Only HEAD_ADMIN may create employees; assigned role is STAFF
                 if (caller.getRole() == null
-                                || !caller.getRole().getRoleCode().equals("ADMIN")
-                                || !caller.getRole().getRoleId().equals(adminRole.getRoleId())) {
+                                || !caller.getRole().getRoleCode().equals("HEAD_ADMIN")
+                                || !caller.getRole().getRoleId().equals(headAdminRole.getRoleId())) {
 
                         throw new org.springframework.security.access.AccessDeniedException(
-                                        "Only ADMIN users may create staff");
+                                        "Only HEAD_ADMIN users may create employees");
                 }
 
                 if (request.getUsername() == null

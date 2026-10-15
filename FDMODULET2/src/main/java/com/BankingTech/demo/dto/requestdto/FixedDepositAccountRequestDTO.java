@@ -10,9 +10,11 @@ import java.math.BigDecimal;
 public class FixedDepositAccountRequestDTO {
 
     @NotBlank(message = "Customer ID is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "10", description = "Original customer ID from Auth, synchronized through Kafka")
     private String customerId;
 
     @NotBlank(message = "Product code is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "FD_STANDARD")
     private String productCode;
 
     /*
@@ -20,9 +22,12 @@ public class FixedDepositAccountRequestDTO {
      * It is not stored in FD_ACCOUNT.
      */
     @NotBlank(message = "Branch code is required")
+    @jakarta.validation.constraints.Pattern(regexp = "\\d{3}", message = "Branch code must contain exactly 3 digits")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "001")
     private String branchCode;
 
     @NotNull(message = "Principal amount is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "10000")
     @DecimalMin(value = "0.01", message = "Principal amount must be greater than zero")
     private BigDecimal principalAmount;
 
@@ -30,10 +35,12 @@ public class FixedDepositAccountRequestDTO {
      * Temporary until Product & Pricing integration.
      */
     @NotNull(message = "Interest rate is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "7")
     @DecimalMin(value = "0.0", message = "Interest rate cannot be negative")
     private BigDecimal interestRate;
 
     @NotNull(message = "Term in months is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "12")
     @Positive(message = "Term must be greater than zero")
     private Integer termMonths;
 
@@ -41,14 +48,18 @@ public class FixedDepositAccountRequestDTO {
      * Temporary until Product & Pricing integration.
      */
     @NotBlank(message = "Interest type is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "SIMPLE")
     private String interestType;
 
     /*
      * Temporary until Product & Pricing integration.
      */
     @NotBlank(message = "Interest payout type is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "CAPITALIZE")
     private String interestPayoutType;
 
+    @NotBlank(message = "Interest frequency is required")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "MONTHLY")
     private String interestFrequency;
 
     public String getInterestFrequency() {

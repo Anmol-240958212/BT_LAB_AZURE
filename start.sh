@@ -15,20 +15,20 @@ echo "================================================================="
 DB_USER="${DB_USERNAME:-root}"
 DB_PASS="${DB_PASSWORD:-Shrey@26}"
 
-# 1. Database Check & Setup
+# 1. Database & Kafka Check & Setup
 echo ""
-echo "[1/4] Checking MySQL Database on port 3306..."
+echo "[1/4] Checking MySQL Database (port 3306) and Kafka (port 9092)..."
 MYSQL_UP=false
 
 if mysql -u"$DB_USER" -p"$DB_PASS" -h 127.0.0.1 -e "SELECT 1;" >/dev/null 2>&1; then
     MYSQL_UP=true
     echo "  ✔ Local MySQL server is running."
-    mysql -u"$DB_USER" -p"$DB_PASS" -h 127.0.0.1 -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS banking_tech2;" >/dev/null 2>&1
+    mysql -u"$DB_USER" -p"$DB_PASS" -h 127.0.0.1 -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS banking_tech2; CREATE DATABASE IF NOT EXISTS fdmodule;" >/dev/null 2>&1
     mysql -u"$DB_USER" -p"$DB_PASS" -h 127.0.0.1 authandcust < "$ROOT_DIR/AUTHMODULET1/authandcustDB.sql" >/dev/null 2>&1 || true
-    echo "  ✔ Databases 'authandcust' & 'banking_tech2' verified and seeded."
+    echo "  ✔ Databases 'authandcust', 'banking_tech2' & 'fdmodule' verified and seeded."
 elif command -v docker >/dev/null 2>&1; then
     echo "  -> Local MySQL not reachable. Attempting to start MySQL via Docker Compose..."
-    docker compose up -d
+    docker compose up -d mysql
     echo "  -> Waiting for MySQL container to become ready..."
     for i in {1..30}; do
         if docker exec -i vaultone-mysql mysql -u"$DB_USER" -p"$DB_PASS" -e "SELECT 1;" >/dev/null 2>&1; then
@@ -42,6 +42,17 @@ fi
 
 if [ "$MYSQL_UP" = false ]; then
     echo "  ⚠ WARNING: Could not connect to MySQL. Ensure MySQL is running on port 3306 with password '$DB_PASS'."
+fi
+
+# Check Kafka
+if nc -z 127.0.0.1 9092 >/dev/null 2>&1; then
+    echo "  ✔ Kafka broker is running on port 9092."
+elif command -v docker >/dev/null 2>&1; then
+    echo "  -> Kafka not detected on port 9092. Starting Kafka via Docker Compose..."
+    docker compose up -d kafka
+    echo "  ✔ Kafka container started."
+else
+    echo "  ⚠ WARNING: Kafka is not running on port 9092. Start Kafka or run 'docker compose up -d kafka'."
 fi
 
 # 2. Start Backend 1 — Auth Service (Port 8080)

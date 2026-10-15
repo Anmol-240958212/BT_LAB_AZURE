@@ -22,6 +22,17 @@ public class CustomerController {
     @Autowired
     private CustomerService customerService;
 
+    @Autowired
+    private com.example.auth.service.CustomerEventSyncService customerEventSyncService;
+
+    @PostMapping("/sync")
+    @Operation(summary = "Synchronize approved customer and registered email to FD through Kafka",
+            security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<?> syncCustomer(Authentication authentication) {
+        customerEventSyncService.sync(authentication.getName());
+        return ResponseEntity.accepted().body(java.util.Map.of("message", "Customer snapshot submitted to Kafka"));
+    }
+
     @PostMapping("/profile")
     @Operation(summary = "Submit customer KYC profile",
                description = "Submits or updates the KYC profile for the currently authenticated customer.",

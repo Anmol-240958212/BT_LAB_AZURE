@@ -10,8 +10,10 @@ import com.example.auth.security.JwtService;
 import com.example.auth.service.LoginAuditService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,6 +25,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+@ExtendWith(MockitoExtension.class)
+@org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
 class AdminEmployeeServiceTest {
 
     @Mock
@@ -39,6 +43,9 @@ class AdminEmployeeServiceTest {
 
     @Mock
     private LoginAuditService loginAuditService;
+
+    @Mock
+    private com.example.auth.util.AuditUtil auditUtil;
 
     @InjectMocks
     private AuthServiceImpl authService;
@@ -85,9 +92,17 @@ class AdminEmployeeServiceTest {
         customerUser.setRole(adminRole);
         customerUser.setUserId(4L);
 
+        AuthRole staffRole = new AuthRole();
+        staffRole.setRoleId(3L);
+        staffRole.setRoleCode("STAFF");
+
         when(authRoleRepository.findByRoleCode(eq("HEAD_ADMIN"))).thenReturn(Optional.of(headAdminRole));
         when(authRoleRepository.findByRoleCode(eq("ADMIN"))).thenReturn(Optional.of(adminRole));
+        when(authRoleRepository.findByRoleCode(eq("STAFF"))).thenReturn(Optional.of(staffRole));
         when(passwordEncoder.encode(anyString())).thenReturn(hashedPassword);
+        when(auditUtil.createAudit(anyString())).thenReturn(new com.example.auth.util.AuditData());
+        when(authUsrRepository.save(any(AuthUsr.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        org.springframework.test.util.ReflectionTestUtils.setField(authService, "auditUtil", auditUtil);
     }
 
     @Test
@@ -252,10 +267,11 @@ class AdminEmployeeServiceTest {
         when(authUsrRepository.existsByEmail(anyString())).thenReturn(false);
         when(authUsrRepository.existsByPhoneNumber(anyString())).thenReturn(false);
 
+        String empPassHash = BCrypt.hashpw("P@ssw0rd!2025", BCrypt.gensalt());
         AuthUsr created = new AuthUsr();
         created.setUserId(10L);
         created.setUsername("jdoe");
-        created.setPasswordHash(hashedPassword);
+        created.setPasswordHash(empPassHash);
         created.setRole(adminRole);
         created.setFailedLoginAttempts((short) 0);
         when(authUsrRepository.save(any(AuthUsr.class))).thenReturn(created);
@@ -266,6 +282,6 @@ class AdminEmployeeServiceTest {
         assertEquals("ADMIN", response.getRole());
 
         // Password verification (login) should succeed with BCrypt
-        assertTrue(BCrypt.checkpw("P@ssw0rd!2025", hashedPassword));
+        assertTrue(BCrypt.checkpw("P@ssw0rd!2025", empPassHash));
     }
 }

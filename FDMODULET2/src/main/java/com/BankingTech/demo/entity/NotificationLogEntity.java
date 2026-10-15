@@ -64,6 +64,18 @@ public class NotificationLogEntity extends AuditEntity {
     @Column(name = "notification_log_error_message", length = 1000)
     private String notificationLogErrorMessage;
 
+    // Durable payload for Kafka publishing and mail retries after maturity commits.
+    private java.math.BigDecimal maturityAmount;
+    private java.time.LocalDate maturityDate;
+    private LocalDateTime nextAttemptAt;
+
+    public java.math.BigDecimal getMaturityAmount() { return maturityAmount; }
+    public void setMaturityAmount(java.math.BigDecimal value) { maturityAmount = value; }
+    public java.time.LocalDate getMaturityDate() { return maturityDate; }
+    public void setMaturityDate(java.time.LocalDate value) { maturityDate = value; }
+    public LocalDateTime getNextAttemptAt() { return nextAttemptAt; }
+    public void setNextAttemptAt(LocalDateTime value) { nextAttemptAt = value; }
+
     public NotificationLogEntity() {
     }
 

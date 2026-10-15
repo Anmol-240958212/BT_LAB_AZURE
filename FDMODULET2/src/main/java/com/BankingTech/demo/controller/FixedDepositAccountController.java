@@ -9,9 +9,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/fd/account")
+@Tag(name = "FD accounts", description = "Create accounts for Kafka-synchronized customers with ACTIVE KYC")
 public class FixedDepositAccountController {
 
         private final FixedDepositAccountService fixedDepositAccountService;
@@ -23,7 +26,7 @@ public class FixedDepositAccountController {
 
         @PostMapping("/create")
         public ResponseEntity<FixedDepositAccountResponseDTO> createAccount(
-                        @RequestBody FixedDepositAccountRequestDTO request) {
+                        @Valid @RequestBody FixedDepositAccountRequestDTO request) {
 
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.createAccount(request));
@@ -32,7 +35,7 @@ public class FixedDepositAccountController {
         // L16
         @PostMapping("/create-with-txn")
         public ResponseEntity<FDAccountCreationResponseDTO> createAccountWithTransaction(
-                        @RequestBody FixedDepositAccountRequestDTO request) {
+                        @Valid @RequestBody FixedDepositAccountRequestDTO request) {
 
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.createAccountWithTransaction(request));

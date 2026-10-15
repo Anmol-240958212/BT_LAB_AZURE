@@ -27,3 +27,8 @@ FRONTEND/yarn-error.log*
 **/.idea/
 **/*.iml
 **/*.class
+*.log
+hs_err_pid*
+replay_pid*
+.vscode/
+NEW/

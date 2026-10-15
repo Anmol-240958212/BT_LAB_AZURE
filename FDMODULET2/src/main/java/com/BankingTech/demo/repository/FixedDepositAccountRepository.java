@@ -10,10 +10,16 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 @Repository
 public interface FixedDepositAccountRepository
                 extends JpaRepository<FixedDepositAccountEntity, String> {
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        @Query("select f from FixedDepositAccountEntity f where f.fdAccountNo = :accountNo")
+        Optional<FixedDepositAccountEntity> findForMaturity(@Param("accountNo") String accountNo);
 
         Optional<FixedDepositAccountEntity> findByFdAccountNo(
                         String fdAccountNo);

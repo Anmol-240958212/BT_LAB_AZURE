@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 
 @Component
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "banking.scheduling.enabled", havingValue = "true", matchIfMissing = true)
 public class FDInterestBatchScheduler {
 
         private final InterestCalculationService interestCalculationService;

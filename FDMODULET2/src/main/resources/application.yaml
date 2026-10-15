@@ -6,7 +6,7 @@ spring:
     name: demo
 
   datasource:
-    url: jdbc:mysql://localhost:3306/banking_tech2
+    url: jdbc:mysql://localhost:3306/${DB_NAME:banking_tech2}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:Shrey@26}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -14,22 +14,54 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-
     show-sql: true
-
     properties:
       hibernate:
         format_sql: true
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:bankingtech@demo.local}
-    password: ${MAIL_PASSWORD:demo123}
+    host: ${BANKING_SMTP_HOST:smtp.gmail.com}
+    port: ${BANKING_SMTP_PORT:587}
+    username: ${BANKING_SMTP_USERNAME:${MAIL_USERNAME:}}
+    password: ${BANKING_SMTP_PASSWORD:${MAIL_PASSWORD:}}
     properties:
       mail:
         smtp:
-          auth: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+          auth: ${BANKING_SMTP_AUTH:true}
           starttls:
-            enable: true
-            required: true
+            enable: ${BANKING_SMTP_STARTTLS:true}
+            required: ${BANKING_SMTP_STARTTLS:true}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+      group-id: fd-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.BankingTech.demo"
+
+logging:
+  level:
+    org.springframework.kafka: INFO
+    org.apache.kafka.clients.consumer: WARN
+
+banking:
+  mail:
+    from: ${BANKING_MAIL_FROM:${BANKING_SMTP_USERNAME:${MAIL_USERNAME:}}}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    urls-primary-name: Fixed Deposit
+    urls:
+      - name: Fixed Deposit
+        url: /v3/api-docs
+      - name: Auth and Customer
+        url: http://localhost:8080/v3/api-docs
