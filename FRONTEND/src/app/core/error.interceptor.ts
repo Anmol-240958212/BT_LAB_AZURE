@@ -29,12 +29,25 @@ export class ErrorInterceptor implements HttpInterceptor {
               queryParams: { returnUrl: this.router.url }
             });
           }
-        } else if (error.status === 403) {
+        } else if (error.status === 403 && !request.url.includes('/auth/')) {
           // Forbidden access
           this.router.navigate(['/unauthorized']);
         }
 
-        const errorMessage = error.error?.message || error.error || error.statusText || 'An unexpected error occurred';
+        let errorMessage = error.error?.detail || error.error?.message;
+        if (!errorMessage && typeof error.error === 'string' && error.error.trim().length > 0) {
+          if (error.error.includes('<html') || error.error.includes('<!DOCTYPE')) {
+            errorMessage = error.status === 502
+              ? 'Backend service unavailable (502 Bad Gateway). Please start backend microservices.'
+              : error.statusText;
+          } else {
+            errorMessage = error.error;
+          }
+        }
+        if (!errorMessage) {
+          errorMessage = error.statusText || 'An unexpected error occurred';
+        }
+
         return throwError(() => new Error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage)));
       })
     );

@@ -232,7 +232,7 @@ export class RegisterComponent implements OnInit {
     this.loading = true;
     const { username, email, phoneNumber, password } = this.registerForm.value;
 
-    this.authApi.register({ username, email, phoneNumber, password }).subscribe({
+    this.authApi.register({ username, name: username, email, phoneNumber, password }).subscribe({
       next: (msg) => {
         this.loading = false;
         this.toastService.success(msg || 'OTP dispatched to email. Please verify.', 'Registration Request Accepted');

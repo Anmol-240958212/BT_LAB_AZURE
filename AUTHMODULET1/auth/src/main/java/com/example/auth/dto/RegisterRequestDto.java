@@ -3,6 +3,7 @@ package com.example.auth.dto;
 public class RegisterRequestDto {
 
     private String name;
+    private String username;
     private String email;
     private String phoneNumber;
     private String password;
@@ -11,11 +12,28 @@ public class RegisterRequestDto {
     }
 
     public String getName() {
-        return name;
+        if (name != null && !name.isBlank()) {
+            return name;
+        }
+        return username;
     }
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getUsername() {
+        if (username != null && !username.isBlank()) {
+            return username;
+        }
+        return name;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+        if (this.name == null || this.name.isBlank()) {
+            this.name = username;
+        }
     }
 
     public String getEmail() {
