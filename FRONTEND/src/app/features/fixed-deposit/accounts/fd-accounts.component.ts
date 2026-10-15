@@ -657,6 +657,10 @@ export class FDAccountsComponent implements OnInit {
   viewDetails(account: FixedDepositAccountResponse): void {
     this.selectedAccount = account;
     this.isDetailModalOpen = true;
+    this.fdAccountApi.getAccount(account.fdAccountNo).subscribe({
+      next: (latestAccount) => this.selectedAccount = latestAccount,
+      error: () => this.toastService.error('The latest account details could not be loaded.', 'Account Refresh Failed')
+    });
     this.accountNotifications = [];
     this.loadingNotifications = true;
     this.fdAccountApi.getAccountNotifications(account.fdAccountNo).subscribe({

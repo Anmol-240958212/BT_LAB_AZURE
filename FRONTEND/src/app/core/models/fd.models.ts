@@ -79,6 +79,10 @@ export interface FDTransactionRequest {
   remarks?: string;
 }
 
+export interface FDTransactionRecord extends FDTransactionRequest {
+  transactionId: string;
+}
+
 export interface BatchProcessResponse {
   status: string;
   businessDate: string;

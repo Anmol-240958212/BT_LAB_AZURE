@@ -13,6 +13,8 @@ public class FDTransactionResponseDTO {
 
     private BigDecimal amount;
 
+    private BigDecimal penaltyAmount;
+
     private LocalDateTime txnDate;
 
     private String remarks;
@@ -47,6 +49,14 @@ public class FDTransactionResponseDTO {
 
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
+    }
+
+    public BigDecimal getPenaltyAmount() {
+        return penaltyAmount;
+    }
+
+    public void setPenaltyAmount(BigDecimal penaltyAmount) {
+        this.penaltyAmount = penaltyAmount;
     }
 
     public LocalDateTime getTxnDate() {

@@ -1050,7 +1050,7 @@ export class CustomerProfileComponent implements OnInit {
   }
 
   loadProfile(): void {
-    this.customerApi.getCustomerStatus().subscribe({
+    this.customerApi.getProfile().subscribe({
       next: (res) => {
         if (res?.status) {
           this.customerStatus = res.status;

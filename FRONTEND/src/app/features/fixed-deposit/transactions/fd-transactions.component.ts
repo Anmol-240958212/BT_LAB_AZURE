@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { FDTransactionApiService } from '../../../core/api/fd-transaction-api.service';
-import { FDTransactionRequest } from '../../../core/models/fd.models';
+import { FDTransactionRecord, FDTransactionRequest } from '../../../core/models/fd.models';
 import { TableColumn } from '../../../shared/components/table/table.component';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -103,6 +103,7 @@ import { ToastService } from '../../../shared/services/toast.service';
           <app-table
             [columns]="columns"
             [data]="transactions"
+            [loading]="loadingTransactions"
             [pageSize]="5"
             emptyMessage="No ledger transactions recorded yet."
           ></app-table>
@@ -136,32 +137,8 @@ export class FDTransactionsComponent implements OnInit {
     { field: 'remarks', header: 'Remarks' }
   ];
 
-  transactions: FDTransactionRequest[] = [
-    {
-      fdAccountNo: 'FD-100293847',
-      txnType: 'DEPOSIT',
-      amount: 250000,
-      penaltyAmount: 0,
-      txnDate: '2026-01-10',
-      remarks: 'Initial deposit funding'
-    },
-    {
-      fdAccountNo: 'FD-100492817',
-      txnType: 'INTEREST',
-      amount: 10000,
-      penaltyAmount: 0,
-      txnDate: '2026-03-31',
-      remarks: 'Quarterly interest accrual credit'
-    },
-    {
-      fdAccountNo: 'FD-100782910',
-      txnType: 'WITHDRAWAL',
-      amount: 297000,
-      penaltyAmount: 3000,
-      txnDate: '2026-01-05',
-      remarks: 'Premature closure with penalty'
-    }
-  ];
+  transactions: FDTransactionRecord[] = [];
+  loadingTransactions = false;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -171,12 +148,28 @@ export class FDTransactionsComponent implements OnInit {
 
   ngOnInit(): void {
     this.txnForm = this.fb.group({
-      fdAccountNo: ['FD-100293847', Validators.required],
-      txnType: ['INTEREST', Validators.required],
-      amount: [15000, [Validators.required, Validators.min(0.01)]],
+      fdAccountNo: ['', Validators.required],
+      txnType: ['DEPOSIT', Validators.required],
+      amount: ['', [Validators.required, Validators.min(0.01)]],
       penaltyAmount: [0],
       txnDate: [new Date().toISOString().substring(0, 10), Validators.required],
-      remarks: ['Routine interest adjustment']
+      remarks: ['']
+    });
+    this.loadTransactions();
+  }
+
+  loadTransactions(): void {
+    this.loadingTransactions = true;
+    this.txnApi.getTransactions().subscribe({
+      next: (transactions) => {
+        this.transactions = transactions || [];
+        this.loadingTransactions = false;
+      },
+      error: () => {
+        this.transactions = [];
+        this.loadingTransactions = false;
+        this.toastService.error('Transaction history could not be loaded.', 'Ledger Unavailable');
+      }
     });
   }
 
@@ -194,18 +187,20 @@ export class FDTransactionsComponent implements OnInit {
       next: (msg) => {
         this.submitting = false;
         this.toastService.success(msg || 'Transaction recorded successfully', 'Ledger Updated');
-        this.transactions = [req, ...this.transactions];
+        this.loadTransactions();
         this.txnForm.reset({
+          fdAccountNo: '',
           txnType: 'DEPOSIT',
           txnDate: new Date().toISOString().substring(0, 10),
-          penaltyAmount: 0
+          amount: '',
+          penaltyAmount: 0,
+          remarks: ''
         });
       },
-      error: () => {
+      error: (err) => {
         this.submitting = false;
-        // Fallback simulation
-        this.toastService.success('Transaction posted to local journal successfully.', 'Ledger Updated');
-        this.transactions = [req, ...this.transactions];
+        const message = err?.error?.message || err?.error || err?.message || 'Transaction could not be recorded.';
+        this.toastService.error(String(message), 'Ledger Update Failed');
       }
     });
   }
