@@ -30,9 +30,11 @@ public class JwtService {
     }
 
     public String generateToken(AuthUsr authUsr) {
+        String role = (authUsr.getRole() != null) ? authUsr.getRole().getRoleCode() : "CUSTOMER";
         return Jwts.builder()
                 .subject(authUsr.getUsername())
                 .claim("userId", authUsr.getUserId())
+                .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(
                         new Date(System.currentTimeMillis()

@@ -232,7 +232,7 @@ export class LoginComponent implements OnInit {
       refreshToken: 'demo-refresh-token'
     });
     this.toastService.info(`Signed in as ${username} [${role}] (Lab Mode)`, 'Session Active');
-    this.router.navigateByUrl(this.returnUrl);
+    this.router.navigateByUrl(this.getSafeTargetUrl(role));
   }
 
   onSubmit(): void {
@@ -251,7 +251,7 @@ export class LoginComponent implements OnInit {
         const role = this.authService.getRole();
         const displayName = this.authService.getDisplayName(username);
         this.toastService.success(`Welcome back, ${displayName}! [${role}]`, 'Authentication Successful');
-        this.router.navigateByUrl(this.returnUrl);
+        this.router.navigateByUrl(this.getSafeTargetUrl(role));
       },
       error: (err: any) => {
         this.loading = false;
@@ -274,8 +274,34 @@ export class LoginComponent implements OnInit {
         });
 
         this.toastService.info(`Connected in offline standby mode as ${inferredRole}.`, 'Offline Session');
-        this.router.navigateByUrl(this.returnUrl);
+        this.router.navigateByUrl(this.getSafeTargetUrl(inferredRole));
       }
     });
+  }
+
+  private getSafeTargetUrl(role: UserRole | null): string {
+    const raw = this.returnUrl;
+    if (!raw || raw === '/unauthorized' || raw === '/login' || raw === '/register') {
+      return '/dashboard';
+    }
+
+    if (role === 'CUSTOMER') {
+      if (
+        raw.startsWith('/admin') ||
+        raw.startsWith('/reports') ||
+        raw.startsWith('/customer/list') ||
+        raw.startsWith('/customer/all') ||
+        raw.startsWith('/fixed-deposit/create') ||
+        raw.startsWith('/fixed-deposit/transactions')
+      ) {
+        return '/dashboard';
+      }
+    } else if (role === 'BANK_OFFICER') {
+      if (raw.startsWith('/admin') || raw.startsWith('/customer/profile')) {
+        return '/dashboard';
+      }
+    }
+
+    return raw;
   }
 }
