@@ -362,6 +362,12 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       roles: ['BANK_OFFICER', 'ADMIN']
     },
     {
+      label: 'Products & Pricing',
+      route: '/products',
+      icon: 'coins',
+      roles: ['BANK_OFFICER', 'ADMIN']
+    },
+    {
       label: 'FD Calculator',
       route: '/fixed-deposit/calculator',
       icon: 'calculator',

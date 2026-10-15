@@ -1,199 +1,106 @@
-# 🚀 vaultOne Core Banking Platform — System Startup Guide
+# vaultOne Core Banking Platform — Startup Guide
 
-> **Target Audience**: Human Developers & Autonomous AI Agents.  
-> **Supported Environments**: macOS, Linux, Windows (PowerShell / CMD), and Docker.  
-> **Architecture**: Distributed microservices architecture composed of MySQL 8.0, Apache Kafka 4.1.0 (KRaft mode), 2 Spring Boot microservices, and an Angular 19+ SPA frontend.
+This guide starts the local development stack: MySQL, Kafka, Auth & Customer, Fixed Deposit, Product & Pricing, and the Angular frontend.
 
----
+## Services and URLs
 
-## ⚡ Quick Endpoints Summary
+| Service | URL / address | Purpose |
+|---|---|---|
+| Angular frontend | http://localhost:4200/ | Web application |
+| Login | http://localhost:4200/login | Sign in |
+| FD calculator | http://localhost:4200/fixed-deposit/calculator | FD projection using Product & Pricing quotes |
+| Product management | http://localhost:4200/products | Bank officer/admin product and category-rate management |
+| Auth Swagger | http://localhost:8080/swagger-ui/index.html | Auth & Customer API |
+| Auth OpenAPI | http://localhost:8080/v3/api-docs | Auth & Customer API specification |
+| FD Swagger | http://localhost:8081/swagger-ui/index.html | Fixed Deposit API |
+| FD OpenAPI | http://localhost:8081/v3/api-docs | Fixed Deposit API specification |
+| FD readiness | http://localhost:8081/actuator/health/readiness | FD readiness check (expect `UP`) |
+| Product Swagger | http://localhost:8082/swagger-ui/index.html | Product & Pricing API |
+| Product OpenAPI | http://localhost:8082/v3/api-docs | Product & Pricing API specification |
+| Product API | http://localhost:8082/api/product | Product catalogue endpoints |
+| MySQL | localhost:3306 | `authandcust`, `banking_tech2`, `fdmodule`, and `banking_product_db` |
+| Kafka | localhost:9092 | KYC and FD maturity event broker |
 
-Once all services are started, the entire platform is accessible via these URLs:
+The Angular dev-server proxy forwards `/auth/**`, `/customer/**`, `/users/**`, and `/api/auth/**` to Auth (8080), `/api/fd/**` to FD (8081), and `/api/product/**` to Product & Pricing (8082).
 
-| Service / Layer | Component | URL | Description |
-|---|---|---|---|
-| **Frontend Web App** | Landing Page | [http://localhost:4200/](http://localhost:4200/) | Commercial customer landing page & yield simulator |
-| **Frontend Web App** | Login Portal | [http://localhost:4200/login](http://localhost:4200/login) | Role-based authentication entry point |
-| **Frontend Web App** | FD Calculator | [http://localhost:4200/fixed-deposit/calculator](http://localhost:4200/fixed-deposit/calculator) | Public fixed deposit projection tool |
-| **Auth Microservice** | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) | Interactive API tester for Auth & Customer APIs |
-| **Auth Microservice** | OpenAPI JSON | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) | OpenAPI 3.0 specification contract |
-| **Fixed Deposit Service** | Swagger UI | [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) | Interactive API tester for FD & Interest Engine |
-| **Fixed Deposit Service** | OpenAPI JSON | [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs) | OpenAPI 3.0 specification contract |
-| **Fixed Deposit Service** | Actuator Health | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) | Spring Boot health check (`{"status":"UP"}`) |
-| **Kafka Broker** | Event Stream | `localhost:9092` | Event broker for KYC events & FD maturity notifications |
-| **MySQL Database** | RDBMS | `localhost:3306` | Databases: `authandcust` & `banking_tech2` |
+## Start the stack
 
----
+Start MySQL and Kafka first. If using the existing local MySQL server, leave it running and start Kafka only:
 
-## 🔑 Pre-Seeded Test Credentials
-
-| Role | Username / Email | Password | Access Scope |
-|---|---|---|---|
-| **Super Admin** | `bankadmin2026@gmail.com` | `Pass@123` | System management, batch processing, audit logs |
-| **Branch Officer / Staff** | `jack.uat.2026@example.com` | `StaffPass@1` | KYC verification, assisted account booking |
-| **Customer (KYC Verified)**| `ram.uat.2026@example.com` | `Pass@123` | Portfolio tracker, new FD application, premature closure |
-| **Customer (Standby)**| `customer1` | `password123` | Fast simulation testing |
-
----
-
-## 🤖 Instructions for AI Agents (Automated Execution)
-
-When an AI Agent is asked to **"Read startup.md and start the project locally"**, the agent must execute these steps sequentially:
-
-### Option 1: Using the Automated Turnkey Launch Script (Recommended)
-
-#### On macOS or Linux:
-```bash
-chmod +x start.sh AUTHMODULET1/auth/mvnw FDMODULET2/mvnw
-./start.sh
-```
-
-#### On Windows (PowerShell):
-```powershell
-.\start.ps1
-```
-
----
-
-### Option 2: Step-by-Step Autonomous Execution
-
-If running step-by-step or in environments where granular process control is preferred:
-
-#### Step 1: Ensure MySQL & Kafka Broker are Running
-Default database credentials expected by Spring Boot:
-- Host: `localhost:3306`
-- User: `root` (or `$DB_USERNAME`)
-- Password: `Shrey@26` (or `$DB_PASSWORD`)
-
-Kafka broker:
-- Host: `localhost:9092`
-- Run via Docker: `docker compose up -d kafka`
-
-**If using local MySQL:**
-```bash
-# macOS / Linux
-mysql -u root -pShrey@26 -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS banking_tech2;"
-mysql -u root -pShrey@26 authandcust < AUTHMODULET1/authandcustDB.sql
-```
-```powershell
-# Windows PowerShell
-mysql -u root -pShrey@26 -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS banking_tech2;"
-Get-Content AUTHMODULET1\authandcustDB.sql | mysql -u root -pShrey@26 authandcust
-```
-
-**If using Docker for Kafka & MySQL:**
 ```bash
 docker compose up -d kafka
-# (Optionally run 'docker compose up -d mysql' if local MySQL is not installed)
 ```
-*(The included `docker-compose.yml` provides KRaft Kafka 4.1.0 on port 9092 and provisions both MySQL databases).*
 
----
+If MySQL is not installed locally, start both Compose services instead:
 
-#### Step 2: Start Backend 1 — Auth & Customer Service (Port 8080)
-- Directory: `AUTHMODULET1/auth`
-- Run as background process / daemon:
-
-**macOS / Linux:**
 ```bash
-cd AUTHMODULET1/auth
-chmod +x mvnw
-./mvnw spring-boot:run
+docker compose up -d mysql kafka
 ```
 
-**Windows:**
-```powershell
-cd AUTHMODULET1\auth
-.\mvnw.cmd spring-boot:run
-```
+Compose MySQL uses `root` / `Shrey@26` and publishes port 3306. Do not start the Compose MySQL container when another MySQL server already owns port 3306. With an existing MySQL instance, make sure the configured DB user can create databases and use the same credentials for all services.
 
-*Health Check URL:* `http://localhost:8080/swagger-ui/index.html`
+Run each command from the repository root in a separate terminal (or keep each process running in the background):
 
----
-
-#### Step 3: Start Backend 2 — Fixed Deposit Service (Port 8081)
-- Directory: `FDMODULET2`
-- Run as background process / daemon:
-
-**macOS / Linux:**
 ```bash
-cd FDMODULET2
-chmod +x mvnw
-./mvnw spring-boot:run
+# Auth & Customer — port 8080
+cd AUTHMODULET1/auth && ./mvnw spring-boot:run
 ```
 
-**Windows:**
-```powershell
-cd FDMODULET2
-.\mvnw.cmd spring-boot:run
-```
-
-*Health Check URL:* `http://localhost:8081/actuator/health` (Wait until status is `UP`)  
-*Swagger UI:* `http://localhost:8081/swagger-ui/index.html`
-
----
-
-#### Step 4: Start Frontend — Angular Web Application (Port 4200)
-- Directory: `FRONTEND`
-- Run as background process / daemon:
-
-**All Platforms:**
 ```bash
-cd FRONTEND
-npm install
-npm start
+# Fixed Deposit — port 8081
+cd FDMODULET2 && ./mvnw spring-boot:run
 ```
-*(The dev server is configured with `proxy.conf.json`, which automatically proxies API routes `/auth/**`, `/customer/**`, `/users/**` to `8080` and `/api/fd/**` to `8081`).*
 
-*Access URL:* `http://localhost:4200/`
-
----
-
-#### Step 5: Verification & Output Generation
-The agent should verify readiness via HTTP and network checks:
-1. `curl -s -I http://localhost:8080/swagger-ui/index.html` (returns 200 or 302)
-2. `curl -s http://localhost:8081/actuator/health` (returns `{"status":"UP"}`)
-3. `curl -s -I http://localhost:4200/` (returns 200)
-4. `nc -z 127.0.0.1 9092` (Kafka broker port listening)
-
-Once all checks pass, output the **Endpoints Summary table** and **Pre-Seeded Test Credentials table** to the user.
-
----
-
-## 🛑 Stopping All Services
-
-#### On macOS / Linux:
 ```bash
-chmod +x stop.sh
-./stop.sh
+# Product & Pricing — port 8082
+DB_USERNAME=root DB_PASSWORD='Shrey@26' mvn -f PRODUCTMODULET3/product-pricing-service/pom.xml spring-boot:run
 ```
-Or manually:
+
 ```bash
-pkill -f "ng serve" || true
-pkill -f "AUTHMODULET1" || pkill -f "auth-0.0.1" || true
-pkill -f "FDMODULET2" || pkill -f "demo-0.0.1" || true
-docker compose stop kafka || true
+# Angular — port 4200
+cd FRONTEND && npm install && npm start
 ```
 
-#### On Windows (PowerShell):
-```powershell
-.\stop.ps1
-```
-Or manually:
-```powershell
-Get-Process -Name "node", "java" -ErrorAction SilentlyContinue | Stop-Process -Force
-docker compose stop kafka
-```
+Use environment variables for a non-default database login. Auth and FD default to `DB_USERNAME=root` and `DB_PASSWORD=Shrey@26`. Product & Pricing defaults to `root` / `root`, so pass the same `DB_USERNAME` and `DB_PASSWORD` used by the other services. The Product service creates `banking_product_db` if needed, runs its Flyway migrations, and validates its schema at startup.
 
----
+On Windows PowerShell, start the first two services with `AUTHMODULET1\auth\mvnw.cmd spring-boot:run` and `FDMODULET2\mvnw.cmd spring-boot:run`. Start Product & Pricing with `$env:DB_USERNAME='root'; $env:DB_PASSWORD='Shrey@26'; mvn -f PRODUCTMODULET3\product-pricing-service\pom.xml spring-boot:run`. Start Angular with `cd FRONTEND; npm install; npm start`.
 
-## 🔧 Environment Variables Reference
+### One-command launcher
 
-Both Spring Boot services allow overriding database and email configurations via environment variables:
+`./start.sh` launches Auth, FD, Product & Pricing, and Angular, and attempts to start missing Compose dependencies. It also imports `AUTHMODULET1/authandcustDB.sql` into `authandcust`; that SQL drops and recreates tables. Use this script only when you intend to reset the Auth/Customer schema, or start the services manually as above to preserve existing Auth/Customer data. The current `start.ps1` does not include Product & Pricing; use the PowerShell commands above on Windows.
 
-| Variable | Default Value | Description |
+## Product setup before testing
+
+Product migrations create the Product & Pricing schema and reference data, but do not insert any products. Sign in as a bank officer or admin, open `/products`, and create an active FD product plus any required category-rate rules. The FD calculator and FD account creation screens load active products and request an effective-rate quote from Product & Pricing, so they need at least one active FD product to demonstrate the complete product-driven flow.
+
+Product & Pricing accepts authenticated customer/staff reads and quote requests; product catalogue changes require a bank officer or admin. The frontend attaches the Auth JWT to proxied API requests. The Product service JWT secret must match Auth's `AUTH_JWT_SECRET` when that variable is overridden; both services use the same default secret in this local setup.
+
+FD maturity email delivery needs valid SMTP settings (`BANKING_SMTP_HOST`, `BANKING_SMTP_PORT`, `BANKING_SMTP_USERNAME`, `BANKING_SMTP_PASSWORD`, and `BANKING_MAIL_FROM`). The FD readiness endpoint can be `UP` without SMTP configured; the overall `/actuator/health` may report `DOWN` because Spring's mail health check cannot authenticate. This does not prevent ordinary FD API testing, but email delivery requires working SMTP credentials.
+
+## Test credentials
+
+These accounts are expected in the seeded Auth/Customer database:
+
+| Role | Username / email | Password |
 |---|---|---|
-| `DB_USERNAME` | `root` | MySQL username |
-| `DB_PASSWORD` | `Shrey@26` | MySQL password |
-| `MAIL_USERNAME`| `bankingtech@demo.local` | SMTP sender email (FD Service) |
-| `MAIL_PASSWORD`| `demo123` | SMTP password (FD Service) |
+| Admin | `bankadmin2026@gmail.com` | `Pass@123` |
+| Branch officer / staff | `jack.uat.2026@example.com` | `StaffPass@1` |
+| KYC verified customer | `ram.uat.2026@example.com` | `Pass@123` |
+| Standby customer | `customer1` | `password123` |
+
+## Verify service readiness
+
+```bash
+curl -sS -o /dev/null -w 'Auth %{http_code}\n' http://localhost:8080/swagger-ui/index.html
+curl -sS http://localhost:8081/actuator/health/readiness
+curl -sS -o /dev/null -w 'Product %{http_code}\n' http://localhost:8082/v3/api-docs
+curl -sS -o /dev/null -w 'Frontend %{http_code}\n' http://localhost:4200/
+nc -z 127.0.0.1 3306 && echo 'MySQL port open'
+nc -z 127.0.0.1 9092 && echo 'Kafka port open'
+```
+
+Expected results are HTTP 200 for Auth, Product, and the frontend, `{"status":"UP"}` for FD readiness, and successful MySQL/Kafka port checks. To confirm Kafka responds to requests, run `docker exec banking-kafka /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list`.
+
+## Stop services
+
+Stop the four application processes with Ctrl+C in their terminals. Stop Kafka with `docker compose stop kafka`; stop Compose MySQL only if you started it with this repository using `docker compose stop mysql`. Do not stop a separately installed local MySQL server through Compose.

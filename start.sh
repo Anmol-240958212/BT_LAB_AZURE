@@ -12,12 +12,14 @@ echo "================================================================="
 echo "  🚀 vaultOne Banking Platform — Starting All Local Services"
 echo "================================================================="
 
+export PATH="/usr/local/mysql/bin:$PATH"
+
 DB_USER="${DB_USERNAME:-root}"
 DB_PASS="${DB_PASSWORD:-Shrey@26}"
 
 # 1. Database & Kafka Check & Setup
 echo ""
-echo "[1/4] Checking MySQL Database (port 3306) and Kafka (port 9092)..."
+echo "[1/5] Checking MySQL Database (port 3306) and Kafka (port 9092)..."
 MYSQL_UP=false
 
 if mysql -u"$DB_USER" -p"$DB_PASS" -h 127.0.0.1 -e "SELECT 1;" >/dev/null 2>&1; then
@@ -57,7 +59,7 @@ fi
 
 # 2. Start Backend 1 — Auth Service (Port 8080)
 echo ""
-echo "[2/4] Starting Auth Microservice (Port 8080)..."
+echo "[2/5] Starting Auth Microservice (Port 8080)..."
 cd "$ROOT_DIR/AUTHMODULET1/auth"
 chmod +x mvnw
 nohup ./mvnw spring-boot:run > "$ROOT_DIR/auth-service.log" 2>&1 &
@@ -66,16 +68,32 @@ echo "  ✔ Auth Microservice launched (PID: $AUTH_PID, logs: auth-service.log)"
 
 # 3. Start Backend 2 — Fixed Deposit Service (Port 8081)
 echo ""
-echo "[3/4] Starting Fixed Deposit Microservice (Port 8081)..."
+echo "[3/5] Starting Fixed Deposit Microservice (Port 8081)..."
 cd "$ROOT_DIR/FDMODULET2"
 chmod +x mvnw
 nohup ./mvnw spring-boot:run > "$ROOT_DIR/fd-service.log" 2>&1 &
 FD_PID=$!
 echo "  ✔ Fixed Deposit Microservice launched (PID: $FD_PID, logs: fd-service.log)"
 
-# 4. Start Frontend — Angular Web App (Port 4200)
+# 4. Start Product & Pricing Service (Port 8082)
 echo ""
-echo "[4/4] Starting Angular Frontend (Port 4200)..."
+echo "[4/5] Starting Product & Pricing Microservice (Port 8082)..."
+PRODUCT_DIR="$ROOT_DIR/PRODUCTMODULET3/product-pricing-service"
+if command -v mvn >/dev/null 2>&1; then
+    PRODUCT_MAVEN=(mvn)
+elif [ -x "$ROOT_DIR/AUTHMODULET1/auth/mvnw" ]; then
+    PRODUCT_MAVEN=("$ROOT_DIR/AUTHMODULET1/auth/mvnw")
+else
+    echo "  ✖ Maven is required to start Product & Pricing. Install Maven or restore the Auth Maven wrapper."
+    exit 1
+fi
+nohup env DB_USERNAME="$DB_USER" DB_PASSWORD="$DB_PASS" "${PRODUCT_MAVEN[@]}" -f "$PRODUCT_DIR/pom.xml" spring-boot:run > "$ROOT_DIR/product-service.log" 2>&1 &
+PRODUCT_PID=$!
+echo "  ✔ Product & Pricing launched (PID: $PRODUCT_PID, logs: product-service.log)"
+
+# 5. Start Frontend — Angular Web App (Port 4200)
+echo ""
+echo "[5/5] Starting Angular Frontend (Port 4200)..."
 cd "$ROOT_DIR/FRONTEND"
 if [ ! -d "node_modules" ]; then
     echo "  -> Installing frontend dependencies (npm install)..."
@@ -102,6 +120,8 @@ echo "  • FD Swagger UI:        http://localhost:8081/swagger-ui/index.html"
 echo "  • FD OpenAPI Docs:      http://localhost:8081/v3/api-docs"
 echo "  • FD Health Check:      http://localhost:8081/actuator/health"
 echo ""
+echo "  • Product Swagger UI: http://localhost:8082/swagger-ui/index.html"
+echo "  • Product OpenAPI:    http://localhost:8082/v3/api-docs"
 echo "Default Logins:"
 echo "  • Admin:      bankadmin2026@gmail.com / Pass@123"
 echo "  • Officer:    jack.uat.2026@example.com / StaffPass@1"

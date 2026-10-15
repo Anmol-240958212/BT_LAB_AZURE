@@ -69,7 +69,7 @@ function generateDemoJwt(username: string, role: UserRole): string {
         <button
           type="button"
           class="demo-chip"
-          (click)="fillLiveCredentials('alice@test.com', 'Pass@123')"
+          (click)="fillLiveCredentials('ram.uat.2026@example.com', 'Pass@123')"
         >
           Customer
         </button>
@@ -103,19 +103,28 @@ function generateDemoJwt(username: string, role: UserRole): string {
       flex-direction: column;
     }
     .login-header {
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .title {
       font-size: 16px;
-      font-weight: 600;
-      color: var(--color-text-primary);
+      font-weight: 700;
+      color: inherit;
       line-height: 1.2;
+      letter-spacing: -0.01em;
+    }
+    :host-context([data-theme="light"]) .title {
+      color: #0f172a;
     }
     .subtitle {
       font-size: 11px;
-      color: var(--color-text-secondary);
-      margin-top: 2px;
-      line-height: 1.3;
+      color: inherit;
+      opacity: 0.75;
+      margin-top: 3px;
+      line-height: 1.35;
+    }
+    :host-context([data-theme="light"]) .subtitle {
+      color: #334155;
+      opacity: 0.9;
     }
     .login-form {
       display: flex;
@@ -129,55 +138,96 @@ function generateDemoJwt(username: string, role: UserRole): string {
     }
     .forgot-link {
       font-size: 11px;
-      color: var(--color-text-secondary);
-      transition: color var(--transition-fast);
+      color: inherit;
+      opacity: 0.8;
+      text-decoration: none;
+      transition: all var(--transition-fast);
     }
     .forgot-link:hover {
-      color: var(--color-accent);
+      opacity: 1;
+      text-decoration: underline;
+    }
+    :host-context([data-theme="light"]) .forgot-link {
+      color: #047857;
+      font-weight: 500;
+      opacity: 0.95;
     }
     .demo-profiles-bar {
-      margin-top: 10px;
-      padding: 5px 10px;
-      background-color: var(--color-bg-base);
-      border: 1px solid var(--color-border-subtle);
-      border-radius: var(--radius-button);
+      margin-top: 12px;
+      padding: 6px 12px;
+      background: rgba(0, 0, 0, 0.22);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: var(--space-2);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    :host-context([data-theme="light"]) .demo-profiles-bar {
+      background: rgba(255, 255, 255, 0.48);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
     .demo-label {
       font-size: 11px;
-      color: var(--color-text-muted);
+      color: inherit;
+      opacity: 0.75;
       font-weight: 500;
     }
+    :host-context([data-theme="light"]) .demo-label {
+      color: #475569;
+    }
     .demo-sep {
-      color: var(--color-border-default);
+      opacity: 0.4;
       font-size: 10px;
     }
     .demo-chip {
       background: transparent;
       border: none;
-      color: var(--color-accent);
+      color: #5eead4;
       font-size: 11px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
       padding: 2px 4px;
-      border-radius: 3px;
-      transition: opacity var(--transition-fast);
+      border-radius: 4px;
+      transition: all var(--transition-fast);
     }
     .demo-chip:hover {
       text-decoration: underline;
       opacity: 0.85;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    :host-context([data-theme="light"]) .demo-chip {
+      color: #047857;
+    }
+    :host-context([data-theme="light"]) .demo-chip:hover {
+      background: rgba(4, 120, 87, 0.08);
     }
     .auth-switch-link {
-      margin-top: var(--space-5);
+      margin-top: 14px;
       text-align: center;
-      font-size: var(--text-xs);
-      color: var(--color-text-secondary);
+      font-size: 11px;
+      color: inherit;
+      opacity: 0.85;
       display: flex;
       justify-content: center;
-      gap: var(--space-2);
+      gap: 6px;
+    }
+    :host-context([data-theme="light"]) .auth-switch-link {
+      color: #475569;
+    }
+    .auth-switch-link a {
+      color: #5eead4;
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .auth-switch-link a:hover {
+      text-decoration: underline;
+    }
+    :host-context([data-theme="light"]) .auth-switch-link a {
+      color: #047857;
     }
   `]
 })

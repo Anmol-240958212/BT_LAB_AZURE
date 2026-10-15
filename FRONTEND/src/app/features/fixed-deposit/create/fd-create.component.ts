@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
@@ -6,7 +6,10 @@ import { UserApiService } from '../../../core/api/user-api.service';
 import { AuthService } from '../../../core/auth.service';
 import { FixedDepositAccountRequest } from '../../../core/models/fd.models';
 import { ToastService } from '../../../shared/services/toast.service';
-import { Observable } from 'rxjs';
+import { Observable, Subscription, of } from 'rxjs';
+import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, tap } from 'rxjs/operators';
+import { ProductPricingApiService } from '../../../core/api/product-pricing-api.service';
+import { ProductRecord } from '../../../core/models/product.models';
 
 @Component({
   selector: 'app-fd-create',
@@ -42,11 +45,12 @@ import { Observable } from 'rxjs';
             <div class="form-group">
               <label class="form-label" for="fd-prod-code">Product Code *</label>
               <select id="fd-prod-code" class="form-select" formControlName="productCode">
-                <option value="PROD_FD_STANDARD">PROD_FD_STANDARD — Standard Fixed Deposit</option>
-                <option value="PROD_FD_CUMULATIVE">PROD_FD_CUMULATIVE — Cumulative Growth FD</option>
-                <option value="PROD_FD_SENIOR">PROD_FD_SENIOR — Senior Citizen Deposit</option>
-                <option value="PROD_FD_QUARTERLY">PROD_FD_QUARTERLY — Quarterly Payout FD</option>
+                <option value="">{{ productLoading ? 'Loading products…' : 'Select an active product' }}</option>
+                <option *ngFor="let product of products" [value]="product.productCode">
+                  {{ product.productName }} — {{ product.productCode }}
+                </option>
               </select>
+              <small *ngIf="selectedProduct">Rate range: {{ selectedProduct.rateLimit.min }}–{{ selectedProduct.rateLimit.max }}%</small>
             </div>
 
             <app-input
@@ -77,7 +81,8 @@ import { Observable } from 'rxjs';
               placeholder="e.g. 7.50"
               formControlName="interestRate"
               [required]="true"
-              hint="Subject to 8.5% regulatory cap"
+              [readonly]="true"
+              hint="Quoted by Product & Pricing for the selected product, amount, and term"
             ></app-input>
 
             <app-input
@@ -88,6 +93,11 @@ import { Observable } from 'rxjs';
               formControlName="termMonths"
               [required]="true"
             ></app-input>
+          </div>
+          <div *ngIf="quoteError" class="quote-error" role="alert">{{ quoteError }}</div>
+          <div *ngIf="quoteLoading" class="form-hint">Updating the contracted rate…</div>
+          <div *ngIf="!productLoading && products.length === 0" class="quote-error" role="status">
+            No active fixed-deposit products are configured. Add one in Products & Pricing first.
           </div>
 
           <div class="grid-3">
@@ -143,7 +153,7 @@ import { Observable } from 'rxjs';
               type="submit"
               variant="primary"
               [loading]="submitting"
-              [disabled]="fdForm.invalid || submitting"
+              [disabled]="fdForm.invalid || submitting || quoteLoading || !rateReady"
             >
               {{ submitting ? 'Generating Account...' : 'Confirm & Create Account' }}
             </app-button>
@@ -153,6 +163,7 @@ import { Observable } from 'rxjs';
     </div>
   `,
   styles: [`
+    .quote-error { margin:10px 0; border:1px solid #d97a7a; background:rgba(217,122,122,.12); color:var(--color-text-primary); border-radius:var(--radius-input); padding:10px 12px; font-size:var(--text-sm); }
     .section-tag {
       font-size: 10px;
       font-weight: 600;
@@ -187,9 +198,21 @@ import { Observable } from 'rxjs';
     }
   `]
 })
-export class FDCreateComponent implements OnInit {
+export class FDCreateComponent implements OnInit, OnDestroy {
   fdForm!: FormGroup;
   submitting = false;
+  products: ProductRecord[] = [];
+  productLoading = false;
+  quoteLoading = false;
+  quoteError = '';
+  private quote: number | null = null;
+  private formChanges?: Subscription;
+
+  get rateReady(): boolean { return this.quote != null; }
+
+  get selectedProduct(): ProductRecord | undefined {
+    return this.products.find(product => product.productCode === this.fdForm?.get('productCode')?.value);
+  }
 
   get isCustomer(): boolean {
     return this.authService.getRole() === 'CUSTOMER';
@@ -200,6 +223,7 @@ export class FDCreateComponent implements OnInit {
     private readonly fdAccountApi: FDAccountApiService,
     private readonly userApi: UserApiService,
     private readonly authService: AuthService,
+    private readonly productApi: ProductPricingApiService,
     private readonly toastService: ToastService,
     public readonly router: Router,
     private readonly route: ActivatedRoute
@@ -212,15 +236,58 @@ export class FDCreateComponent implements OnInit {
 
     this.fdForm = this.fb.group({
       customerId: [initialCust, Validators.required],
-      productCode: ['PROD_FD_CUMULATIVE', Validators.required],
+      productCode: [q['productCode'] || '', Validators.required],
       branchCode: [initialBranch, [Validators.required, Validators.pattern(/^\d{3}$/)]],
       principalAmount: [q['principal'] ? Number(q['principal']) : 100000, [Validators.required, Validators.min(1000)]],
-      interestRate: [q['rate'] ? Number(q['rate']) : 7.25, [Validators.required, Validators.min(0.1), Validators.max(8.5)]],
+      interestRate: [q['rate'] ? Number(q['rate']) : '', [Validators.required, Validators.min(0.1), Validators.max(100)]],
       termMonths: [q['term'] ? Number(q['term']) : 12, [Validators.required, Validators.min(1)]],
       interestType: [q['interestType'] || 'COMPOUND', Validators.required],
       interestPayoutType: ['MATURITY', Validators.required],
       interestFrequency: ['QUARTERLY', Validators.required],
       createWithTxn: [true]
+    });
+
+    this.formChanges = this.fdForm.valueChanges.pipe(
+      map(value => ({
+        productCode: String(value.productCode || ''),
+        principal: Number(value.principalAmount),
+        term: Number(value.termMonths)
+      })),
+      distinctUntilChanged((previous, current) => previous.productCode === current.productCode
+        && previous.principal === current.principal && previous.term === current.term),
+      tap(() => { this.quote = null; this.quoteError = ''; }),
+      debounceTime(250),
+      switchMap(value => {
+        const { productCode, principal, term } = value;
+        if (!productCode || !Number.isFinite(principal) || principal <= 0 || !Number.isFinite(term) || term <= 0) {
+          this.quoteLoading = false;
+          return of(null);
+        }
+        this.quoteLoading = true;
+        return this.productApi.getEffectiveRate(productCode, { principal, term, termUnit: 'MONTHS' }).pipe(
+          catchError(err => {
+            this.quoteError = err?.error?.message || err?.error?.detail || 'Could not quote this product for the entered amount and term.';
+            return of(null);
+          }),
+          finalize(() => this.quoteLoading = false)
+        );
+      })
+    ).subscribe(rate => {
+      this.quote = rate?.effectiveRate ?? null;
+      if (this.quote != null) this.fdForm.patchValue({ interestRate: this.quote }, { emitEvent: false });
+    });
+
+    this.productLoading = true;
+    this.productApi.search({ productType: 'FD', status: 'ACTIVE', page: 0, size: 100 }).pipe(
+      finalize(() => this.productLoading = false)
+    ).subscribe({
+      next: response => {
+        this.products = response.content || [];
+        const requested = q['productCode'];
+        const initial = this.products.find(product => product.productCode === requested) || this.products[0];
+        if (initial) this.fdForm.patchValue({ productCode: initial.productCode });
+      },
+      error: err => this.quoteError = err?.error?.message || err?.error?.detail || 'Could not load active products.'
     });
 
     this.userApi.getMe().subscribe({
@@ -236,9 +303,14 @@ export class FDCreateComponent implements OnInit {
     });
   }
 
+  ngOnDestroy(): void {
+    this.formChanges?.unsubscribe();
+  }
+
   onSubmit(): void {
-    if (this.fdForm.invalid || this.submitting) {
+    if (this.fdForm.invalid || this.submitting || this.quoteLoading || this.quote == null) {
       this.fdForm.markAllAsTouched();
+      if (this.quote == null && !this.quoteLoading) this.quoteError = 'Wait for a valid Product Pricing quote before creating the account.';
       return;
     }
 
@@ -249,7 +321,7 @@ export class FDCreateComponent implements OnInit {
       productCode: formVal.productCode,
       branchCode: String(formVal.branchCode).trim(),
       principalAmount: Number(formVal.principalAmount),
-      interestRate: Number(formVal.interestRate),
+      interestRate: this.quote,
       termMonths: Number(formVal.termMonths),
       interestType: formVal.interestType,
       interestPayoutType: formVal.interestPayoutType,

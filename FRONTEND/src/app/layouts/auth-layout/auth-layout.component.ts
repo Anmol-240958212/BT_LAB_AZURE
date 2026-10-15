@@ -185,7 +185,7 @@ export interface BankingVideo {
       z-index: 10;
     }
 
-    /* Floating Auth Card: Compact height to guarantee no page overflow */
+    /* Floating Auth Card: Glass Transparent / Glassmorphism */
     .auth-card-wrapper {
       position: relative;
       z-index: 10;
@@ -195,25 +195,103 @@ export interface BankingVideo {
       overflow-y: auto;
       scrollbar-width: none;
       -ms-overflow-style: none;
-      background-color: rgba(20, 28, 24, 0.88);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: var(--radius-card);
-      padding: 16px 24px;
-      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      color: #e2e8f0;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(15, 23, 20, 0.40) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      border-top: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 16px;
+      padding: 20px 26px;
+      box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      color: #f8fafc;
       user-select: text;
+      transition: all var(--transition-base);
     }
     .auth-card-wrapper::-webkit-scrollbar {
       display: none;
     }
 
     :host-context([data-theme="light"]) .auth-card-wrapper {
-      background-color: rgba(255, 255, 255, 0.94);
-      border: 1px solid rgba(0, 0, 0, 0.12);
-      box-shadow: 0 25px 60px -10px rgba(0, 0, 0, 0.55);
-      color: var(--color-text-primary);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.28) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.65);
+      border-top: 1px solid rgba(255, 255, 255, 0.88);
+      box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.85);
+      color: #0f172a;
+    }
+
+    /* Glass styled form inputs within auth card */
+    ::ng-deep .auth-card-wrapper .form-input {
+      background: rgba(0, 0, 0, 0.32) !important;
+      border: 1px solid rgba(255, 255, 255, 0.22) !important;
+      color: #f8fafc !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-radius: 8px !important;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+      transition: all var(--transition-fast);
+    }
+    ::ng-deep .auth-card-wrapper .form-input::placeholder {
+      color: rgba(255, 255, 255, 0.5) !important;
+    }
+    ::ng-deep .auth-card-wrapper .form-input:focus {
+      background: rgba(0, 0, 0, 0.45) !important;
+      border-color: rgba(90, 140, 120, 0.8) !important;
+      box-shadow: 0 0 0 3px rgba(90, 140, 120, 0.3), inset 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+    }
+    ::ng-deep .auth-card-wrapper .form-input.is-invalid {
+      border-color: #ef4444 !important;
+      border-left: 3px solid #ef4444 !important;
+      background: rgba(239, 68, 68, 0.12) !important;
+    }
+    ::ng-deep .auth-card-wrapper .form-label {
+      color: inherit;
+      font-weight: 500;
+      font-size: var(--text-xs);
+    }
+
+    :host-context([data-theme="light"]) ::ng-deep .auth-card-wrapper .form-input {
+      background: rgba(255, 255, 255, 0.52) !important;
+      border: 1px solid rgba(255, 255, 255, 0.75) !important;
+      color: #0f172a !important;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.04);
+    }
+    :host-context([data-theme="light"]) ::ng-deep .auth-card-wrapper .form-input::placeholder {
+      color: rgba(15, 23, 42, 0.45) !important;
+    }
+    :host-context([data-theme="light"]) ::ng-deep .auth-card-wrapper .form-input:focus {
+      background: rgba(255, 255, 255, 0.82) !important;
+      border-color: var(--color-accent) !important;
+      box-shadow: 0 0 0 3px rgba(37, 95, 72, 0.22), inset 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+    }
+    :host-context([data-theme="light"]) ::ng-deep .auth-card-wrapper .form-input.is-invalid {
+      border-color: #dc2626 !important;
+      border-left: 3px solid #dc2626 !important;
+      background: rgba(254, 226, 226, 0.55) !important;
+    }
+    :host-context([data-theme="light"]) ::ng-deep .auth-card-wrapper .form-label {
+      color: #1e293b;
+    }
+
+    /* Glass themed buttons inside auth card */
+    ::ng-deep .auth-card-wrapper .btn-primary {
+      background: linear-gradient(135deg, rgba(37, 95, 72, 0.95), rgba(27, 72, 54, 0.95)) !important;
+      border: 1px solid rgba(255, 255, 255, 0.3) !important;
+      border-radius: 8px !important;
+      box-shadow: 0 4px 14px rgba(37, 95, 72, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25) !important;
+      backdrop-filter: blur(10px);
+      color: #ffffff !important;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    ::ng-deep .auth-card-wrapper .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, rgba(45, 115, 88, 1), rgba(32, 85, 64, 1)) !important;
+      box-shadow: 0 6px 20px rgba(37, 95, 72, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+      transform: translateY(-1px);
+    }
+    ::ng-deep .auth-card-wrapper .btn-primary:disabled {
+      opacity: 0.45;
+      background: rgba(37, 95, 72, 0.45) !important;
+      box-shadow: none !important;
     }
 
     .auth-header {
@@ -222,9 +300,13 @@ export interface BankingVideo {
       align-items: center;
       text-align: center;
       margin-bottom: 8px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid var(--color-border-subtle);
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.16);
     }
+    :host-context([data-theme="light"]) .auth-header {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
     .auth-brand-link {
       display: flex;
       flex-direction: column;
@@ -237,18 +319,25 @@ export interface BankingVideo {
       color: var(--color-accent);
     }
     .auth-logo-box {
-      width: 38px;
-      height: 38px;
-      border-radius: var(--radius-button);
-      background-color: #ffffff;
-      border: 1px solid var(--color-border-default);
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.85);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 4px;
+      margin-bottom: 5px;
       overflow: hidden;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-      padding: 3px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      padding: 4px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+    :host-context([data-theme="light"]) .auth-logo-box {
+      background: rgba(255, 255, 255, 0.88);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
     }
     .auth-logo-img {
       width: 100%;
@@ -258,32 +347,41 @@ export interface BankingVideo {
     }
     .auth-brand-title {
       font-size: var(--text-base);
-      font-weight: 600;
-      color: var(--color-text-primary);
+      font-weight: 700;
+      color: inherit;
+      letter-spacing: -0.01em;
       transition: color var(--transition-fast);
       line-height: 1.2;
     }
+    :host-context([data-theme="light"]) .auth-brand-title {
+      color: #0f172a;
+    }
     .auth-brand-tagline {
       font-size: 10px;
-      color: var(--color-text-muted);
+      color: inherit;
+      opacity: 0.75;
       margin-top: 1px;
     }
     .auth-body {
       margin-bottom: 4px;
     }
     .auth-card-footer {
-      margin-top: 6px;
-      padding-top: 6px;
-      border-top: 1px solid var(--color-border-subtle);
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.16);
       display: flex;
       justify-content: center;
+    }
+    :host-context([data-theme="light"]) .auth-card-footer {
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
     }
     .card-home-link {
       display: inline-flex;
       align-items: center;
       gap: 5px;
       font-size: 11px;
-      color: var(--color-text-muted);
+      color: inherit;
+      opacity: 0.8;
       text-decoration: none;
       transition: all var(--transition-fast);
       padding: 3px 8px;
@@ -291,7 +389,11 @@ export interface BankingVideo {
     }
     .card-home-link:hover {
       color: var(--color-accent);
-      background-color: var(--color-bg-hover);
+      opacity: 1;
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+    :host-context([data-theme="light"]) .card-home-link:hover {
+      background-color: rgba(0, 0, 0, 0.06);
     }
 
     /* Minimalist Floating Source Attribution & Audio Capsule */

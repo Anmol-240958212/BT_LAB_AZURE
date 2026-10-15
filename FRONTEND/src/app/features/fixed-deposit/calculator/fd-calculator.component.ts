@@ -1,12 +1,14 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
-import { timeout, catchError, finalize } from 'rxjs/operators';
+import { timeout, catchError, finalize, map, switchMap } from 'rxjs/operators';
 import { FDCalculatorApiService } from '../../../core/api/fd-calculator-api.service';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
 import { UserApiService } from '../../../core/api/user-api.service';
+import { ProductPricingApiService } from '../../../core/api/product-pricing-api.service';
 import { FDCalculationRequest, FDCalculationResponse, FixedDepositAccountRequest } from '../../../core/models/fd.models';
 import { UserProfileResponse } from '../../../core/models/auth.models';
+import { CategoryRate, EffectiveRateQuote, ProductRecord } from '../../../core/models/product.models';
 import { AuthService } from '../../../core/auth.service';
 import { ToastService } from '../../../shared/services/toast.service';
 
@@ -33,8 +35,8 @@ import { ToastService } from '../../../shared/services/toast.service';
       <div *ngIf="isRateCapped" class="notice-box mb-6">
         <app-icon name="alert-triangle" [size]="16"></app-icon>
         <span>
-          <strong>Regulatory Rate Cap Applied:</strong> Effective interest rate has been capped at
-          <strong>8.50% p.a.</strong> in accordance with central reserve statutory guidelines.
+          <strong>Product rate cap applied:</strong> The effective rate is capped at
+          <strong>{{ (rateQuote?.rateCap ?? selectedProduct?.rateLimit?.max ?? 8.5) | number:'1.2-2' }}% p.a.</strong>
         </span>
       </div>
 
@@ -76,17 +78,22 @@ import { ToastService } from '../../../shared/services/toast.service';
               </div>
             </div>
 
-            <!-- Base Interest Rate -->
-            <app-input
-              id="calc-base-rate"
-              label="Base Interest Rate (% p.a.)"
-              type="number"
-              placeholder="e.g. 7.10"
-              [(ngModel)]="baseRate"
-              name="baseRate"
-              [required]="true"
-              hint="Card base interest rate before category add-ons"
-            ></app-input>
+            <div class="form-group">
+              <label class="form-label" for="calc-product">Deposit product *</label>
+              <select id="calc-product" class="form-select" [(ngModel)]="selectedProductCode" name="selectedProductCode"
+                      (ngModelChange)="onProductChanged($event)" [disabled]="!authService.isLoggedIn() || productLoading">
+                <option value="">{{ productLoading ? 'Loading products…' : 'Select a product' }}</option>
+                <option *ngFor="let product of products" [value]="product.productCode">
+                  {{ product.productName }} ({{ product.productCode }})
+                </option>
+              </select>
+              <small class="field-hint" *ngIf="selectedProduct">
+                Base rate: {{ selectedProduct.baseRate == null ? 'tiered by amount and term' : (selectedProduct.baseRate | number:'1.2-2') + '%' }}
+                · range {{ selectedProduct.rateLimit.min }}–{{ selectedProduct.rateLimit.max }}%
+              </small>
+              <small class="field-hint" *ngIf="!authService.isLoggedIn()">Sign in to load live products and bank-approved rates.</small>
+            </div>
+            <div *ngIf="pricingError" class="error-banner" role="alert">{{ pricingError }}</div>
 
             <!-- Interest Accrual Mechanism -->
             <div class="form-group">
@@ -98,20 +105,14 @@ import { ToastService } from '../../../shared/services/toast.service';
             </div>
 
             <!-- Category Add-ons -->
-            <div class="category-section">
+            <div class="category-section" *ngIf="categoryRates.length">
               <span class="category-header-title">Special Category Add-ons:</span>
               <div class="checkbox-group">
-                <label class="checkbox-item">
-                  <input type="checkbox" [(ngModel)]="seniorCitizen" name="seniorCitizen" />
-                  <span>Senior Citizen (+0.50%)</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" [(ngModel)]="bankEmployee" name="bankEmployee" />
-                  <span>Bank Employee / Staff (+1.00%)</span>
-                </label>
-                <label class="checkbox-item">
-                  <input type="checkbox" [(ngModel)]="premiumCustomer" name="premiumCustomer" />
-                  <span>Premium Wealth Customer (+0.25%)</span>
+                <label class="checkbox-item" *ngFor="let category of categoryRates">
+                  <input type="checkbox" [checked]="selectedCategoryCodes.has(category.categoryCode)"
+                         [disabled]="!authService.isLoggedIn() || categoryUnavailable(category)"
+                         (change)="toggleCategory(category.categoryCode, $event)" />
+                  <span>{{ category.displayName }} (+{{ category.adjustmentPercent | number:'1.2-2' }}%)</span>
                 </label>
               </div>
             </div>
@@ -121,7 +122,7 @@ import { ToastService } from '../../../shared/services/toast.service';
                 type="submit"
                 variant="primary"
                 [loading]="calculating"
-                [disabled]="principal <= 0 || termValue <= 0"
+                [disabled]="principal <= 0 || termValue <= 0 || calculating || (authService.isLoggedIn() && !selectedProduct)"
                 [block]="true"
                 id="btn-run-calculation"
                 (clicked)="calculate()"
@@ -160,7 +161,7 @@ import { ToastService } from '../../../shared/services/toast.service';
               <span class="row-label">Effective Applicable Rate</span>
               <span class="row-val">
                 {{ result?.effectiveRate || effectiveCalculatedRate | number:'1.2-2' }}%
-                <span *ngIf="isRateCapped" class="capped-tag">(CAPPED AT 8.5%)</span>
+                <span *ngIf="isRateCapped" class="capped-tag">(CAPPED AT {{ rateQuote?.rateCap | number:'1.2-2' }}%)</span>
               </span>
             </div>
             <div class="breakdown-row">
@@ -188,6 +189,7 @@ import { ToastService } from '../../../shared/services/toast.service';
             <app-button
               variant="secondary"
               [block]="true"
+              [disabled]="calculating || !result || (authService.isLoggedIn() && !rateQuote)"
               (clicked)="openFdWithParams()"
             >
               {{ isCustomer ? 'Apply for Fixed Deposit With These Terms →' : 'Open FD Account With These Terms →' }}
@@ -275,6 +277,8 @@ import { ToastService } from '../../../shared/services/toast.service';
     </div>
   `,
   styles: [`
+    .field-hint { display:block; margin-top:6px; color:var(--color-text-muted); font-size:var(--text-xs); }
+    .error-banner { margin:10px 0; border:1px solid #d97a7a; background:rgba(217,122,122,.12); color:var(--color-text-primary); border-radius:var(--radius-input); padding:10px 12px; font-size:var(--text-sm); }
     .section-tag {
       font-size: 10px;
       font-weight: 600;
@@ -503,10 +507,14 @@ export class FDCalculatorComponent implements OnInit {
   termUnit = 'MONTHS';
   baseRate = 7.10;
   interestType = 'COMPOUND';
-
-  seniorCitizen = false;
-  bankEmployee = false;
-  premiumCustomer = false;
+  products: ProductRecord[] = [];
+  selectedProductCode = '';
+  categoryRates: CategoryRate[] = [];
+  selectedCategoryCodes = new Set<string>();
+  rateQuote: EffectiveRateQuote | null = null;
+  productLoading = false;
+  pricingError = '';
+  private calculationSequence = 0;
 
   calculating = false;
   result: FDCalculationResponse | null = null;
@@ -517,7 +525,9 @@ export class FDCalculatorComponent implements OnInit {
   submittingApplication = false;
   currentUser: UserProfileResponse | null = null;
 
-  readonly MAX_ALLOWED_RATE = 8.5; // Mandate L11
+  get selectedProduct(): ProductRecord | undefined {
+    return this.products.find(product => product.productCode === this.selectedProductCode);
+  }
 
   get isCustomer(): boolean {
     return this.authService.getRole() === 'CUSTOMER';
@@ -559,6 +569,7 @@ export class FDCalculatorComponent implements OnInit {
     private readonly calcApi: FDCalculatorApiService,
     private readonly fdAccountApi: FDAccountApiService,
     private readonly userApi: UserApiService,
+    private readonly productApi: ProductPricingApiService,
     public readonly authService: AuthService,
     private readonly toastService: ToastService,
     private readonly router: Router,
@@ -566,105 +577,202 @@ export class FDCalculatorComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.calculate();
+    if (!this.authService.isLoggedIn()) {
+      this.calculate();
+      return;
+    }
+    this.userApi.getMe().pipe(catchError(() => of(null))).subscribe(profile => {
+      this.currentUser = profile;
+      this.productLoading = true;
+      this.productApi.search({ productType: 'FD', status: 'ACTIVE', page: 0, size: 100 }).pipe(
+        finalize(() => this.productLoading = false)
+      ).subscribe({
+        next: response => {
+          this.products = response.content || [];
+          const defaultProduct = this.products[0];
+          if (defaultProduct) {
+            this.selectedProductCode = defaultProduct.productCode;
+            this.baseRate = Number(defaultProduct.baseRate) || 0;
+            this.loadSelectedProductRates(true);
+          } else {
+            this.pricingError = 'No active fixed-deposit products are configured yet. Ask a bank officer to add one.';
+            this.cdr.detectChanges();
+          }
+        },
+        error: err => {
+          this.pricingError = this.apiError(err, 'Could not load live product rates.');
+          this.cdr.detectChanges();
+        }
+      });
+    });
   }
 
   get categories(): string[] {
-    const list: string[] = [];
-    if (this.seniorCitizen) list.push('SENIOR');
-    if (this.bankEmployee) list.push('EMPLOYEE');
-    if (this.premiumCustomer) list.push('PREMIUM_USER');
-    return list;
+    return [...this.selectedCategoryCodes];
   }
 
   get effectiveCalculatedRate(): number {
-    let rate = Number(this.baseRate) || 0;
-    if (this.seniorCitizen) rate += 0.5;
-    if (this.bankEmployee) rate += 1.0;
-    if (this.premiumCustomer) rate += 0.25;
-
-    // Hard Cap at 8.5% per L11 testing table
-    return Math.min(rate, this.MAX_ALLOWED_RATE);
+    return this.rateQuote?.effectiveRate ?? (Number(this.baseRate) || 0);
   }
 
   get isRateCapped(): boolean {
-    let rawRate = Number(this.baseRate) || 0;
-    if (this.seniorCitizen) rawRate += 0.5;
-    if (this.bankEmployee) rawRate += 1.0;
-    if (this.premiumCustomer) rawRate += 0.25;
-    return rawRate > this.MAX_ALLOWED_RATE;
+    return this.rateQuote?.capped ?? false;
   }
 
   calculate(): void {
     const numPrincipal = Number(this.principal) || 0;
     const numTerm = Number(this.termValue) || 0;
-    const numBaseRate = Number(this.baseRate) || 0;
-
     if (numPrincipal <= 0 || numTerm <= 0) return;
-
-    this.calculating = true;
-
-    // Convert term to years for mathematical interest formulas
-    const years = this.termUnit === 'DAYS' ? numTerm / 365 : this.termUnit === 'MONTHS' ? numTerm / 12 : numTerm;
-    const rate = this.effectiveCalculatedRate / 100;
-
-    // Simple Interest (I = P * R * T)
-    const simpleInterest = Math.round((numPrincipal * rate * years) * 100) / 100;
-    this.simpleYield = numPrincipal + simpleInterest;
-
-    // Compound Interest (Quarterly compounding, n=4: A = P * (1 + r/4)^(4*t))
-    const compoundAmount = Math.round((numPrincipal * Math.pow(1 + rate / 4, 4 * years)) * 100) / 100;
-    this.compoundYield = compoundAmount;
-
-    // Immediate local calculation ensures responsive feedback with zero UI freeze
-    const chosenAmount = this.interestType === 'COMPOUND' ? this.compoundYield : this.simpleYield;
-    const localResult: FDCalculationResponse = {
-      maturityAmount: chosenAmount,
-      effectiveRate: this.effectiveCalculatedRate,
-      interestEarned: Math.round((chosenAmount - numPrincipal) * 100) / 100
-    };
-    this.result = localResult;
-    this.cdr.detectChanges();
-
-    // Prepare normalized request payload (months for backend calculator engine)
-    let termMonths = numTerm;
-    if (this.termUnit === 'YEARS') {
-      termMonths = numTerm * 12;
-    } else if (this.termUnit === 'DAYS') {
-      termMonths = Math.max(1, Math.round(numTerm / 30.417));
+    if (!this.authService.isLoggedIn()) {
+      this.applyProjection(this.baseRate);
+      this.result = this.localCalculation(this.baseRate);
+      return;
+    }
+    if (!this.selectedProduct) {
+      this.pricingError = 'Select an active fixed-deposit product before calculating.';
+      this.result = null;
+      return;
     }
 
-    const req: FDCalculationRequest = {
-      principal: numPrincipal,
-      term: {
-        value: termMonths,
-        unit: 'MONTHS'
-      },
-      baseRate: numBaseRate,
+    const sequence = ++this.calculationSequence;
+    this.calculating = true;
+    this.pricingError = '';
+    this.productApi.getEffectiveRate(this.selectedProduct.productCode, {
       categories: this.categories,
-      interestType: this.interestType
-    };
-
-    this.calcApi.calculate(req).pipe(
-      timeout(3000),
-      catchError((err) => {
-        console.warn('Backend calculation synchronization fallback to precision local engine:', err);
-        return of(localResult);
+      customerAge: this.customerAge(),
+      customerGender: this.customerGender(),
+      principal: numPrincipal,
+      term: numTerm,
+      termUnit: this.termUnit as 'DAYS' | 'MONTHS' | 'YEARS'
+    }).pipe(
+      switchMap(quote => {
+        this.rateQuote = quote;
+        this.applyProjection(quote.effectiveRate);
+        const localResult = this.localCalculation(quote.effectiveRate);
+        const request: FDCalculationRequest = {
+          principal: numPrincipal,
+          term: { value: this.termMonthsEquivalent, unit: 'MONTHS' },
+          // Product Pricing has already selected the tier and applied category caps.
+          // Pass the final rate to the FD engine without reapplying category bonuses.
+          baseRate: quote.effectiveRate,
+          categories: [],
+          interestType: this.interestType
+        };
+        return this.calcApi.calculate(request).pipe(
+          timeout(3000),
+          catchError(() => of(localResult)),
+          map(result => ({ quote, result: Number.isFinite(result?.maturityAmount) ? result : localResult }))
+        );
       }),
       finalize(() => {
-        this.calculating = false;
-        this.cdr.detectChanges();
+        if (sequence === this.calculationSequence) {
+          this.calculating = false;
+          this.cdr.detectChanges();
+        }
       })
     ).subscribe({
-      next: (res) => {
-        if (res && res.maturityAmount) {
-          this.result = res;
-        } else {
-          this.result = localResult;
-        }
+      next: ({ quote, result }) => {
+        if (sequence !== this.calculationSequence) return;
+        this.rateQuote = quote;
+        this.result = result;
+        this.cdr.detectChanges();
+      },
+      error: err => {
+        if (sequence !== this.calculationSequence) return;
+        this.result = null;
+        this.pricingError = this.apiError(err, 'Could not calculate this product rate. Check the selected term, amount, and category eligibility.');
         this.cdr.detectChanges();
       }
     });
+  }
+
+  onProductChanged(productCode: string): void {
+    this.selectedProductCode = productCode;
+    this.rateQuote = null;
+    this.selectedCategoryCodes.clear();
+    this.result = null;
+    const product = this.selectedProduct;
+    this.baseRate = Number(product?.baseRate) || 0;
+    if (product) this.loadSelectedProductRates(true);
+    else this.categoryRates = [];
+  }
+
+  toggleCategory(categoryCode: string, event: Event): void {
+    const checked = (event.target as HTMLInputElement).checked;
+    const next = new Set(this.selectedCategoryCodes);
+    if (checked) next.add(categoryCode);
+    else next.delete(categoryCode);
+    this.selectedCategoryCodes = next;
+  }
+
+  categoryUnavailable(category: CategoryRate): boolean {
+    const age = this.customerAge();
+    if ((category.minAge != null || category.maxAge != null) && age == null) return true;
+    if (age != null && category.minAge != null && age < category.minAge) return true;
+    if (age != null && category.maxAge != null && age > category.maxAge) return true;
+    const requiredGender = category.gender?.toUpperCase();
+    if (requiredGender && !this.customerGender()) return true;
+    return !!requiredGender && requiredGender !== this.customerGender();
+  }
+
+  private loadSelectedProductRates(recalculate: boolean): void {
+    const product = this.selectedProduct;
+    if (!product) return;
+    this.productApi.getCategoryRates(product.productCode).subscribe({
+      next: rates => {
+        this.categoryRates = rates;
+        this.cdr.detectChanges();
+        if (recalculate) this.calculate();
+      },
+      error: err => {
+        this.categoryRates = [];
+        this.pricingError = this.apiError(err, 'Could not load category-rate options.');
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private applyProjection(ratePercent: number): void {
+    const principal = Number(this.principal) || 0;
+    const years = this.termUnit === 'DAYS' ? Number(this.termValue) / 365
+      : this.termUnit === 'MONTHS' ? Number(this.termValue) / 12 : Number(this.termValue);
+    const rate = ratePercent / 100;
+    this.simpleYield = Math.round((principal + principal * rate * years) * 100) / 100;
+    this.compoundYield = Math.round(principal * Math.pow(1 + rate / 4, 4 * years) * 100) / 100;
+  }
+
+  private localCalculation(ratePercent: number): FDCalculationResponse {
+    const amount = this.interestType === 'COMPOUND' ? this.compoundYield : this.simpleYield;
+    return { maturityAmount: amount, effectiveRate: ratePercent,
+      interestEarned: Math.round((amount - Number(this.principal)) * 100) / 100 };
+  }
+
+  private customerAge(): number | undefined {
+    const dateOfBirth = this.currentUser?.dateOfBirth;
+    if (!dateOfBirth) return undefined;
+    const birth = new Date(dateOfBirth);
+    if (Number.isNaN(birth.getTime())) return undefined;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDifference = today.getMonth() - birth.getMonth();
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  }
+
+  private customerGender(): string | undefined {
+    const gender = this.currentUser?.gender?.trim().toUpperCase();
+    if (!gender) return undefined;
+    if (gender === 'M' || gender.startsWith('MALE')) return 'M';
+    if (gender === 'F' || gender.startsWith('FEMALE')) return 'F';
+    return 'X';
+  }
+
+  private apiError(err: any, fallback: string): string {
+    const body = err?.error;
+    if (body?.validationErrors && typeof body.validationErrors === 'object') {
+      return Object.values(body.validationErrors).map(value => String(value)).join(' · ');
+    }
+    return body?.message || body?.detail || fallback;
   }
 
   openFdWithParams(): void {
@@ -685,6 +793,7 @@ export class FDCalculatorComponent implements OnInit {
           principal: this.principal,
           term: this.termMonthsEquivalent,
           rate: this.effectiveCalculatedRate,
+          productCode: this.selectedProduct?.productCode,
           interestType: this.interestType
         }
       });
@@ -700,7 +809,7 @@ export class FDCalculatorComponent implements OnInit {
 
     const req: FixedDepositAccountRequest = {
       customerId: customerIdStr,
-      productCode: 'PROD_FD_CUMULATIVE',
+      productCode: this.selectedProduct?.productCode || 'PROD_FD_CUMULATIVE',
       branchCode: '001',
       principalAmount: Number(this.principal),
       interestRate: Number(this.effectiveCalculatedRate),

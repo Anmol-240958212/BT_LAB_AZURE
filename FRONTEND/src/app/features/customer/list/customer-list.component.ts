@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { CustomerApiService } from '../../../core/api/customer-api.service';
 import { CustomerProfileResponse } from '../../../core/models/auth.models';
 import { TableColumn } from '../../../shared/components/table/table.component';
+import { ToastService } from '../../../shared/services/toast.service';
+import { of } from 'rxjs';
+import { catchError, finalize, timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-customer-list',
@@ -26,7 +29,11 @@ import { TableColumn } from '../../../shared/components/table/table.component';
             [(ngModel)]="searchQuery"
             (input)="onSearch()"
           />
-          <app-button variant="secondary" (clicked)="loadCustomers()">
+          <app-button
+            variant="secondary"
+            [loading]="loading"
+            (clicked)="loadCustomers()"
+          >
             Refresh List
           </app-button>
         </div>
@@ -162,7 +169,11 @@ export class CustomerListComponent implements OnInit {
     { field: 'message', header: 'Verification Notes' }
   ];
 
-  constructor(private readonly customerApi: CustomerApiService) {}
+  constructor(
+    private readonly customerApi: CustomerApiService,
+    private readonly toastService: ToastService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.filteredCustomers = [...this.allCustomers];
@@ -171,16 +182,32 @@ export class CustomerListComponent implements OnInit {
 
   loadCustomers(): void {
     this.loading = true;
-    this.customerApi.getAllCustomers().subscribe({
-      next: (data) => {
+    this.cdr.detectChanges();
+
+    this.customerApi.getAllCustomers().pipe(
+      timeout(4000),
+      catchError((err) => {
+        console.warn('Customer list API fetch error or timeout:', err);
+        const isAuthErr = err?.status === 401 || err?.status === 403;
+        this.toastService.warning(
+          isAuthErr
+            ? 'Your banking session has expired. Please sign out and sign in again.'
+            : 'Live sync timed out. Serving local repository records.',
+          'Sync Notice'
+        );
+        return of(this.allCustomers.length > 0 ? this.allCustomers : []);
+      }),
+      finalize(() => {
         this.loading = false;
+        this.cdr.detectChanges();
+      })
+    ).subscribe({
+      next: (data) => {
         if (data && data.length > 0) {
           this.allCustomers = data;
-          this.onSearch();
         }
-      },
-      error: () => {
-        this.loading = false;
+        this.onSearch();
+        this.cdr.detectChanges();
       }
     });
   }
