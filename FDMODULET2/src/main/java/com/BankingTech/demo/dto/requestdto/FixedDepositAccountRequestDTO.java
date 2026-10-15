@@ -62,6 +62,17 @@ public class FixedDepositAccountRequestDTO {
     @io.swagger.v3.oas.annotations.media.Schema(example = "MONTHLY")
     private String interestFrequency;
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "PENDING", description = "Initial status (ACTIVE or PENDING approval)")
+    private String status;
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
     public String getInterestFrequency() {
         return interestFrequency;
     }

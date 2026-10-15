@@ -27,6 +27,7 @@ export interface FixedDepositAccountRequest {
   interestType: string;
   interestPayoutType: string;
   interestFrequency?: string;
+  status?: string;
 }
 
 export interface FixedDepositAccountResponse {

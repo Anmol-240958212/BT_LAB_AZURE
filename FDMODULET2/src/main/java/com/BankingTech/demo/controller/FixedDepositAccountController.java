@@ -41,6 +41,14 @@ public class FixedDepositAccountController {
                                 fixedDepositAccountService.createAccountWithTransaction(request));
         }
 
+        @PutMapping("/{fdAccountNo}/approve")
+        public ResponseEntity<FixedDepositAccountResponseDTO> approveAccount(
+                        @PathVariable String fdAccountNo) {
+
+                return ResponseEntity.ok(
+                                fixedDepositAccountService.approveAccount(fdAccountNo));
+        }
+
         @GetMapping("/{fdAccountNo}")
         public ResponseEntity<FixedDepositAccountResponseDTO> getAccount(
                         @PathVariable String fdAccountNo) {

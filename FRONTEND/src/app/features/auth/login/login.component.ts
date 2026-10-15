@@ -304,6 +304,7 @@ export class LoginComponent implements OnInit {
         raw.startsWith('/reports') ||
         raw.startsWith('/customer/list') ||
         raw.startsWith('/customer/all') ||
+        raw.startsWith('/fixed-deposit/create') ||
         raw.startsWith('/fixed-deposit/transactions')
       ) {
         return '/dashboard';

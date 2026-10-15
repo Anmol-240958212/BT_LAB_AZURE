@@ -25,6 +25,10 @@ export class FDAccountApiService {
     return this.http.post<FDAccountCreationResponse>(`${this.baseUrl}/create-with-txn`, request);
   }
 
+  public approveAccount(fdAccountNo: string): Observable<FixedDepositAccountResponse> {
+    return this.http.put<FixedDepositAccountResponse>(`${this.baseUrl}/${encodeURIComponent(fdAccountNo)}/approve`, {});
+  }
+
   public getAccount(fdAccountNo: string): Observable<FixedDepositAccountResponse> {
     return this.http.get<FixedDepositAccountResponse>(`${this.baseUrl}/${encodeURIComponent(fdAccountNo)}`);
   }
