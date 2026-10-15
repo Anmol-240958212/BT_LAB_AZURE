@@ -5,6 +5,7 @@ import { AuthService } from '../../../core/auth.service';
 import { FixedDepositAccountResponse, FDWithdrawalResponse } from '../../../core/models/fd.models';
 import { TableColumn } from '../../../shared/components/table/table.component';
 import { ToastService } from '../../../shared/services/toast.service';
+import { UserApiService } from '../../../core/api/user-api.service';
 
 @Component({
   selector: 'app-fd-accounts',
@@ -15,9 +16,11 @@ import { ToastService } from '../../../shared/services/toast.service';
       <div class="card mb-6">
         <div class="flex-between">
           <div>
-            <span class="section-tag">DEPOSIT LEDGER REGISTRY</span>
-            <h1 class="card-title mt-1">Fixed Deposit Accounts Portfolio</h1>
-            <p class="card-subtitle">Manage customer deposit accounts, terms, and premature liquidation workflows.</p>
+            <span class="section-tag">{{ canCreate ? 'DEPOSIT LEDGER REGISTRY' : 'CUSTOMER DEPOSIT HOLDINGS' }}</span>
+            <h1 class="card-title mt-1">{{ canCreate ? 'Fixed Deposit Accounts Portfolio' : 'My Fixed Deposit Portfolio' }}</h1>
+            <p class="card-subtitle">
+              {{ canCreate ? 'Manage customer deposit accounts, terms, and premature liquidation workflows.' : 'View your active deposit instruments, contracted interest rates, and maturity statuses.' }}
+            </p>
           </div>
           <app-button
             *ngIf="canCreate"
@@ -61,7 +64,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 
       <!-- Accounts Table -->
       <app-card
-        title="Fixed Deposit Holdings"
+        [title]="canCreate ? 'Fixed Deposit Holdings' : 'My Active Deposits'"
         [subtitle]="filteredAccounts.length + ' deposit accounts match criteria'"
       >
         <app-table
@@ -82,7 +85,7 @@ import { ToastService } from '../../../shared/services/toast.service';
                 Inspect
               </button>
               <button
-                *ngIf="account.status === 'ACTIVE'"
+                *ngIf="account.status === 'ACTIVE' && canCreate"
                 type="button"
                 class="btn btn-danger btn-xs"
                 (click)="openWithdrawalModal(account)"
@@ -383,14 +386,30 @@ export class FDAccountsComponent implements OnInit {
     { field: 'status', header: 'Status', type: 'badge', align: 'center' }
   ];
 
+  userCustomerId: string | null = null;
+
   constructor(
     private readonly fdAccountApi: FDAccountApiService,
     private readonly authService: AuthService,
+    private readonly userApi: UserApiService,
     private readonly toastService: ToastService,
     public readonly router: Router
   ) {}
 
   ngOnInit(): void {
+    const role = this.authService.getRole();
+    if (role === 'CUSTOMER') {
+      this.userApi.getMe().subscribe({
+        next: (profile) => {
+          if (profile && profile.customerId) {
+            this.userCustomerId = String(profile.customerId);
+            this.applyFilters();
+          }
+        },
+        error: () => {}
+      });
+    }
+
     this.filteredAccounts = [...this.allAccounts];
     this.loadAccounts();
   }
@@ -424,13 +443,21 @@ export class FDAccountsComponent implements OnInit {
   applyFilters(): void {
     let list = [...this.allAccounts];
 
-    if (this.selectedStatus !== 'ALL') {
-      list = list.filter(a => a.status.toUpperCase() === this.selectedStatus.toUpperCase());
-    }
-
-    if (this.customerFilter.trim()) {
+    const role = this.authService.getRole();
+    if (role === 'CUSTOMER') {
+      if (this.userCustomerId) {
+        const q = this.userCustomerId.trim().toLowerCase();
+        list = list.filter(a => a.customerId.toLowerCase().includes(q));
+      } else {
+        list = list.filter(a => a.customerId.toLowerCase().includes('1001'));
+      }
+    } else if (this.customerFilter.trim()) {
       const q = this.customerFilter.trim().toLowerCase();
       list = list.filter(a => a.customerId.toLowerCase().includes(q));
+    }
+
+    if (this.selectedStatus !== 'ALL') {
+      list = list.filter(a => a.status.toUpperCase() === this.selectedStatus.toUpperCase());
     }
 
     this.filteredAccounts = list;

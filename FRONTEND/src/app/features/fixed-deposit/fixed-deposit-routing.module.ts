@@ -5,10 +5,11 @@ import { FDAccountsComponent } from './accounts/fd-accounts.component';
 import { FDCreateComponent } from './create/fd-create.component';
 import { FDTransactionsComponent } from './transactions/fd-transactions.component';
 import { RoleGuard } from '../../core/role.guard';
+import { AuthGuard } from '../../core/auth.guard';
 
 const routes: Routes = [
   { path: 'calculator', component: FDCalculatorComponent },
-  { path: 'accounts', component: FDAccountsComponent },
+  { path: 'accounts', component: FDAccountsComponent, canActivate: [AuthGuard] },
   {
     path: 'create',
     component: FDCreateComponent,

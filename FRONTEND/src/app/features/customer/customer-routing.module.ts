@@ -3,9 +3,13 @@ import { RouterModule, Routes } from '@angular/router';
 import { CustomerProfileComponent } from './profile/customer-profile.component';
 import { CustomerListComponent } from './list/customer-list.component';
 import { RoleGuard } from '../../core/role.guard';
-
 const routes: Routes = [
-  { path: 'profile', component: CustomerProfileComponent },
+  {
+    path: 'profile',
+    component: CustomerProfileComponent,
+    canActivate: [RoleGuard],
+    data: { roles: ['CUSTOMER'] }
+  },
   {
     path: 'all',
     component: CustomerListComponent,

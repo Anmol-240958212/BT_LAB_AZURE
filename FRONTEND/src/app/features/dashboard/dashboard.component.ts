@@ -4,6 +4,7 @@ import { AuthService } from '../../core/auth.service';
 import { AuthState, UserRole } from '../../core/models/auth.models';
 import { FixedDepositAccountResponse } from '../../core/models/fd.models';
 import { FDAccountApiService } from '../../core/api/fd-account-api.service';
+import { UserApiService } from '../../core/api/user-api.service';
 import { TableColumn } from '../../shared/components/table/table.component';
 
 @Component({
@@ -105,7 +106,20 @@ import { TableColumn } from '../../shared/components/table/table.component';
             <span>Update My KYC Profile</span>
           </app-button>
 
-          <app-button variant="ghost" (clicked)="navigate('/reports')">
+          <app-button
+            *ngIf="currentRole === 'CUSTOMER'"
+            variant="ghost"
+            (clicked)="navigate('/fixed-deposit/accounts')"
+          >
+            <app-icon name="coins" [size]="15"></app-icon>
+            <span>My Deposit Portfolio</span>
+          </app-button>
+
+          <app-button
+            *ngIf="currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
+            variant="ghost"
+            (clicked)="navigate('/reports')"
+          >
             <app-icon name="bar-chart" [size]="15"></app-icon>
             <span>View Analytics</span>
           </app-button>
@@ -114,8 +128,8 @@ import { TableColumn } from '../../shared/components/table/table.component';
 
       <!-- Recent Fixed Deposits Table -->
       <app-card
-        title="Recent Fixed Deposit Accounts"
-        subtitle="Live registry of active deposit instruments under management"
+        [title]="currentRole === 'CUSTOMER' ? 'My Fixed Deposit Accounts' : 'Recent Fixed Deposit Accounts'"
+        [subtitle]="currentRole === 'CUSTOMER' ? 'Your active deposit instruments and accrued returns' : 'Live registry of active deposit instruments under management'"
         class="mb-6"
       >
         <div card-action class="flex-row">
@@ -124,7 +138,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
             <span>Refresh Data</span>
           </app-button>
           <app-button variant="secondary" (clicked)="navigate('/fixed-deposit/accounts')">
-            <span>View All Accounts</span>
+            <span>{{ currentRole === 'CUSTOMER' ? 'View My Deposits' : 'View All Accounts' }}</span>
             <app-icon name="arrow-right" [size]="13"></app-icon>
           </app-button>
         </div>
@@ -268,9 +282,12 @@ export class DashboardComponent implements OnInit {
     }
   ];
 
+  userCustomerId: string | null = null;
+
   constructor(
     private readonly authService: AuthService,
     private readonly fdAccountApi: FDAccountApiService,
+    private readonly userApi: UserApiService,
     private readonly router: Router
   ) {}
 
@@ -278,6 +295,18 @@ export class DashboardComponent implements OnInit {
     this.authService.authState$.subscribe(state => {
       this.authState = state;
       this.currentRole = state.role;
+      if (this.currentRole === 'CUSTOMER') {
+        this.userApi.getMe().subscribe({
+          next: (profile) => {
+            if (profile && profile.customerId) {
+              this.userCustomerId = String(profile.customerId);
+              this.filterAccountsForCustomer();
+              this.recalculateStats();
+            }
+          },
+          error: () => {}
+        });
+      }
     });
 
     this.loadAccounts();
@@ -290,16 +319,33 @@ export class DashboardComponent implements OnInit {
         this.loadingAccounts = false;
         if (data && data.length > 0) {
           this.recentAccounts = data;
-          this.activeAccountCount = data.length;
-          this.totalDepositValue = data.reduce((acc, curr) => acc + (Number(curr.principalAmount) || 0), 0);
-          this.totalAccruedInterest = data.reduce((acc, curr) => acc + (Number(curr.accruedInterest) || 0), 0);
         }
+        this.filterAccountsForCustomer();
+        this.recalculateStats();
       },
       error: () => {
         this.loadingAccounts = false;
-        // Keep demo records if backend is offline
+        this.filterAccountsForCustomer();
+        this.recalculateStats();
       }
     });
+  }
+
+  private filterAccountsForCustomer(): void {
+    if (this.currentRole === 'CUSTOMER') {
+      if (this.userCustomerId) {
+        const id = this.userCustomerId.toLowerCase();
+        this.recentAccounts = this.recentAccounts.filter(a => a.customerId.toLowerCase().includes(id));
+      } else {
+        this.recentAccounts = this.recentAccounts.filter(a => a.customerId.toLowerCase().includes('1001'));
+      }
+    }
+  }
+
+  private recalculateStats(): void {
+    this.activeAccountCount = this.recentAccounts.length;
+    this.totalDepositValue = this.recentAccounts.reduce((acc, curr) => acc + (Number(curr.principalAmount) || 0), 0);
+    this.totalAccruedInterest = this.recentAccounts.reduce((acc, curr) => acc + (Number(curr.accruedInterest) || 0), 0);
   }
 
   navigate(path: string): void {

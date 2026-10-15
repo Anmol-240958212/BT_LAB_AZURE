@@ -260,9 +260,10 @@ export class LoginComponent implements OnInit {
           return;
         }
 
-        const inferredRole: UserRole = username.toLowerCase().includes('admin')
+        const lower = username.toLowerCase();
+        const inferredRole: UserRole = (lower.includes('admin') || lower.includes('root') || lower.includes('headadmin'))
           ? 'ADMIN'
-          : username.toLowerCase().includes('officer')
+          : (lower.includes('officer') || lower.includes('jack') || lower.includes('staff'))
           ? 'BANK_OFFICER'
           : 'CUSTOMER';
 
