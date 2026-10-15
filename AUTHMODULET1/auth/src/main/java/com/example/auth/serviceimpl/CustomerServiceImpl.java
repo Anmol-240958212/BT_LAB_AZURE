@@ -79,8 +79,9 @@ public class CustomerServiceImpl implements CustomerService {
             throw new IllegalStateException("No customer associated with this user");
         }
 
-        if (!"KYC_PENDING".equals(customer.getCustomerStatus().getStatusCode())) {
-            throw new IllegalStateException("Customer status must be KYC_PENDING to perform KYC");
+        String currentStatusCode = customer.getCustomerStatus() != null ? customer.getCustomerStatus().getStatusCode() : "KYC_PENDING";
+        if ("LOCKED".equals(currentStatusCode) || "CLOSED".equals(currentStatusCode)) {
+            throw new IllegalStateException("Cannot update KYC profile for a locked or closed account");
         }
 
         // 1. Update CustDtl
@@ -133,13 +134,19 @@ public class CustomerServiceImpl implements CustomerService {
             IdfnTypMstr idfnType = idfnTypMstrRepository.findByIdentificationType(request.getIdentificationType())
                     .orElseThrow(() -> new IllegalStateException("Invalid identification type: " + request.getIdentificationType()));
             
-            CustIdfn custIdfn = new CustIdfn();
-            custIdfn.setCustomer(customer);
+            CustIdfn custIdfn = custIdfnRepository.findByCustomer(customer).stream()
+                    .findFirst()
+                    .orElseGet(() -> {
+                        CustIdfn idfn = new CustIdfn();
+                        idfn.setCustomer(customer);
+                        return idfn;
+                    });
+            
             custIdfn.setIdentificationType(idfnType);
             custIdfn.setIdentificationItem(request.getIdentificationNumber());
             
             custIdfn.setEffectiveDate(audit.getEffectiveDate());
-            custIdfn.setCrudValue(audit.getCrudValue());
+            custIdfn.setCrudValue(custIdfn.getRecordId() == null ? "C" : "U");
             custIdfn.setUserId(audit.getUserId());
             custIdfn.setWorkstationId(audit.getWorkstationId());
             custIdfn.setProgramId(audit.getProgramId());
@@ -377,12 +384,19 @@ public class CustomerServiceImpl implements CustomerService {
         if (value == null || value.isBlank()) return;
         NmeTypMstr nameType = nmeTypMstrRepository.findByNameType(nameTypeStr)
                 .orElseThrow(() -> new IllegalStateException("Invalid name type: " + nameTypeStr));
-        CustNmeCmpnt cmpnt = new CustNmeCmpnt();
-        cmpnt.setCustomer(customer);
-        cmpnt.setNameType(nameType);
+        CustNmeCmpnt cmpnt = custNmeCmpntRepository.findByCustomer(customer).stream()
+                .filter(n -> n.getNameType() != null && nameTypeStr.equals(n.getNameType().getNameType()))
+                .findFirst()
+                .orElseGet(() -> {
+                    CustNmeCmpnt n = new CustNmeCmpnt();
+                    n.setCustomer(customer);
+                    n.setNameType(nameType);
+                    return n;
+                });
+
         cmpnt.setNameTypeValue(value);
         cmpnt.setEffectiveDate(audit.getEffectiveDate());
-        cmpnt.setCrudValue(audit.getCrudValue());
+        cmpnt.setCrudValue(cmpnt.getId() == null ? "C" : "U");
         cmpnt.setUserId(audit.getUserId());
         cmpnt.setWorkstationId(audit.getWorkstationId());
         cmpnt.setProgramId(audit.getProgramId());
@@ -398,12 +412,19 @@ public class CustomerServiceImpl implements CustomerService {
         if (value == null || value.isBlank()) return;
         AddrTypMstr addrType = addrTypMstrRepository.findByAddressType(addrTypeStr)
                 .orElseThrow(() -> new IllegalStateException("Invalid address type: " + addrTypeStr));
-        CustAddrCmpnt cmpnt = new CustAddrCmpnt();
-        cmpnt.setCustomer(customer);
-        cmpnt.setAddressType(addrType);
+        CustAddrCmpnt cmpnt = custAddrCmpntRepository.findByCustomer(customer).stream()
+                .filter(a -> a.getAddressType() != null && addrTypeStr.equals(a.getAddressType().getAddressType()))
+                .findFirst()
+                .orElseGet(() -> {
+                    CustAddrCmpnt a = new CustAddrCmpnt();
+                    a.setCustomer(customer);
+                    a.setAddressType(addrType);
+                    return a;
+                });
+
         cmpnt.setAddressTypeValue(value);
         cmpnt.setEffectiveDate(audit.getEffectiveDate());
-        cmpnt.setCrudValue(audit.getCrudValue());
+        cmpnt.setCrudValue(cmpnt.getId() == null ? "C" : "U");
         cmpnt.setUserId(audit.getUserId());
         cmpnt.setWorkstationId(audit.getWorkstationId());
         cmpnt.setProgramId(audit.getProgramId());
@@ -419,12 +440,19 @@ public class CustomerServiceImpl implements CustomerService {
         if (value == null || value.isBlank()) return;
         CntctTypMstr cntctType = cntctTypMstrRepository.findByContactType(contactTypeStr)
                 .orElseThrow(() -> new IllegalStateException("Invalid contact type: " + contactTypeStr));
-        CustCntctDtls cmpnt = new CustCntctDtls();
-        cmpnt.setCustomer(customer);
-        cmpnt.setContactType(cntctType);
+        CustCntctDtls cmpnt = custCntctDtlsRepository.findByCustomer(customer).stream()
+                .filter(c -> c.getContactType() != null && contactTypeStr.equals(c.getContactType().getContactType()))
+                .findFirst()
+                .orElseGet(() -> {
+                    CustCntctDtls c = new CustCntctDtls();
+                    c.setCustomer(customer);
+                    c.setContactType(cntctType);
+                    return c;
+                });
+
         cmpnt.setContactValue(value);
         cmpnt.setEffectiveDate(audit.getEffectiveDate());
-        cmpnt.setCrudValue(audit.getCrudValue());
+        cmpnt.setCrudValue(cmpnt.getRecordId() == null ? "C" : "U");
         cmpnt.setUserId(audit.getUserId());
         cmpnt.setWorkstationId(audit.getWorkstationId());
         cmpnt.setProgramId(audit.getProgramId());

@@ -30,7 +30,7 @@ public class KycKafkaEventListener {
     }
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, readOnly = true)
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
     public void onKycApproved(KycApprovedEvent event) {
         CustDtl customer = event.getCustomer();
 

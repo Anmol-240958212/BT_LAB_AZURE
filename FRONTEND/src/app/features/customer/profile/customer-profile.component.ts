@@ -126,7 +126,7 @@ import { TableColumn } from '../../../shared/components/table/table.component';
                 [disabled]="kycForm.invalid || savingKyc"
                 [block]="true"
               >
-                {{ savingKyc ? 'Updating Profile...' : 'Save & Submit KYC Profile' }}
+                {{ savingKyc ? 'Updating Profile...' : (customerStatus === 'ACTIVE' ? 'Save & Update KYC Profile' : 'Save & Submit KYC Profile') }}
               </app-button>
             </div>
           </form>
@@ -329,7 +329,8 @@ export class CustomerProfileComponent implements OnInit {
       },
       error: (err) => {
         this.savingKyc = false;
-        this.toastService.error(err.message || 'Failed to submit KYC profile', 'Submission Error');
+        const msg = err.error?.detail || err.error?.message || err.message || 'Failed to submit KYC profile';
+        this.toastService.error(msg, 'Submission Error');
       }
     });
   }
