@@ -13,8 +13,8 @@ const routes: Routes = [
   {
     path: 'create',
     component: FDCreateComponent,
-    canActivate: [RoleGuard],
-    data: { roles: ['BANK_OFFICER', 'ADMIN'] }
+    canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN'] }
   },
   {
     path: 'transactions',
@@ -29,3 +29,4 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class FixedDepositRoutingModule {}
+

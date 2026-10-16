@@ -21,8 +21,8 @@ export class ErrorInterceptor implements HttpInterceptor {
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401 || (error.status === 403 && this.authService.isTokenExpired(this.authService.getToken() || ''))) {
-          // Auto logout on 401 or expired token response if not already on an auth page
+        if (error.status === 401) {
+          // Auto logout on 401 response if not already on an auth page
           if (!request.url.includes('/login') && !request.url.includes('/register') && !request.url.includes('/auth/')) {
             this.authService.clearSession();
             this.router.navigate(['/login'], {

@@ -1,4 +1,4 @@
-import { Component, ContentChild, EventEmitter, Input, OnChanges, OnInit, Output, SimpleChanges, TemplateRef } from '@angular/core';
+import { Component, ContentChild, EventEmitter, Input, OnChanges, Output, SimpleChanges, TemplateRef } from '@angular/core';
 
 export interface TableColumn {
   field: string;
@@ -31,7 +31,7 @@ export interface TableColumn {
           </tr>
         </thead>
 
-        <tbody *ngIf="pagedData.length > 0">
+        <tbody *ngIf="!loading && pagedData.length > 0">
           <tr *ngFor="let row of pagedData; let idx = index" (click)="onRowClick(row)">
             <td
               *ngFor="let col of columns"
@@ -92,13 +92,6 @@ export interface TableColumn {
           </tr>
         </tbody>
 
-        <!-- Initial Loading Placeholder when no prior data -->
-        <tbody *ngIf="loading && pagedData.length === 0">
-          <tr>
-            <td [attr.colspan]="columns.length + (hasActions ? 1 : 0)" style="height: 140px;"></td>
-          </tr>
-        </tbody>
-
         <!-- Empty State -->
         <tbody *ngIf="!loading && pagedData.length === 0">
           <tr>
@@ -151,15 +144,9 @@ export interface TableColumn {
       align-items: center;
       justify-content: center;
       z-index: 10;
-      min-height: 140px;
-      backdrop-filter: blur(4px);
-    }
-    :host-context([data-theme="light"]) .table-loading-overlay {
-      background-color: rgba(255, 255, 255, 0.8);
     }
     .table-container {
       position: relative;
-      min-height: 140px;
     }
     .actions-header,
     .actions-cell {
@@ -204,7 +191,7 @@ export interface TableColumn {
     }
   `]
 })
-export class AppTableComponent implements OnInit, OnChanges {
+export class AppTableComponent implements OnChanges {
   @Input() columns: TableColumn[] = [];
   @Input() data: any[] = [];
   @Input() loading = false;
@@ -220,12 +207,8 @@ export class AppTableComponent implements OnInit, OnChanges {
   pagedData: any[] = [];
   totalPages = 1;
 
-  ngOnInit(): void {
-    this.updatePagedData();
-  }
-
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['data'] || changes['pageSize'] || changes['loading']) {
+    if (changes['data'] || changes['pageSize']) {
       this.totalPages = Math.max(1, Math.ceil((this.data?.length || 0) / this.pageSize));
       if (this.currentPage > this.totalPages) {
         this.currentPage = 1;

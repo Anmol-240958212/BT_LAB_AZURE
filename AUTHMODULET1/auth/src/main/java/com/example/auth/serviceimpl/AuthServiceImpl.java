@@ -417,12 +417,7 @@ public class AuthServiceImpl implements AuthService {
                         throw new IllegalArgumentException("Invalid username or password");
                 }
 
-                boolean passwordMatches = passwordEncoder.matches(request.getPassword(), authUsr.getPasswordHash());
-                if (!passwordMatches && "jack.uat.2026@example.com".equalsIgnoreCase(authUsr.getUsername()) && "StaffPass@1".equals(request.getPassword())) {
-                        passwordMatches = true;
-                }
-
-                if (!passwordMatches) {
+                if (!passwordEncoder.matches(request.getPassword(), authUsr.getPasswordHash())) {
                         loginAuditService.recordAudit(authUsr, "FAILED", "INCORRECT_PASSWORD", ipAddress, userAgent);
                         throw new IllegalArgumentException("Invalid username or password");
                 }

@@ -27,7 +27,4 @@ public interface FixedDepositAccountService {
         FDAccountCreationResponseDTO createAccountWithTransaction(
                         FixedDepositAccountRequestDTO request);
 
-        FixedDepositAccountResponseDTO approveAccount(
-                        String fdAccountNo);
-
 }

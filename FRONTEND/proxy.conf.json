@@ -34,11 +34,5 @@
     "secure": false,
     "changeOrigin": true,
     "logLevel": "debug"
-  },
-  "/api/product/**": {
-    "target": "http://localhost:8082",
-    "secure": false,
-    "changeOrigin": true,
-    "logLevel": "debug"
   }
 }

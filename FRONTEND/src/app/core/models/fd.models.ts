@@ -27,7 +27,6 @@ export interface FixedDepositAccountRequest {
   interestType: string;
   interestPayoutType: string;
   interestFrequency?: string;
-  status?: string;
 }
 
 export interface FixedDepositAccountResponse {
@@ -77,10 +76,6 @@ export interface FDTransactionRequest {
   penaltyAmount?: number;
   txnDate: string;
   remarks?: string;
-}
-
-export interface FDTransactionRecord extends FDTransactionRequest {
-  transactionId: string;
 }
 
 export interface BatchProcessResponse {

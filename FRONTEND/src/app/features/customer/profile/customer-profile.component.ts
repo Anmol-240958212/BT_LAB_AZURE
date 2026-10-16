@@ -24,12 +24,8 @@ function idValidator(component: CustomerProfileComponent) {
     if (!val || !val.toString().trim()) {
       return { required: true };
     }
-    const strVal = val.toString().trim();
-    if (component.isExistingMaskedId(strVal, component.currentUser?.identificationNumber)) {
-      return null;
-    }
     const rule = component.currentIdRule;
-    if (rule && !rule.isValid(strVal)) {
+    if (rule && !rule.isValid(val)) {
       return { invalidId: true, message: rule.errorMessage };
     }
     return null;
@@ -409,7 +405,7 @@ function mobileValidator(control: AbstractControl): ValidationErrors | null {
                   type="submit"
                   variant="primary"
                   [loading]="savingKyc"
-                  [disabled]="savingKyc"
+                  [disabled]="kycForm.invalid || savingKyc"
                   [block]="!isKycActive"
                   (clicked)="submitKyc()"
                 >
@@ -936,55 +932,12 @@ export class CustomerProfileComponent implements OnInit {
     this.cdr.detectChanges();
   }
 
-  isExistingMaskedId(value: string | null | undefined, existing?: string | null | undefined): boolean {
-    if (!value) return false;
-    const str = value.toString().trim();
-    if (str.includes('*') || str.includes('•') || str.includes('X') || str.includes('x')) {
-      return true;
-    }
-    const targetExisting = existing || this.currentUser?.identificationNumber;
-    if (targetExisting) {
-      const cleanExisting = targetExisting.replace(/\D/g, '');
-      const cleanVal = str.replace(/\D/g, '');
-      if (cleanVal && cleanExisting && (cleanVal === cleanExisting || cleanExisting.endsWith(cleanVal))) {
-        return true;
-      }
-      if (str.length <= 4 && targetExisting.endsWith(str)) {
-        return true;
-      }
-    }
-    if (this.isKycActive && str.replace(/\D/g, '').length <= 4) {
-      return true;
-    }
-    return false;
-  }
-
-  getFirstFormError(): string | null {
-    if (this.kycForm.get('firstName')?.invalid) return 'Please enter your First Name';
-    if (this.kycForm.get('lastName')?.invalid) return 'Please enter your Last Name';
-    if (this.kycForm.get('dateOfBirth')?.invalid) return 'Please select a valid Date of Birth';
-    if (this.kycForm.get('gender')?.invalid) return 'Please select your Gender';
-    if (this.kycForm.get('identificationNumber')?.invalid) {
-      return this.idNumberError || this.currentIdRule.errorMessage || 'Please enter a valid Identification Number';
-    }
-    if (this.kycForm.get('addressLine1')?.invalid) return 'Please enter Address Line 1';
-    if (this.kycForm.get('state')?.invalid) return 'Please select your State';
-    if (this.kycForm.get('city')?.invalid) return 'Please select your City';
-    if (this.kycForm.get('postalCode')?.invalid) return this.postalCodeError || 'Please enter a valid 6-digit PIN code';
-    if (this.kycForm.get('mobileNumber')?.invalid) return this.mobileNumberError || 'Please enter a valid 10-digit mobile number';
-    return null;
-  }
-
   onIdTypeChange(): void {
     const rule = this.currentIdRule;
     const ctrl = this.kycForm.get('identificationNumber');
     if (ctrl && ctrl.value) {
-      if (this.isExistingMaskedId(ctrl.value, this.currentUser?.identificationNumber)) {
-        ctrl.setValue('');
-      } else {
-        const formatted = rule.format(ctrl.value);
-        ctrl.setValue(formatted);
-      }
+      const formatted = rule.format(ctrl.value);
+      ctrl.setValue(formatted);
     }
     ctrl?.updateValueAndValidity();
     this.cdr.detectChanges();
@@ -994,13 +947,9 @@ export class CustomerProfileComponent implements OnInit {
     const input = event.target as HTMLInputElement;
     if (!input) return;
     const rule = this.currentIdRule;
-    if (!input.value.includes('•') && !input.value.includes('*')) {
-      const formatted = rule.format(input.value);
-      input.value = formatted;
-      this.kycForm.get('identificationNumber')?.setValue(formatted);
-    } else {
-      this.kycForm.get('identificationNumber')?.setValue(input.value);
-    }
+    const formatted = rule.format(input.value);
+    input.value = formatted;
+    this.kycForm.get('identificationNumber')?.setValue(formatted);
   }
 
   onMobileInput(event: Event): void {
@@ -1050,7 +999,7 @@ export class CustomerProfileComponent implements OnInit {
   }
 
   loadProfile(): void {
-    this.customerApi.getProfile().subscribe({
+    this.customerApi.getCustomerStatus().subscribe({
       next: (res) => {
         if (res?.status) {
           this.customerStatus = res.status;
@@ -1086,14 +1035,8 @@ export class CustomerProfileComponent implements OnInit {
     const idType = (user.identificationType as IdentificationType) || 'AADHAAR';
     updates['identificationType'] = idType;
     if (user.identificationNumber) {
-      const raw = user.identificationNumber;
-      if (raw.includes('*') || raw.includes('•') || raw.length <= 4) {
-        const last4 = raw.replace(/\D/g, '') || raw.slice(-4);
-        updates['identificationNumber'] = idType === 'AADHAAR' ? `•••• •••• ${last4}` : `••••${last4}`;
-      } else {
-        const rule = ID_RULES[idType] || ID_RULES['AADHAAR'];
-        updates['identificationNumber'] = rule.format(raw);
-      }
+      const rule = ID_RULES[idType] || ID_RULES['AADHAAR'];
+      updates['identificationNumber'] = rule.format(user.identificationNumber);
     }
 
     if (user.addressLine1) updates['addressLine1'] = user.addressLine1;
@@ -1143,27 +1086,16 @@ export class CustomerProfileComponent implements OnInit {
   }
 
   submitKyc(): void {
-    if (this.savingKyc) return;
-
-    if (this.kycForm.invalid) {
+    if (this.kycForm.invalid || this.savingKyc) {
       this.kycForm.markAllAsTouched();
       this.cdr.detectChanges();
-      const firstError = this.getFirstFormError();
-      this.toastService.error(firstError || 'Please fill in all required fields correctly before saving.', 'Incomplete Form');
       return;
     }
 
     this.savingKyc = true;
     this.cdr.detectChanges();
 
-    const formVal = { ...this.kycForm.value };
-
-    // If identification number is existing masked or suffix value, omit it so database raw value is preserved
-    if (this.isExistingMaskedId(formVal.identificationNumber, this.currentUser?.identificationNumber)) {
-      delete formVal.identificationNumber;
-    }
-
-    this.customerApi.submitProfile(formVal).pipe(
+    this.customerApi.submitProfile(this.kycForm.value).pipe(
       finalize(() => {
         this.savingKyc = false;
         this.cdr.detectChanges();

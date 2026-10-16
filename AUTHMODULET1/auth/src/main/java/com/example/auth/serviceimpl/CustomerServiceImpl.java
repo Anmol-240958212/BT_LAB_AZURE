@@ -143,12 +143,7 @@ public class CustomerServiceImpl implements CustomerService {
                     });
             
             custIdfn.setIdentificationType(idfnType);
-            String rawId = request.getIdentificationNumber() != null ? request.getIdentificationNumber().trim() : "";
-            boolean isMasked = rawId.contains("*") || rawId.contains("•") || rawId.contains("X") || rawId.contains("x");
-            boolean isSuffixOnly = custIdfn.getIdentificationItem() != null && rawId.length() <= 4;
-            if (!rawId.isBlank() && !isMasked && !isSuffixOnly) {
-                custIdfn.setIdentificationItem(rawId);
-            }
+            custIdfn.setIdentificationItem(request.getIdentificationNumber());
             
             custIdfn.setEffectiveDate(audit.getEffectiveDate());
             custIdfn.setCrudValue(custIdfn.getRecordId() == null ? "C" : "U");

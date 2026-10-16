@@ -3,14 +3,12 @@ package com.BankingTech.demo.service.serviceimpl;
 import com.BankingTech.demo.entity.FDTransactionEntity;
 import com.BankingTech.demo.repository.FDTransactionRepository;
 import com.BankingTech.demo.service.FDTransactionService;
-import com.BankingTech.demo.dto.responsedto.FDTransactionResponseDTO;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -98,30 +96,6 @@ public class FDTransactionServiceImpl
 
                 fdTransactionRepository.save(
                                 transaction);
-        }
-
-        @Override
-        @Transactional(readOnly = true)
-        public List<FDTransactionResponseDTO> getTransactions(String fdAccountNo) {
-                List<FDTransactionEntity> transactions = fdAccountNo == null || fdAccountNo.isBlank()
-                                ? fdTransactionRepository.findAllByOrderByFdTransactionTxnDateDesc()
-                                : fdTransactionRepository
-                                                .findByFdTransactionFdAccountNoOrderByFdTransactionTxnDateDesc(
-                                                                fdAccountNo.trim());
-
-                return transactions.stream().map(this::toResponse).toList();
-        }
-
-        private FDTransactionResponseDTO toResponse(FDTransactionEntity transaction) {
-                FDTransactionResponseDTO response = new FDTransactionResponseDTO();
-                response.setTransactionId(transaction.getFdTransactionId());
-                response.setFdAccountNo(transaction.getFdTransactionFdAccountNo());
-                response.setTxnType(transaction.getFdTransactionTxnType());
-                response.setAmount(transaction.getFdTransactionAmount());
-                response.setPenaltyAmount(transaction.getFdTransactionPenaltyAmount());
-                response.setTxnDate(transaction.getFdTransactionTxnDate());
-                response.setRemarks(transaction.getFdTransactionRemarks());
-                return response;
         }
 
         private String generateTransactionId() {

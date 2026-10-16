@@ -7,7 +7,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.example.auth.entity.AuthUsr;
@@ -19,18 +18,15 @@ import io.jsonwebtoken.security.Keys;
 @Service
 public class JwtService {
 
-    private final SecretKey signingKey;
+    private final String SECRET_KEY = "my-super-secret-key-for-authentication-123456789";
 
-    private final long EXPIRATION_TIME = 1000L * 60 * 60 * 24; // 24 hours
+    private final long EXPIRATION_TIME = 1000 * 60 * 10; // 10 minutes
 
     private final Set<String> blacklistedTokens = ConcurrentHashMap.newKeySet();
 
-    public JwtService(@Value("${AUTH_JWT_SECRET:my-super-secret-key-for-authentication-123456789}") String secretKey) {
-        this.signingKey = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-    }
-
     private SecretKey getSigningKey() {
-        return signingKey;
+        return Keys.hmacShaKeyFor(
+                SECRET_KEY.getBytes(StandardCharsets.UTF_8));
     }
 
     public String generateToken(AuthUsr authUsr) {

@@ -4,6 +4,7 @@ import com.BankingTech.demo.dto.requestdto.FixedDepositAccountRequestDTO;
 import com.BankingTech.demo.dto.responsedto.FixedDepositAccountResponseDTO;
 import com.BankingTech.demo.dto.responsedto.FDAccountCreationResponseDTO;
 import com.BankingTech.demo.service.FixedDepositAccountService;
+import com.BankingTech.demo.service.FdCreationAuthorization;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,15 +19,19 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class FixedDepositAccountController {
 
         private final FixedDepositAccountService fixedDepositAccountService;
+        private final FdCreationAuthorization creationAuthorization;
 
         public FixedDepositAccountController(
-                        FixedDepositAccountService fixedDepositAccountService) {
+                        FixedDepositAccountService fixedDepositAccountService, FdCreationAuthorization creationAuthorization) {
                 this.fixedDepositAccountService = fixedDepositAccountService;
+                this.creationAuthorization = creationAuthorization;
         }
 
         @PostMapping("/create")
         public ResponseEntity<FixedDepositAccountResponseDTO> createAccount(
-                        @Valid @RequestBody FixedDepositAccountRequestDTO request) {
+                        @Valid @RequestBody FixedDepositAccountRequestDTO request,
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
+                creationAuthorization.authorize(authorization, request);
 
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.createAccount(request));
@@ -35,18 +40,12 @@ public class FixedDepositAccountController {
         // L16
         @PostMapping("/create-with-txn")
         public ResponseEntity<FDAccountCreationResponseDTO> createAccountWithTransaction(
-                        @Valid @RequestBody FixedDepositAccountRequestDTO request) {
+                        @Valid @RequestBody FixedDepositAccountRequestDTO request,
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
+                creationAuthorization.authorize(authorization, request);
 
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.createAccountWithTransaction(request));
-        }
-
-        @PutMapping("/{fdAccountNo}/approve")
-        public ResponseEntity<FixedDepositAccountResponseDTO> approveAccount(
-                        @PathVariable String fdAccountNo) {
-
-                return ResponseEntity.ok(
-                                fixedDepositAccountService.approveAccount(fdAccountNo));
         }
 
         @GetMapping("/{fdAccountNo}")
@@ -84,3 +83,4 @@ public class FixedDepositAccountController {
                                                 status));
         }
 }
+

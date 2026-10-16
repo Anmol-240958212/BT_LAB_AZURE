@@ -1,15 +1,12 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
 import { UserApiService } from '../../../core/api/user-api.service';
-import { AuthService } from '../../../core/auth.service';
 import { FixedDepositAccountRequest } from '../../../core/models/fd.models';
 import { ToastService } from '../../../shared/services/toast.service';
-import { Observable, Subscription, of } from 'rxjs';
-import { catchError, debounceTime, distinctUntilChanged, finalize, map, switchMap, tap } from 'rxjs/operators';
-import { ProductPricingApiService } from '../../../core/api/product-pricing-api.service';
-import { ProductRecord } from '../../../core/models/product.models';
+import { Observable } from 'rxjs';
+import { AuthService } from '../../../core/auth.service';
 
 @Component({
   selector: 'app-fd-create',
@@ -19,38 +16,44 @@ import { ProductRecord } from '../../../core/models/product.models';
       <div class="card mb-6">
         <div class="flex-between">
           <div>
-            <span class="section-tag">{{ isCustomer ? 'TERM DEPOSIT BOOKING' : 'ACCOUNT ORIGINATION WORKFLOW' }}</span>
+            <span class="section-tag">ACCOUNT ORIGINATION WORKFLOW</span>
             <h1 class="card-title mt-1">Open Fixed Deposit Account</h1>
             <p class="card-subtitle">
-              {{ isCustomer ? 'Lock in attractive interest yields and book your new fixed deposit.' : 'Issue a new term deposit instrument linked to customer KYC and branch ledger.' }}
+              Open a fixed deposit linked to a verified customer profile.
             </p>
           </div>
-          <app-badge variant="role" [text]="isCustomer ? 'Customer Self-Service' : 'Officer / Admin Action'"></app-badge>
+          <app-badge variant="role" [text]="isCustomer ? 'Customer Deposit' : 'Officer / Admin Action'"></app-badge>
         </div>
       </div>
 
       <!-- Creation Form Card -->
       <app-card title="Deposit Contract Specifications" subtitle="Fill required parameters to generate FD account number">
+        <p *ngIf="isCustomer && !profileReady">Loading your customer profile...</p>
+        <p *ngIf="profileError">{{ profileError }}</p>
+        <p *ngIf="isCustomer && profileReady && !kycActive">
+          Complete your <a routerLink="/customer/profile">KYC verification</a> before opening a fixed deposit.
+        </p>
+        <p *ngIf="isCustomer && profileReady && kycActive">This deposit will be opened for your own customer profile.</p>
         <form [formGroup]="fdForm" (ngSubmit)="onSubmit()" class="fd-create-form">
           <div class="grid-3">
             <app-input
+              *ngIf="!isCustomer"
               id="fd-cust-id"
               label="Customer Identifier *"
               placeholder="e.g. 10"
               formControlName="customerId"
               [required]="true"
-              [hint]="isCustomer ? 'Linked to your verified KYC profile' : 'Customer must have ACTIVE KYC synced via Kafka'"
+              hint="Customer must have ACTIVE KYC synced via Kafka"
             ></app-input>
 
             <div class="form-group">
               <label class="form-label" for="fd-prod-code">Product Code *</label>
               <select id="fd-prod-code" class="form-select" formControlName="productCode">
-                <option value="">{{ productLoading ? 'Loading products…' : 'Select an active product' }}</option>
-                <option *ngFor="let product of products" [value]="product.productCode">
-                  {{ product.productName }} — {{ product.productCode }}
-                </option>
+                <option value="PROD_FD_STANDARD">PROD_FD_STANDARD — Standard Fixed Deposit</option>
+                <option value="PROD_FD_CUMULATIVE">PROD_FD_CUMULATIVE — Cumulative Growth FD</option>
+                <option value="PROD_FD_SENIOR">PROD_FD_SENIOR — Senior Citizen Deposit</option>
+                <option value="PROD_FD_QUARTERLY">PROD_FD_QUARTERLY — Quarterly Payout FD</option>
               </select>
-              <small *ngIf="selectedProduct">Rate range: {{ selectedProduct.rateLimit.min }}–{{ selectedProduct.rateLimit.max }}%</small>
             </div>
 
             <app-input
@@ -81,8 +84,7 @@ import { ProductRecord } from '../../../core/models/product.models';
               placeholder="e.g. 7.50"
               formControlName="interestRate"
               [required]="true"
-              [readonly]="true"
-              hint="Quoted by Product & Pricing for the selected product, amount, and term"
+              hint="Subject to 8.5% regulatory cap"
             ></app-input>
 
             <app-input
@@ -93,11 +95,6 @@ import { ProductRecord } from '../../../core/models/product.models';
               formControlName="termMonths"
               [required]="true"
             ></app-input>
-          </div>
-          <div *ngIf="quoteError" class="quote-error" role="alert">{{ quoteError }}</div>
-          <div *ngIf="quoteLoading" class="form-hint">Updating the contracted rate…</div>
-          <div *ngIf="!productLoading && products.length === 0" class="quote-error" role="status">
-            No active fixed-deposit products are configured. Add one in Products & Pricing first.
           </div>
 
           <div class="grid-3">
@@ -131,7 +128,7 @@ import { ProductRecord } from '../../../core/models/product.models';
           </div>
 
           <!-- L16 Checkbox: Create With Initial Transaction -->
-          <div class="initial-txn-box">
+          <div class="initial-txn-box" *ngIf="!isCustomer">
             <label class="checkbox-item">
               <input type="checkbox" formControlName="createWithTxn" />
               <span>
@@ -153,7 +150,7 @@ import { ProductRecord } from '../../../core/models/product.models';
               type="submit"
               variant="primary"
               [loading]="submitting"
-              [disabled]="fdForm.invalid || submitting || quoteLoading || !rateReady"
+              [disabled]="fdForm.invalid || submitting || (isCustomer && (!profileReady || !kycActive))"
             >
               {{ submitting ? 'Generating Account...' : 'Confirm & Create Account' }}
             </app-button>
@@ -163,7 +160,6 @@ import { ProductRecord } from '../../../core/models/product.models';
     </div>
   `,
   styles: [`
-    .quote-error { margin:10px 0; border:1px solid #d97a7a; background:rgba(217,122,122,.12); color:var(--color-text-primary); border-radius:var(--radius-input); padding:10px 12px; font-size:var(--text-sm); }
     .section-tag {
       font-size: 10px;
       font-weight: 600;
@@ -198,48 +194,37 @@ import { ProductRecord } from '../../../core/models/product.models';
     }
   `]
 })
-export class FDCreateComponent implements OnInit, OnDestroy {
+export class FDCreateComponent implements OnInit {
   fdForm!: FormGroup;
   submitting = false;
-  products: ProductRecord[] = [];
-  productLoading = false;
-  quoteLoading = false;
-  quoteError = '';
-  private quote: number | null = null;
-  private formChanges?: Subscription;
-
-  get rateReady(): boolean { return this.quote != null; }
-
-  get selectedProduct(): ProductRecord | undefined {
-    return this.products.find(product => product.productCode === this.fdForm?.get('productCode')?.value);
-  }
-
-  get isCustomer(): boolean {
-    return this.authService.getRole() === 'CUSTOMER';
-  }
+  isCustomer = false;
+  profileReady = false;
+  kycActive = false;
+  profileError = '';
+  private ownCustomerId = '';
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly fdAccountApi: FDAccountApiService,
     private readonly userApi: UserApiService,
     private readonly authService: AuthService,
-    private readonly productApi: ProductPricingApiService,
     private readonly toastService: ToastService,
     public readonly router: Router,
     private readonly route: ActivatedRoute
   ) {}
 
   ngOnInit(): void {
+    this.isCustomer = this.authService.getRole() === 'CUSTOMER';
     const q = this.route.snapshot.queryParams;
     const initialBranch = q['branchCode'] || '001';
-    const initialCust = q['customerId'] || '';
+    const initialCust = this.isCustomer ? '' : q['customerId'] || '';
 
     this.fdForm = this.fb.group({
       customerId: [initialCust, Validators.required],
-      productCode: [q['productCode'] || '', Validators.required],
+      productCode: ['PROD_FD_CUMULATIVE', Validators.required],
       branchCode: [initialBranch, [Validators.required, Validators.pattern(/^\d{3}$/)]],
       principalAmount: [q['principal'] ? Number(q['principal']) : 100000, [Validators.required, Validators.min(1000)]],
-      interestRate: [q['rate'] ? Number(q['rate']) : '', [Validators.required, Validators.min(0.1), Validators.max(100)]],
+      interestRate: [q['rate'] ? Number(q['rate']) : 7.25, [Validators.required, Validators.min(0.1), Validators.max(8.5)]],
       termMonths: [q['term'] ? Number(q['term']) : 12, [Validators.required, Validators.min(1)]],
       interestType: [q['interestType'] || 'COMPOUND', Validators.required],
       interestPayoutType: ['MATURITY', Validators.required],
@@ -247,88 +232,46 @@ export class FDCreateComponent implements OnInit, OnDestroy {
       createWithTxn: [true]
     });
 
-    this.formChanges = this.fdForm.valueChanges.pipe(
-      map(value => ({
-        productCode: String(value.productCode || ''),
-        principal: Number(value.principalAmount),
-        term: Number(value.termMonths)
-      })),
-      distinctUntilChanged((previous, current) => previous.productCode === current.productCode
-        && previous.principal === current.principal && previous.term === current.term),
-      tap(() => { this.quote = null; this.quoteError = ''; }),
-      debounceTime(250),
-      switchMap(value => {
-        const { productCode, principal, term } = value;
-        if (!productCode || !Number.isFinite(principal) || principal <= 0 || !Number.isFinite(term) || term <= 0) {
-          this.quoteLoading = false;
-          return of(null);
-        }
-        this.quoteLoading = true;
-        return this.productApi.getEffectiveRate(productCode, { principal, term, termUnit: 'MONTHS' }).pipe(
-          catchError(err => {
-            this.quoteError = err?.error?.message || err?.error?.detail || 'Could not quote this product for the entered amount and term.';
-            return of(null);
-          }),
-          finalize(() => this.quoteLoading = false)
-        );
-      })
-    ).subscribe(rate => {
-      this.quote = rate?.effectiveRate ?? null;
-      if (this.quote != null) this.fdForm.patchValue({ interestRate: this.quote }, { emitEvent: false });
-    });
-
-    this.productLoading = true;
-    this.productApi.search({ productType: 'FD', status: 'ACTIVE', page: 0, size: 100 }).pipe(
-      finalize(() => this.productLoading = false)
-    ).subscribe({
-      next: response => {
-        this.products = response.content || [];
-        const requested = q['productCode'];
-        const initial = this.products.find(product => product.productCode === requested) || this.products[0];
-        if (initial) this.fdForm.patchValue({ productCode: initial.productCode });
-      },
-      error: err => this.quoteError = err?.error?.message || err?.error?.detail || 'Could not load active products.'
-    });
-
     this.userApi.getMe().subscribe({
       next: (profile) => {
-        if (profile?.customerId) {
+        this.profileReady = true;
+        this.kycActive = profile?.customerStatus === 'ACTIVE';
+        if (this.isCustomer) {
+          this.ownCustomerId = profile?.customerId ? String(profile.customerId) : '';
+          this.fdForm.patchValue({ customerId: this.ownCustomerId });
+          if (!this.ownCustomerId) this.profileError = 'Your account has no customer profile. Please contact support.';
+        } else if (profile?.customerId && !q['customerId']) {
           this.fdForm.patchValue({ customerId: String(profile.customerId) });
-          if (this.isCustomer) {
-            this.fdForm.get('customerId')?.disable();
-          }
         }
       },
-      error: () => {}
+      error: () => {
+        this.profileReady = true;
+        this.profileError = 'Unable to load your profile. Refresh the page and try again.';
+      }
     });
-  }
-
-  ngOnDestroy(): void {
-    this.formChanges?.unsubscribe();
   }
 
   onSubmit(): void {
-    if (this.fdForm.invalid || this.submitting || this.quoteLoading || this.quote == null) {
+    if (this.fdForm.invalid || this.submitting || (this.isCustomer && (!this.profileReady || !this.kycActive || !this.ownCustomerId))) {
       this.fdForm.markAllAsTouched();
-      if (this.quote == null && !this.quoteLoading) this.quoteError = 'Wait for a valid Product Pricing quote before creating the account.';
       return;
     }
 
     this.submitting = true;
-    const formVal = this.fdForm.getRawValue();
+    const formVal = this.fdForm.value;
     const req: FixedDepositAccountRequest = {
-      customerId: String(formVal.customerId).trim(),
+      customerId: this.isCustomer ? this.ownCustomerId : String(formVal.customerId).trim(),
       productCode: formVal.productCode,
       branchCode: String(formVal.branchCode).trim(),
       principalAmount: Number(formVal.principalAmount),
-      interestRate: this.quote,
+      interestRate: Number(formVal.interestRate),
       termMonths: Number(formVal.termMonths),
       interestType: formVal.interestType,
       interestPayoutType: formVal.interestPayoutType,
       interestFrequency: formVal.interestFrequency
     };
 
-    const call$: Observable<any> = formVal.createWithTxn
+    const call$: Observable<any> = (this.isCustomer || formVal.createWithTxn)
       ? this.fdAccountApi.createAccountWithTransaction(req)
       : this.fdAccountApi.createAccount(req);
 

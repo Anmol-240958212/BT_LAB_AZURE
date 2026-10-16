@@ -71,10 +71,7 @@ public class FixedDepositAccountServiceImpl
                 entity.setFdAccountMaturityDate(
                                 now.toLocalDate().plusMonths(request.getTermMonths()));
 
-                String initialStatus = (request.getStatus() != null && !request.getStatus().isBlank())
-                                ? request.getStatus().trim().toUpperCase()
-                                : "ACTIVE";
-                entity.setFdAccountStatus(initialStatus);
+                entity.setFdAccountStatus("ACTIVE");
                 entity.setFdAccountInterestType(request.getInterestType());
                 entity.setFdAccountInterestPayoutType(
                                 request.getInterestPayoutType());
@@ -129,10 +126,7 @@ public class FixedDepositAccountServiceImpl
                 entity.setFdAccountMaturityDate(
                                 now.toLocalDate().plusMonths(request.getTermMonths()));
 
-                String initialStatus = (request.getStatus() != null && !request.getStatus().isBlank())
-                                ? request.getStatus().trim().toUpperCase()
-                                : "ACTIVE";
-                entity.setFdAccountStatus(initialStatus);
+                entity.setFdAccountStatus("ACTIVE");
                 entity.setFdAccountInterestType(request.getInterestType());
                 entity.setFdAccountInterestPayoutType(
                                 request.getInterestPayoutType());
@@ -251,14 +245,6 @@ public class FixedDepositAccountServiceImpl
         public List<FixedDepositAccountResponseDTO> getAccountsByStatus(
                         String status) {
 
-                if ("ALL".equalsIgnoreCase(status)) {
-                        return fixedDepositAccountRepository
-                                        .findAll()
-                                        .stream()
-                                        .map(this::convertToResponseDTO)
-                                        .toList();
-                }
-
                 return fixedDepositAccountRepository
                                 .findByFdAccountStatus(status)
                                 .stream()
@@ -272,40 +258,12 @@ public class FixedDepositAccountServiceImpl
                         String customerId,
                         String status) {
 
-                if ("ALL".equalsIgnoreCase(status)) {
-                        return fixedDepositAccountRepository
-                                        .findByFdAccountCustomerId(customerId)
-                                        .stream()
-                                        .map(this::convertToResponseDTO)
-                                        .toList();
-                }
-
                 return fixedDepositAccountRepository
                                 .findByFdAccountCustomerIdAndFdAccountStatus(
-                                                customerId,
-                                                status)
+                                                customerId, status)
                                 .stream()
                                 .map(this::convertToResponseDTO)
                                 .toList();
-        }
-
-        @Override
-        @Transactional
-        public FixedDepositAccountResponseDTO approveAccount(String fdAccountNo) {
-                FixedDepositAccountEntity entity = fixedDepositAccountRepository.findByFdAccountNo(fdAccountNo)
-                                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
-                                                org.springframework.http.HttpStatus.NOT_FOUND,
-                                                "FD account not found: " + fdAccountNo));
-
-                LocalDateTime now = LocalDateTime.now();
-                entity.setFdAccountStatus("ACTIVE");
-                entity.setFdAccountOpenedAt(now);
-                entity.setFdAccountMaturityDate(
-                                now.toLocalDate().plusMonths(entity.getFdAccountTerm()));
-                setAccountAuditFields(entity, "OFFICER_APPROVAL", now);
-
-                FixedDepositAccountEntity saved = fixedDepositAccountRepository.save(entity);
-                return convertToResponseDTO(saved);
         }
 
         private FixedDepositAccountResponseDTO convertToResponseDTO(

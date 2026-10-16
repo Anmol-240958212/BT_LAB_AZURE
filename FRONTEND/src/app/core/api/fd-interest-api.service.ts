@@ -8,6 +8,10 @@ import { Observable } from 'rxjs';
 export class FDInterestApiService {
   constructor(private readonly http: HttpClient) {}
 
+  public calculateInterest(): Observable<string> {
+    return this.http.post('/api/fd/interest/calculate', {}, { responseType: 'text' });
+  }
+
   public runInterestBatch(businessDate?: string): Observable<string> {
     let params = new HttpParams();
     if (businessDate) {

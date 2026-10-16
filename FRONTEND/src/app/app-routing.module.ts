@@ -68,12 +68,6 @@ const routes: Routes = [
         data: { roles: ['BANK_OFFICER', 'ADMIN'] },
         loadChildren: () => import('./features/reports/reports.module').then(m => m.ReportsModule)
       },
-      {
-        path: 'products',
-        canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['BANK_OFFICER', 'ADMIN'] },
-        loadChildren: () => import('./features/products/products.module').then(m => m.ProductsModule)
-      },
 
       // Route Aliases per implementation.md Section 3.3
       { path: 'fd/calculator', redirectTo: 'fixed-deposit/calculator', pathMatch: 'full' },

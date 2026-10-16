@@ -22,9 +22,9 @@ try {
     if ($LASTEXITCODE -eq 0) {
         $mysqlUp = $true
         Write-Host "  ✔ Local MySQL server is reachable." -ForegroundColor Green
-        mysql -u$dbUser -p$dbPass -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS banking_tech2; CREATE DATABASE IF NOT EXISTS fdmodule;" 2>$null
+        mysql -u$dbUser -p$dbPass -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;" 2>$null
         Get-Content "$RootDir\AUTHMODULET1\authandcustDB.sql" | mysql -u$dbUser -p$dbPass authandcust 2>$null
-        Write-Host "  ✔ Databases 'authandcust', 'banking_tech2' & 'fdmodule' verified and seeded." -ForegroundColor Green
+        Write-Host "  ✔ Databases 'authandcust' & 'fdmodule' verified and seeded." -ForegroundColor Green
     }
 } catch {
     $mysqlUp = $false

@@ -1,7 +1,7 @@
-import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
-import { catchError, timeout, finalize } from 'rxjs/operators';
+import { catchError, timeout } from 'rxjs/operators';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
 import { AuthService } from '../../../core/auth.service';
 import { FixedDepositAccountResponse, FDWithdrawalResponse } from '../../../core/models/fd.models';
@@ -25,20 +25,12 @@ import { UserApiService } from '../../../core/api/user-api.service';
             </p>
           </div>
           <app-button
-            *ngIf="canCreate"
+            *ngIf="canOpenDeposit"
             variant="primary"
             (clicked)="router.navigate(['/fixed-deposit/create'])"
           >
             <app-icon name="plus" [size]="14"></app-icon>
             <span>Open New FD</span>
-          </app-button>
-          <app-button
-            *ngIf="!canCreate"
-            variant="primary"
-            (clicked)="router.navigate(['/fixed-deposit/calculator'])"
-          >
-            <app-icon name="plus" [size]="14"></app-icon>
-            <span>Apply for Fixed Deposit</span>
           </app-button>
         </div>
 
@@ -95,15 +87,6 @@ import { UserApiService } from '../../../core/api/user-api.service';
                 Inspect
               </button>
               <button
-                *ngIf="account.status === 'PENDING' && canCreate"
-                type="button"
-                class="btn btn-primary btn-xs"
-                [disabled]="approvingNo === account.fdAccountNo"
-                (click)="approveFdAccount(account)"
-              >
-                {{ approvingNo === account.fdAccountNo ? 'Approving...' : 'Approve' }}
-              </button>
-              <button
                 *ngIf="account.status === 'ACTIVE' && canCreate"
                 type="button"
                 class="btn btn-danger btn-xs"
@@ -150,11 +133,7 @@ import { UserApiService } from '../../../core/api/user-api.service';
           </div>
           <div class="detail-row">
             <span class="detail-label">Status:</span>
-            <app-badge [variant]="selectedAccount.status === 'ACTIVE' ? 'active' : (selectedAccount.status === 'PENDING' ? 'pending' : 'closed')" [text]="selectedAccount.status === 'PENDING' ? 'PENDING APPROVAL' : selectedAccount.status"></app-badge>
-          </div>
-          <div *ngIf="selectedAccount.status === 'PENDING'" class="alert alert-warning mt-3" style="grid-column: 1 / -1; padding: 10px 14px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 13px; display: flex; align-items: center; gap: 8px;">
-            <app-icon name="shield" [size]="16" color="#f59e0b"></app-icon>
-            <span>This deposit application is pending authorization and ledger activation by an authorized Bank Officer.</span>
+            <app-badge [variant]="selectedAccount.status === 'ACTIVE' ? 'active' : 'closed'" [text]="selectedAccount.status"></app-badge>
           </div>
 
           <!-- Kafka Maturity Notification Delivery Status -->
@@ -416,13 +395,51 @@ export class FDAccountsComponent implements OnInit {
     private readonly fdAccountApi: FDAccountApiService,
     private readonly authService: AuthService,
     private readonly userApi: UserApiService,
+    private readonly cdr: ChangeDetectorRef,
     private readonly toastService: ToastService,
-    public readonly router: Router,
-    private readonly cdr: ChangeDetectorRef
+    public readonly router: Router
   ) {}
 
   ngOnInit(): void {
-    this.loadAccounts();
+    const role = this.authService.getRole();
+    if (role === 'CUSTOMER') {
+      if (this.isDemoUser()) {
+        this.allAccounts = [...this.mockAccounts];
+        this.applyFilters();
+        this.loadAccounts();
+      } else {
+        // Real customer account: start clean, enforce business logic
+        this.allAccounts = [];
+        this.filteredAccounts = [];
+        this.loading = true;
+        this.userApi.getMe().subscribe({
+          next: (profile) => {
+            if (profile && profile.customerId) {
+              this.userCustomerId = String(profile.customerId);
+              this.fetchCustomerAccounts();
+            } else {
+              this.loading = false;
+              this.allAccounts = [];
+              this.filteredAccounts = [];
+            }
+          },
+          error: () => {
+            this.loading = false;
+            this.allAccounts = [];
+            this.filteredAccounts = [];
+          }
+        });
+      }
+    } else {
+      // Bank Officer / Admin
+      this.allAccounts = [...this.mockAccounts];
+      this.filteredAccounts = [...this.allAccounts];
+      this.loadAccounts();
+    }
+  }
+
+  get canOpenDeposit(): boolean {
+    return this.canCreate || this.authService.getRole() === 'CUSTOMER';
   }
 
   get canCreate(): boolean {
@@ -435,21 +452,19 @@ export class FDAccountsComponent implements OnInit {
 
     if (role === 'CUSTOMER') {
       if (this.isDemoUser()) {
-        this.loading = true;
-        this.cdr.detectChanges();
+        if (isManualRefresh || this.allAccounts.length === 0) {
+          this.loading = true;
+        }
         const fetch$ = this.selectedStatus === 'ALL'
           ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
           : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
         fetch$.pipe(
-          timeout(3000),
-          catchError(() => of([])),
-          finalize(() => {
-            this.loading = false;
-            this.cdr.detectChanges();
-          })
+          timeout(2500),
+          catchError(() => of([]))
         ).subscribe({
           next: (data) => {
+            this.loading = false;
             if (data && data.length > 0) {
               this.allAccounts = data;
             } else {
@@ -458,6 +473,7 @@ export class FDAccountsComponent implements OnInit {
             this.applyFilters();
           },
           error: () => {
+            this.loading = false;
             this.allAccounts = [...this.mockAccounts];
             this.applyFilters();
           }
@@ -468,20 +484,7 @@ export class FDAccountsComponent implements OnInit {
       // Real customer account
       if (!this.userCustomerId) {
         this.loading = true;
-        this.cdr.detectChanges();
-        this.userApi.getMe().pipe(
-          timeout(3000),
-          catchError((err) => {
-            console.warn('Could not fetch user profile for customer ID:', err);
-            return of(null);
-          }),
-          finalize(() => {
-            if (!this.userCustomerId) {
-              this.loading = false;
-              this.cdr.detectChanges();
-            }
-          })
-        ).subscribe({
+        this.userApi.getMe().subscribe({
           next: (profile) => {
             if (profile && profile.customerId) {
               this.userCustomerId = String(profile.customerId);
@@ -490,14 +493,12 @@ export class FDAccountsComponent implements OnInit {
               this.loading = false;
               this.allAccounts = [];
               this.filteredAccounts = [];
-              this.cdr.detectChanges();
             }
           },
           error: () => {
             this.loading = false;
             this.allAccounts = [];
             this.filteredAccounts = [];
-            this.cdr.detectChanges();
           }
         });
         return;
@@ -508,21 +509,19 @@ export class FDAccountsComponent implements OnInit {
     }
 
     // Bank Officer or Admin
-    this.loading = true;
-    this.cdr.detectChanges();
+    if (isManualRefresh || this.allAccounts.length === 0) {
+      this.loading = true;
+    }
     const fetch$ = this.selectedStatus === 'ALL'
-      ? this.fdAccountApi.getAccountsByStatus('ALL')
+      ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
       : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
     fetch$.pipe(
-      timeout(3000),
-      catchError(() => of([])),
-      finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      })
+      timeout(2500),
+      catchError(() => of([]))
     ).subscribe({
       next: (data) => {
+        this.loading = false;
         if (data && data.length > 0) {
           this.allAccounts = data;
         } else if (this.allAccounts.length === 0) {
@@ -531,37 +530,11 @@ export class FDAccountsComponent implements OnInit {
         this.applyFilters();
       },
       error: () => {
+        this.loading = false;
         if (this.allAccounts.length === 0) {
           this.allAccounts = [...this.mockAccounts];
         }
         this.applyFilters();
-      }
-    });
-  }
-
-  approvingNo: string | null = null;
-
-  approveFdAccount(account: FixedDepositAccountResponse): void {
-    if (this.approvingNo) return;
-    this.approvingNo = account.fdAccountNo;
-    this.cdr.detectChanges();
-
-    this.fdAccountApi.approveAccount(account.fdAccountNo).pipe(
-      finalize(() => {
-        this.approvingNo = null;
-        this.cdr.detectChanges();
-      })
-    ).subscribe({
-      next: (res) => {
-        this.toastService.success(
-          `Fixed Deposit Account ${res.fdAccountNo} has been approved and activated!`,
-          'Account Approved'
-        );
-        this.loadAccounts(true);
-      },
-      error: (err) => {
-        const msg = err.error?.detail || err.error?.message || err.message || 'Failed to approve FD account';
-        this.toastService.error(msg, 'Approval Failed');
       }
     });
   }
@@ -571,12 +544,9 @@ export class FDAccountsComponent implements OnInit {
       this.loading = false;
       this.allAccounts = [];
       this.filteredAccounts = [];
-      this.cdr.detectChanges();
       return;
     }
-
     this.loading = true;
-    this.cdr.detectChanges();
 
     const fetch$ = this.selectedStatus === 'ALL'
       ? this.fdAccountApi.getAccountsByCustomer(this.userCustomerId)
@@ -584,24 +554,18 @@ export class FDAccountsComponent implements OnInit {
 
     fetch$.pipe(
       timeout(3500),
-      catchError((err) => {
-        console.warn('Could not fetch customer accounts from FD API:', err);
-        return of([]);
-      }),
-      finalize(() => {
-        this.loading = false;
-        this.cdr.detectChanges();
-      })
+      catchError(() => of([]))
     ).subscribe({
       next: (data) => {
+        this.loading = false;
+        // Strictly use real customer data. Fresh accounts with no accounts remain empty!
         this.allAccounts = data || [];
         this.applyFilters();
-        this.cdr.detectChanges();
       },
       error: () => {
+        this.loading = false;
         this.allAccounts = [];
         this.filteredAccounts = [];
-        this.cdr.detectChanges();
       }
     });
   }
@@ -617,33 +581,25 @@ export class FDAccountsComponent implements OnInit {
     const role = this.authService.getRole();
     if (role === 'CUSTOMER') {
       if (!this.isDemoUser()) {
-        // Real customer: strictly filter by their customer ID, NO mock data
+        // Real customer: strictly filter by their customer ID, NO mock data ever
         if (this.userCustomerId) {
-          const q = String(this.userCustomerId).trim().toLowerCase();
-          list = list.filter(a => {
-            if (!a.customerId) return false;
-            const cid = String(a.customerId).trim().toLowerCase();
-            return cid === q || cid.replace('cust-', '') === q.replace('cust-', '');
-          });
+          const q = this.userCustomerId.trim().toLowerCase();
+          list = list.filter(a => a.customerId && a.customerId.toLowerCase().trim() === q);
         } else {
           list = [];
         }
       } else {
         // Demo user
         if (this.userCustomerId) {
-          const q = String(this.userCustomerId).trim().toLowerCase();
-          list = list.filter(a => {
-            if (!a.customerId) return false;
-            const cid = String(a.customerId).trim().toLowerCase();
-            return cid === q || cid.replace('cust-', '') === q.replace('cust-', '');
-          });
+          const q = this.userCustomerId.trim().toLowerCase();
+          list = list.filter(a => a.customerId && a.customerId.toLowerCase().trim() === q);
         } else {
-          list = list.filter(a => a.customerId && (String(a.customerId).includes('9') || String(a.customerId).toLowerCase().includes('1001')));
+          list = list.filter(a => a.customerId && (a.customerId.includes('9') || a.customerId.toLowerCase().includes('1001')));
         }
       }
     } else if (this.customerFilter.trim()) {
       const q = this.customerFilter.trim().toLowerCase();
-      list = list.filter(a => a.customerId && String(a.customerId).toLowerCase().includes(q));
+      list = list.filter(a => a.customerId && a.customerId.toLowerCase().includes(q));
     }
 
     if (this.selectedStatus !== 'ALL') {
@@ -651,16 +607,12 @@ export class FDAccountsComponent implements OnInit {
     }
 
     this.filteredAccounts = list;
-    this.cdr.detectChanges();
+    this.cdr.markForCheck();
   }
 
   viewDetails(account: FixedDepositAccountResponse): void {
     this.selectedAccount = account;
     this.isDetailModalOpen = true;
-    this.fdAccountApi.getAccount(account.fdAccountNo).subscribe({
-      next: (latestAccount) => this.selectedAccount = latestAccount,
-      error: () => this.toastService.error('The latest account details could not be loaded.', 'Account Refresh Failed')
-    });
     this.accountNotifications = [];
     this.loadingNotifications = true;
     this.fdAccountApi.getAccountNotifications(account.fdAccountNo).subscribe({
@@ -716,3 +668,4 @@ export class FDAccountsComponent implements OnInit {
     });
   }
 }
+

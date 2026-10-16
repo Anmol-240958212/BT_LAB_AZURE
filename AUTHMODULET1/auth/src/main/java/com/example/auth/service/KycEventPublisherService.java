@@ -58,7 +58,7 @@ public class KycEventPublisherService {
 
     private void syncToFdCustomerRegistry(KycCustomerEventDto event) {
         try {
-            String sql = "INSERT INTO banking_tech2.fd_customer_registry " +
+            String sql = "INSERT INTO fdmodule.fd_customer_registry " +
                     "(customer_id, full_name, customer_status, kyc_status, email, last_updated_at) " +
                     "VALUES (?, ?, 'ACTIVE', 'ACTIVE', ?, NOW()) " +
                     "ON DUPLICATE KEY UPDATE " +

@@ -44,3 +44,4 @@ export class CustomerApiService {
     return this.http.post<{ message: string }>(`${this.baseUrl}/sync`, {});
   }
 }
+

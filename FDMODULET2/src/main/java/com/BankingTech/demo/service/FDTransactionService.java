@@ -2,9 +2,6 @@ package com.BankingTech.demo.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
-
-import com.BankingTech.demo.dto.responsedto.FDTransactionResponseDTO;
 
 public interface FDTransactionService {
 
@@ -15,6 +12,4 @@ public interface FDTransactionService {
             BigDecimal penaltyAmount,
             LocalDateTime transactionDate,
             String remarks);
-
-    List<FDTransactionResponseDTO> getTransactions(String fdAccountNo);
 }

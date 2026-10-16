@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
@@ -307,6 +307,7 @@ export class DashboardComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly fdAccountApi: FDAccountApiService,
     private readonly userApi: UserApiService,
+    private readonly cdr: ChangeDetectorRef,
     private readonly router: Router
   ) {}
 
@@ -424,6 +425,8 @@ export class DashboardComponent implements OnInit {
     this.activeAccountCount = this.recentAccounts.length;
     this.totalDepositValue = this.recentAccounts.reduce((acc, curr) => acc + (Number(curr.principalAmount) || 0), 0);
     this.totalAccruedInterest = this.recentAccounts.reduce((acc, curr) => acc + (Number(curr.accruedInterest) || 0), 0);
+    // HTTP subscriptions must notify Angular's zoneless change detection.
+    this.cdr.markForCheck();
   }
 
   navigate(path: string): void {

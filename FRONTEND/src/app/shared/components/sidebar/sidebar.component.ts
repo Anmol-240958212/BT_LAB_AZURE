@@ -359,13 +359,7 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       label: 'Create FD Account',
       route: '/fixed-deposit/create',
       icon: 'plus',
-      roles: ['BANK_OFFICER', 'ADMIN']
-    },
-    {
-      label: 'Products & Pricing',
-      route: '/products',
-      icon: 'coins',
-      roles: ['BANK_OFFICER', 'ADMIN']
+      roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN']
     },
     {
       label: 'FD Calculator',
@@ -463,3 +457,4 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
     return this.allNavItems.filter(item => item.roles.includes(this.currentRole!));
   }
 }
+
