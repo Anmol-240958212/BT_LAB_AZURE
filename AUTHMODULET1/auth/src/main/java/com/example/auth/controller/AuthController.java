@@ -51,9 +51,6 @@ public class AuthController {
         String otp = otpService.getLatestOtp(identifier);
 
         String message = "Registration request received. OTP sent.";
-        if (otp != null) {
-            message += " [SIMULATED OTP: " + otp + "]";
-        }
 
         return ResponseEntity.ok(message);
     }
@@ -163,24 +160,10 @@ public class AuthController {
     public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequestDto request) {
 
         authService.forgotPassword(request.getIdentifier());
-        String otp = otpService.getLatestOtp(request.getIdentifier());
         String message = "Password reset instructions accepted.";
-        if (otp != null) {
-            message += " [SIMULATED OTP: " + otp + "]";
-        }
         return new ResponseEntity<>(message, HttpStatus.OK);
     }
 
-    @GetMapping("/latest-otp")
-    @Operation(summary = "Get latest simulated OTP for testing/presentation")
-    public ResponseEntity<java.util.Map<String, String>> getLatestOtp(@RequestParam(required = false) String identifier) {
-        String otp = otpService.getLatestOtp(identifier);
-        String currentId = otpService.getLatestIdentifier();
-        return ResponseEntity.ok(java.util.Map.of(
-                "otp", otp != null ? otp : "123456",
-                "identifier", currentId != null ? currentId : ""
-        ));
-    }
 
     @PostMapping("/reset-password")
     @Operation(summary = "Reset password",

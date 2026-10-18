@@ -1,6 +1,8 @@
 package com.example.auth.serviceimpl;
 
 import com.example.auth.service.OtpService;
+import com.example.auth.service.NotificationService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -21,6 +23,13 @@ public class OtpServiceImpl implements OtpService {
     private static volatile String latestGeneratedOtp = null;
     private static volatile String latestIdentifier = null;
 
+    private final NotificationService notificationService;
+
+    @Autowired
+    public OtpServiceImpl(NotificationService notificationService) {
+        this.notificationService = notificationService;
+    }
+
     @Override
     public void generateAndSendOtp(String identifier) {
 
@@ -39,13 +48,8 @@ public class OtpServiceImpl implements OtpService {
         latestGeneratedOtp = otp;
         latestIdentifier = identifier;
 
-        // OTP simulation
-        System.out.println("=================================");
-        System.out.println("OTP SIMULATION");
-        System.out.println("Recipient: " + identifier);
-        System.out.println("OTP: " + otp);
-        System.out.println("Expires in: " + OTP_EXPIRY_MINUTES + " minutes");
-        System.out.println("=================================");
+        // Send OTP via NotificationService
+        notificationService.sendOtpNotification(identifier, otp);
     }
 
     @Override

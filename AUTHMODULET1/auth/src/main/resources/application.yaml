@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/authandcust
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:#Iamgood1}
+    password: ${DB_PASSWORD:rish}
 
   jpa:
     hibernate:
@@ -22,6 +22,22 @@ spring:
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
         max.block.ms: 1000
+
+  mail:
+    host: ${BANKING_SMTP_HOST:smtp.gmail.com}
+    port: ${BANKING_SMTP_PORT:587}
+    username: ${BANKING_SMTP_USERNAME:${MAIL_USERNAME:team4.bt.lab@gmail.com}}
+    password: ${BANKING_SMTP_PASSWORD:${MAIL_PASSWORD:pais tuny wywn cxxo}}
+    properties:
+      mail:
+        smtp:
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+          auth: ${BANKING_SMTP_AUTH:true}
+          starttls:
+            enable: ${BANKING_SMTP_STARTTLS:true}
+            required: ${BANKING_SMTP_STARTTLS:true}
 
 server:
   port: 8080

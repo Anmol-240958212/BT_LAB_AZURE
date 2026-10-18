@@ -51,9 +51,6 @@ public class SecurityConfig {
                         // reset password
                         .requestMatchers("/auth/reset-password").permitAll()
 
-                        // latest otp for presentation/testing simulation
-                        .requestMatchers("/auth/latest-otp").permitAll()
-
                         // Check username availability
                         .requestMatchers("/auth/check-username").permitAll()
 

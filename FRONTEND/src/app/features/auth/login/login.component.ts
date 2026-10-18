@@ -24,11 +24,12 @@ function generateDemoJwt(username: string, role: UserRole): string {
       </div>
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
-        <!-- Username Field -->
+        <!-- Email Field -->
         <app-input
-          id="login-username"
-          label="Username / Identifier"
-          placeholder="Enter username"
+          id="login-email"
+          label="Email"
+          type="email"
+          placeholder="Enter email"
           formControlName="username"
           [required]="true"
           [error]="usernameError"
@@ -197,7 +198,7 @@ export class LoginComponent implements OnInit {
 
   ngOnInit(): void {
     this.loginForm = this.fb.group({
-      username: ['', [Validators.required, Validators.minLength(3)]],
+      username: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required, Validators.minLength(4)]]
     });
 
@@ -207,8 +208,8 @@ export class LoginComponent implements OnInit {
   get usernameError(): string | null {
     const ctrl = this.loginForm.get('username');
     if (ctrl?.touched && ctrl.errors) {
-      if (ctrl.errors['required']) return 'Username is required';
-      if (ctrl.errors['minlength']) return 'Username must be at least 3 characters';
+      if (ctrl.errors['required']) return 'Email is required';
+      if (ctrl.errors['email']) return 'Please enter a valid email';
     }
     return null;
   }

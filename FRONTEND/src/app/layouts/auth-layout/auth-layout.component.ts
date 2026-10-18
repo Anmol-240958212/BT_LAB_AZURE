@@ -86,6 +86,17 @@ export interface BankingVideo {
           <app-icon [name]="isMuted ? 'volume-x' : 'volume-2'" [size]="13"></app-icon>
           <span>{{ isMuted ? 'Unmute' : 'Mute' }}</span>
         </button>
+        <button
+          type="button"
+          class="source-audio-btn"
+          [class.unmuted]="!isPaused"
+          (click)="togglePause()"
+          title="{{ isPaused ? 'Play Video' : 'Pause Video' }}"
+          id="rbi-pause-toggle-btn"
+        >
+          <app-icon [name]="isPaused ? 'play' : 'pause'" [size]="13"></app-icon>
+          <span>{{ isPaused ? 'Play' : 'Pause' }}</span>
+        </button>
       </div>
     </div>
   `,
@@ -394,6 +405,7 @@ export class AuthLayoutComponent implements OnInit, OnDestroy {
     }
   ];
 
+  isPaused = false;
   isMuted = true;
   safeVideoUrl!: SafeResourceUrl;
 
@@ -424,6 +436,20 @@ export class AuthLayoutComponent implements OnInit, OnDestroy {
     this.isMuted = !this.isMuted;
     this.sendCommand(this.isMuted ? 'mute' : 'unMute', []);
     this.cdr.detectChanges();
+  }
+
+  togglePause(): void {
+    this.isPaused = !this.isPaused;
+    this.sendCommand(this.isPaused ? 'pauseVideo' : 'playVideo', []);
+    this.cdr.detectChanges();
+  }
+
+  getPauseIcon(): string {
+    return this.isPaused ? 'play' : 'pause';
+  }
+
+  getPlayPauseText(): string {
+    return this.isPaused ? 'Play' : 'Pause';
   }
 
   private sendCommand(func: string, args: any[] = []): void {
