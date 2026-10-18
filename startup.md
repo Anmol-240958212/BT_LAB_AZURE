@@ -63,7 +63,7 @@ If running step-by-step or in environments where granular process control is pre
 Default database credentials expected by Spring Boot:
 - Host: `localhost:3306`
 - User: `root` (or `$DB_USERNAME`)
-- Password: `Shrey@26` (or `$DB_PASSWORD`)
+- Password: `#Iamgood1` (or `$DB_PASSWORD`)
 
 Kafka broker:
 - Host: `localhost:9092`
@@ -72,13 +72,13 @@ Kafka broker:
 **If using local MySQL:**
 ```bash
 # macOS / Linux
-mysql -u root -pShrey@26 -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;"
-mysql -u root -pShrey@26 authandcust < AUTHMODULET1/authandcustDB.sql
+mysql -u root -p"#Iamgood1" -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;"
+mysql -u root -p"#Iamgood1" authandcust < AUTHMODULET1/authandcustDB.sql
 ```
 ```powershell
 # Windows PowerShell
-mysql -u root -pShrey@26 -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;"
-Get-Content AUTHMODULET1\authandcustDB.sql | mysql -u root -pShrey@26 authandcust
+mysql -u root -p"#Iamgood1" -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;"
+Get-Content AUTHMODULET1\authandcustDB.sql | mysql -u root -p"#Iamgood1" authandcust
 ```
 
 **If using Docker for Kafka & MySQL:**
@@ -194,6 +194,6 @@ Both Spring Boot services allow overriding database and email configurations via
 | Variable | Default Value | Description |
 |---|---|---|
 | `DB_USERNAME` | `root` | MySQL username |
-| `DB_PASSWORD` | `Shrey@26` | MySQL password |
+| `DB_PASSWORD` | `#Iamgood1` | MySQL password |
 | `MAIL_USERNAME`| `bankingtech@demo.local` | SMTP sender email (FD Service) |
 | `MAIL_PASSWORD`| `demo123` | SMTP password (FD Service) |

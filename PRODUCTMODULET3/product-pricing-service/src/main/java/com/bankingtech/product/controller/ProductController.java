@@ -22,8 +22,11 @@ import com.bankingtech.product.dto.CategoryRateResponseDto;
 import com.bankingtech.product.dto.EffectiveRateResponseDto;
 import com.bankingtech.product.dto.PageResponseDto;
 import com.bankingtech.product.dto.ProductCreateRequestDto;
+import com.bankingtech.product.dto.ProductPenaltyResponseDto;
 import com.bankingtech.product.dto.ProductResponseDto;
+import com.bankingtech.product.dto.ProductSummaryReportDto;
 import com.bankingtech.product.dto.ProductUpdateRequestDto;
+import com.bankingtech.product.dto.ProductValidationResponseDto;
 import com.bankingtech.product.entity.enums.RecordStatus;
 import com.bankingtech.product.entity.enums.DurationUnit;
 import com.bankingtech.product.service.CategoryPricingService;
@@ -123,4 +126,30 @@ public class ProductController {
         return categoryPricingService.effectiveRate(productCode, categories, customerAge, customerGender,
                 date, principal, term, termUnit);
     }
+
+    @GetMapping("/report/summary")
+    @PreAuthorize("hasAnyRole('BANK_OFFICER', 'ADMIN')")
+    @Operation(summary = "Operational product summary report", description = "Aggregated count by type, active/inactive totals, and rate statistics (Lab L21).")
+    public ProductSummaryReportDto getSummaryReport() {
+        return productService.getSummaryReport();
+    }
+
+    @GetMapping("/{productCode}/validate")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'STAFF', 'BANK_OFFICER', 'ADMIN')")
+    @Operation(summary = "Validate product for account creation", description = "Validates active status, term bounds, amount, and returns applicable rate and settings (Lab L13).")
+    public ProductValidationResponseDto validateProduct(
+            @PathVariable String productCode,
+            @RequestParam(required = false) Integer termMonths,
+            @RequestParam(required = false) java.math.BigDecimal amount,
+            @RequestParam(required = false) String currency) {
+        return productService.validateProductForAccount(productCode, termMonths, amount, currency);
+    }
+
+    @GetMapping("/{productCode}/penalty")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'STAFF', 'BANK_OFFICER', 'ADMIN')")
+    @Operation(summary = "Get premature withdrawal penalty details", description = "Returns penalty percentage and flat withdrawal fee for early FD closure (Lab L15).")
+    public ProductPenaltyResponseDto getPenaltyDetails(@PathVariable String productCode) {
+        return productService.getPenaltyDetails(productCode);
+    }
 }
+

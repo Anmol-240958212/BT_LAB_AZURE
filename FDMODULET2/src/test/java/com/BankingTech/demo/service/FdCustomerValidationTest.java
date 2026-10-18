@@ -45,10 +45,24 @@ class FdCustomerValidationTest {
         var accounts = mock(FixedDepositAccountRepository.class);
         var transactions = mock(FDTransactionRepository.class);
         var numbers = mock(AccountNumberGenerator.class);
-        var service = new FixedDepositAccountServiceImpl(accounts, numbers, transactions, validator);
+        var service = new FixedDepositAccountServiceImpl(accounts, numbers, transactions, validator, mock(FdProductPricingService.class));
         var request = new FixedDepositAccountRequestDTO();
         request.setCustomerId("999");
         when(registry.findById("999")).thenReturn(Optional.empty());
+        assertThrows(ResponseStatusException.class, () -> service.createAccount(request));
+        assertThrows(ResponseStatusException.class, () -> service.createAccountWithTransaction(request));
+        verifyNoInteractions(accounts, transactions, numbers);
+    }
+
+    @Test void bothCreationRoutesRejectUnavailablePricingBeforeAnyWrite() {
+        var accounts = mock(FixedDepositAccountRepository.class);
+        var transactions = mock(FDTransactionRepository.class);
+        var numbers = mock(AccountNumberGenerator.class);
+        var pricing = mock(FdProductPricingService.class);
+        var service = new FixedDepositAccountServiceImpl(accounts, numbers, transactions, validator, pricing);
+        var request = new FixedDepositAccountRequestDTO(); request.setCustomerId("10");
+        when(registry.findById("10")).thenReturn(Optional.of(new FdCustomerRegistry("10", "Test", "ACTIVE", "ACTIVE", null)));
+        doThrow(new ResponseStatusException(org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE)).when(pricing).applyAuthoritativePricing(request);
         assertThrows(ResponseStatusException.class, () -> service.createAccount(request));
         assertThrows(ResponseStatusException.class, () -> service.createAccountWithTransaction(request));
         verifyNoInteractions(accounts, transactions, numbers);

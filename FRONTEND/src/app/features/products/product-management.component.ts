@@ -1,8 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { finalize } from 'rxjs/operators';
+import { forkJoin } from 'rxjs';
 import { ProductPricingApiService } from '../../core/api/product-pricing-api.service';
-import { CategoryRate, ProductRecord, ProductStatus } from '../../core/models/product.models';
+import { CategoryRate, ProductRecord, ProductStatus, ProductSummary, ProductValidation, ProductPenalty, EffectiveRateQuote } from '../../core/models/product.models';
 import { ToastService } from '../../shared/services/toast.service';
 
 @Component({
@@ -20,6 +21,16 @@ import { ToastService } from '../../shared/services/toast.service';
       </header>
 
       <div *ngIf="pageError" class="error-banner" role="alert">{{ pageError }}</div>
+
+      <section class="card" *ngIf="summary">
+        <h2>Catalogue summary</h2>
+        <div class="detail-grid">
+          <div><small>Total products</small><strong>{{ summary.totalProducts }}</strong></div>
+          <div><small>Active status</small><strong>{{ summary.activeProducts }}</strong></div>
+          <div><small>Inactive status</small><strong>{{ summary.inactiveProducts }}</strong></div>
+          <div><small>Average available base rate</small><strong>{{ summary.averageBaseRate | number:'1.2-2' }}%</strong></div>
+        </div>
+      </section>
 
       <section class="toolbar card">
         <label>Type
@@ -144,12 +155,14 @@ import { ToastService } from '../../shared/services/toast.service';
               </div>
 
               <section class="category-panel">
-                <div class="section-header"><div><h3>Category rate adjustments</h3><p>These are used by live FD quotes.</p></div></div>
+                <div class="section-header"><div><h3>Category rate adjustments</h3><p>Configure dated bonuses for product rate quotes.</p></div></div>
+                <label>Show adjustments effective on<input type="date" [(ngModel)]="categoryDate" name="categoryDate" (change)="loadCategoryRates(selected.productCode)" /></label>
                 <div *ngIf="categoryRatesLoading" class="empty-state">Loading category rates…</div>
                 <div *ngIf="!categoryRatesLoading && categoryRates.length === 0" class="empty-state">No active category adjustments.</div>
                 <div *ngFor="let rate of categoryRates" class="category-row">
                   <span><strong>{{ rate.displayName }}</strong><small>{{ rate.categoryCode }}<ng-container *ngIf="rate.minAge != null"> · age {{ rate.minAge }}+</ng-container><ng-container *ngIf="rate.gender"> · {{ rate.gender }}</ng-container></small></span>
                   <b>+{{ rate.adjustmentPercent | number:'1.2-2' }}%</b>
+                  <small>{{ rate.effectiveFrom }} – {{ rate.effectiveTo || 'No end date' }}</small>
                 </div>
                 <form [formGroup]="categoryForm" (ngSubmit)="addCategoryRate()" class="category-form">
                   <label>Category code<input formControlName="categoryCode" placeholder="SENIOR_CITIZEN" maxlength="30" /></label>
@@ -159,8 +172,31 @@ import { ToastService } from '../../shared/services/toast.service';
                   <label>Maximum age<input type="number" min="0" max="130" formControlName="maxAge" /></label>
                   <label>Gender<select formControlName="gender"><option value="">Any</option><option value="F">Female</option><option value="M">Male</option><option value="X">Other</option></select></label>
                   <label>Effective from<input type="date" formControlName="effectiveFrom" /></label>
+                  <label>Effective to (optional)<input type="date" formControlName="effectiveTo" /></label>
                   <button class="primary-button" type="submit" [disabled]="categoryForm.invalid || saving">Add adjustment</button>
                 </form>
+              </section>
+
+              <section class="category-panel">
+                <h3>Check pricing</h3>
+                <p>Check today's account eligibility, category-adjusted rate, and configured withdrawal charges.</p>
+                <form [formGroup]="quoteForm" (ngSubmit)="checkPricing()" class="category-form">
+                  <label>Deposit amount<input type="number" min="0.01" formControlName="amount" /></label>
+                  <label>Term (months)<input type="number" min="1" step="1" formControlName="term" /></label>
+                  <label>Customer age<input type="number" min="0" max="130" formControlName="age" /></label>
+                  <label>Gender<select formControlName="gender"><option value="">Unspecified</option><option value="F">Female</option><option value="M">Male</option><option value="X">Other</option></select></label>
+                  <label>Category codes (comma separated)<input formControlName="categories" placeholder="SENIOR_CITIZEN, EMPLOYEE" /></label>
+                  <button class="primary-button" type="submit" [disabled]="quoteForm.invalid || checking">{{ checking ? 'Checking…' : 'Check pricing' }}</button>
+                </form>
+                <p *ngIf="pricingError" role="alert">{{ pricingError }}</p>
+                <p *ngIf="validation">{{ validation.message }}</p>
+                <div class="detail-grid" *ngIf="quote">
+                  <div><small>Base rate</small><strong>{{ quote.baseRate }}%</strong></div>
+                  <div><small>Applied bonus</small><strong>{{ quote.totalAdjustmentPercent }}%</strong></div>
+                  <div><small>Effective rate</small><strong>{{ quote.effectiveRate }}%</strong></div>
+                  <div><small>Rate capped</small><strong>{{ quote.capped ? 'Yes' : 'No' }}</strong></div>
+                </div>
+                <p *ngIf="penalty">{{ penalty.remarks }}</p>
               </section>
             </ng-container>
             <ng-template #selectPrompt><div class="empty-state large">Choose a product to view its terms, or add a product.</div></ng-template>
@@ -223,6 +259,13 @@ import { ToastService } from '../../shared/services/toast.service';
 })
 export class ProductManagementComponent implements OnInit {
   products: ProductRecord[] = [];
+  summary: ProductSummary | null = null;
+  validation: ProductValidation | null = null;
+  penalty: ProductPenalty | null = null;
+  quote: EffectiveRateQuote | null = null;
+  pricingError = '';
+  checking = false;
+  readonly quoteForm: FormGroup;
   selected: ProductRecord | null = null;
   categoryRates: CategoryRate[] = [];
   productTypeFilter = '';
@@ -236,6 +279,7 @@ export class ProductManagementComponent implements OnInit {
   pageError = '';
   editorMode: 'view' | 'create' | 'edit' = 'view';
   readonly today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  categoryDate = this.today;
 
   readonly createForm: FormGroup;
   readonly editForm: FormGroup;
@@ -245,7 +289,12 @@ export class ProductManagementComponent implements OnInit {
   get rateMatrixGroups(): FormGroup[] { return this.rateMatrixRows.controls as FormGroup[]; }
 
   constructor(private readonly fb: FormBuilder, private readonly api: ProductPricingApiService,
-              private readonly toast: ToastService) {
+              private readonly toast: ToastService, private readonly cdr: ChangeDetectorRef) {
+    this.quoteForm = this.fb.group({
+      amount: [50000, [Validators.required, Validators.min(0.01)]],
+      term: [12, [Validators.required, Validators.min(1), Validators.pattern(/^\d+$/)]],
+      age: [null, [Validators.min(0), Validators.max(130)]], gender: [''], categories: ['']
+    });
     this.createForm = this.fb.group({
     productCode: ['', [Validators.required, Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9_-]+$/)]],
     productName: ['', [Validators.required, Validators.maxLength(100)]],
@@ -275,18 +324,21 @@ export class ProductManagementComponent implements OnInit {
     categoryCode: ['', [Validators.required, Validators.maxLength(30), Validators.pattern(/^[A-Za-z0-9_-]+$/)]],
     displayName: ['', [Validators.required, Validators.maxLength(100)]],
     adjustmentPercent: [0.5, [Validators.required, Validators.min(0), Validators.max(100)]],
-    minAge: [null as number | null], maxAge: [null as number | null], gender: [''], effectiveFrom: [this.today, Validators.required]
+    minAge: [null as number | null], maxAge: [null as number | null], gender: [''], effectiveFrom: [this.today, Validators.required], effectiveTo: ['']
     });
   }
 
   ngOnInit(): void { this.loadProducts(); }
 
   loadProducts(page = this.page): void {
+    this.validation = null; this.quote = null; this.penalty = null; this.pricingError = '';
+    this.api.summary().pipe(finalize(() => this.cdr.markForCheck()))
+      .subscribe({ next: value => this.summary = value, error: () => this.summary = null });
     this.loading = true;
     this.pageError = '';
     this.api.search({ productType: this.productTypeFilter || undefined,
       status: this.statusFilter || undefined, page, size: 20 }).pipe(
-      finalize(() => this.loading = false)
+      finalize(() => { this.loading = false; this.cdr.markForCheck(); })
     ).subscribe({
       next: response => {
         this.products = response.content || [];
@@ -304,6 +356,7 @@ export class ProductManagementComponent implements OnInit {
   }
 
   selectProduct(product: ProductRecord): void {
+    this.validation = null; this.quote = null; this.penalty = null; this.pricingError = '';
     this.selected = product;
     this.editorMode = 'view';
     this.loadCategoryRates(product.productCode);
@@ -311,7 +364,7 @@ export class ProductManagementComponent implements OnInit {
 
   loadCategoryRates(productCode: string): void {
     this.categoryRatesLoading = true;
-    this.api.getCategoryRates(productCode).pipe(finalize(() => this.categoryRatesLoading = false)).subscribe({
+    this.api.getCategoryRates(productCode, this.categoryDate || this.today).pipe(finalize(() => { this.categoryRatesLoading = false; this.cdr.markForCheck(); })).subscribe({
       next: rates => this.categoryRates = rates,
       error: err => {
         this.categoryRates = [];
@@ -386,7 +439,7 @@ export class ProductManagementComponent implements OnInit {
         durationFrom: Number(row.durationFrom), durationTo: Number(row.durationTo), rate: Number(row.rate),
         effectiveTo: row.effectiveTo || undefined
       })) : []
-    }).pipe(finalize(() => this.saving = false)).subscribe({
+    }).pipe(finalize(() => { this.saving = false; this.cdr.markForCheck(); })).subscribe({
       next: created => {
         this.toast.success(`Product ${created.productCode} created.`, 'Product saved');
         this.editorMode = 'view'; this.selected = created; this.statusFilter = 'ACTIVE';
@@ -418,7 +471,7 @@ export class ProductManagementComponent implements OnInit {
       rateLimit: { min: Number(value.rateMin), max: Number(value.rateMax) },
       baseRate: value.baseRate == null || value.baseRate === '' ? undefined : Number(value.baseRate),
       maxAdditionalPercent: Number(value.maxAdditionalPercent)
-    }).pipe(finalize(() => this.saving = false)).subscribe({
+    }).pipe(finalize(() => { this.saving = false; this.cdr.markForCheck(); })).subscribe({
       next: updated => {
         this.selected = updated; this.editorMode = 'view'; this.toast.success(`Product ${productCode} updated.`, 'Changes saved');
         this.loadProducts(this.page);
@@ -435,14 +488,42 @@ export class ProductManagementComponent implements OnInit {
       categoryCode: String(value.categoryCode).trim().toUpperCase(), displayName: String(value.displayName).trim(),
         adjustmentPercent: Number(value.adjustmentPercent), minAge: value.minAge == null ? null : Number(value.minAge),
         maxAge: value.maxAge == null ? null : Number(value.maxAge),
-      gender: value.gender ? value.gender as 'M' | 'F' | 'X' : null, effectiveFrom: value.effectiveFrom!
-    }).pipe(finalize(() => this.saving = false)).subscribe({
+      gender: value.gender ? value.gender as 'M' | 'F' | 'X' : null, effectiveFrom: value.effectiveFrom!, effectiveTo: value.effectiveTo || null
+    }).pipe(finalize(() => { this.saving = false; this.cdr.markForCheck(); })).subscribe({
       next: () => {
         this.toast.success('Category adjustment added.', 'Pricing updated');
-        this.categoryForm.reset({ categoryCode: '', displayName: '', adjustmentPercent: 0.5, minAge: null, maxAge: null, gender: '', effectiveFrom: this.today });
+        this.categoryForm.reset({ categoryCode: '', displayName: '', adjustmentPercent: 0.5, minAge: null, maxAge: null, gender: '', effectiveFrom: this.today, effectiveTo: '' });
         this.loadCategoryRates(this.selected!.productCode);
       },
       error: err => this.pageError = this.errorText(err, 'Could not add category adjustment.')
+    });
+  }
+
+  checkPricing(): void {
+    if (!this.selected || this.quoteForm.invalid || this.checking) return;
+    const product = this.selected;
+    const value = this.quoteForm.getRawValue();
+    this.validation = null; this.quote = null; this.penalty = null; this.pricingError = '';
+    this.checking = true;
+    forkJoin({
+      validation: this.api.validate(product.productCode, Number(value.amount), Number(value.term), product.currency),
+      penalty: this.api.penalty(product.productCode)
+    }).pipe(finalize(() => this.cdr.markForCheck())).subscribe({
+      next: result => {
+        if (this.selected?.productCode !== product.productCode) { this.checking = false; return; }
+        this.validation = result.validation; this.penalty = result.penalty;
+        if (!result.validation.valid) { this.checking = false; return; }
+        this.api.getEffectiveRate(product.productCode, {
+          principal: Number(value.amount), term: Number(value.term), termUnit: 'MONTHS',
+          customerAge: value.age == null || value.age === '' ? undefined : Number(value.age),
+          customerGender: value.gender || undefined,
+          categories: String(value.categories).split(',').map(code => code.trim().toUpperCase()).filter(Boolean)
+        }).pipe(finalize(() => { this.checking = false; this.cdr.markForCheck(); })).subscribe({
+          next: quote => { if (this.selected?.productCode === product.productCode) this.quote = quote; },
+          error: err => { if (this.selected?.productCode === product.productCode) this.pricingError = this.errorText(err, 'Could not obtain a rate quote.'); }
+        });
+      },
+      error: err => { this.checking = false; if (this.selected?.productCode === product.productCode) this.pricingError = this.errorText(err, 'Could not check pricing.'); }
     });
   }
 

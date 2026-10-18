@@ -11,28 +11,22 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class FdCreationAuthorizationTest {
-    private HttpServer server;
     private FdCreationAuthorization authorization;
     private String profile;
     private int status;
     private String receivedToken;
-
-    @BeforeEach void setup() throws Exception {
+    @BeforeEach void setup() {
         status = 200;
-        profile = "{\"username\":\"customer@example.com\",\"firstName\":\"Test\",\"role\":\"CUSTOMER\",\"customerId\":17,\"customerStatus\":\"ACTIVE\"}";
-        server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/users/me", exchange -> {
-            receivedToken = exchange.getRequestHeaders().getFirst("Authorization");
-            byte[] body = profile.getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().set("Content-Type", "application/json");
-            exchange.sendResponseHeaders(status, body.length);
-            exchange.getResponseBody().write(body);
-            exchange.close();
+        profile = "{\"role\":\"CUSTOMER\",\"customerId\":17,\"customerStatus\":\"ACTIVE\"}";
+        var client = mock(FdAuthKafkaClient.class);
+        when(client.profile(anyString())).thenAnswer(call -> {
+            receivedToken = call.getArgument(0);
+            if (status != 200) throw new ResponseStatusException(
+                status == 403 ? org.springframework.http.HttpStatus.UNAUTHORIZED : org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE);
+            return new tools.jackson.databind.json.JsonMapper().readValue(profile, FdCreationAuthorization.Profile.class);
         });
-        server.start();
-        authorization = new FdCreationAuthorization("http://127.0.0.1:" + server.getAddress().getPort());
+        authorization = new FdCreationAuthorization(client);
     }
-    @AfterEach void cleanup() { server.stop(0); }
     private FixedDepositAccountRequestDTO request(String id) {
         var request = new FixedDepositAccountRequestDTO();
         request.setCustomerId(id);

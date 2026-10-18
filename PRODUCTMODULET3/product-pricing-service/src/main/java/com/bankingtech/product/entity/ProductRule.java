@@ -36,12 +36,12 @@ import jakarta.persistence.UniqueConstraint;
  * {@code rule_definition} is a MySQL JSON column - the database rejects
  * malformed JSON, the service layer validates the meaning.
  * <p>
- * UNIQUE (product_id, rule_code): a rule code is unique within its product.
+ * Rule codes are versioned by effective_from within a product.
  */
 @Entity
 @Table(name = "product_rule",
-       uniqueConstraints = @UniqueConstraint(name = "uq_rule_product_code",
-                                             columnNames = {"product_id", "rule_code"}),
+       uniqueConstraints = @UniqueConstraint(name = "uq_rule_product_code_from",
+                                             columnNames = {"product_id", "rule_code", "effective_from"}),
        indexes = {
            @Index(name = "idx_rule_product_type", columnList = "product_id, rule_type"),
            @Index(name = "idx_rule_type",         columnList = "rule_type")

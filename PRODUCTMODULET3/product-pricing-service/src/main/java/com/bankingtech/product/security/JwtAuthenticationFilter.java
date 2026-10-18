@@ -7,6 +7,7 @@ import java.util.List;
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,7 +27,13 @@ import jakarta.servlet.http.HttpServletResponse;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final SecretKey signingKey;
 
-    public JwtAuthenticationFilter(@Value("${product.jwt.secret}") String secret) {
+    public JwtAuthenticationFilter(@Value("${product.jwt.secret}") String secret, Environment environment) {
+        boolean localProfile = java.util.Arrays.asList(environment.getActiveProfiles()).contains("local");
+        if (secret == null || secret.isBlank() || secret.contains("${")
+                || secret.toLowerCase(java.util.Locale.ROOT).contains("replace-with")
+                || (!localProfile && secret.equals("local-development-only-change-me-32-bytes-minimum"))) {
+            throw new IllegalArgumentException("AUTH_JWT_SECRET must be a non-placeholder production secret");
+        }
         byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
         this.signingKey = Keys.hmacShaKeyFor(keyBytes);
     }

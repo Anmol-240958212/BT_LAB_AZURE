@@ -59,7 +59,20 @@ public class CategoryPricingService {
 
     @Transactional
     public CategoryRateResponseDto add(String productCode, CategoryRateRequestDto request, String actor) {
-        Product product = findProduct(productCode);
+        if (request == null || request.categoryCode() == null || request.categoryCode().isBlank()
+                || request.displayName() == null || request.displayName().isBlank()
+                || request.adjustmentPercent() == null || request.effectiveFrom() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "categoryCode, displayName, adjustmentPercent, and effectiveFrom are required");
+        }
+        if (request.adjustmentPercent().signum() < 0
+                || request.adjustmentPercent().compareTo(BigDecimal.valueOf(100)) > 0) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "adjustmentPercent must be between 0 and 100");
+        }
+        Product product = productCode == null || productCode.isBlank()
+                ? findProduct(productCode)
+                : products.findByProductCodeIgnoreCaseForUpdate(productCode.trim())
+                        .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "Product not found"));
         String code = normalizeCode(request.categoryCode());
         if (request.minAge() != null && request.maxAge() != null && request.maxAge() < request.minAge()) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "maxAge must be greater than or equal to minAge");
@@ -67,12 +80,17 @@ public class CategoryPricingService {
         if (request.effectiveTo() != null && request.effectiveTo().isBefore(request.effectiveFrom())) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "effectiveTo must be on or after effectiveFrom");
         }
-        boolean duplicateCategory = rules.existsByProductProductIdAndRuleCodeIgnoreCase(product.getProductId(), code)
-                || rules.findAllByProductProductIdAndRuleType(product.getProductId(), ProductRule.TYPE_CATEGORY_PRICING)
-                        .stream().anyMatch(existing -> categoryCode(decode(existing.getRuleDefinition()), existing.getRuleCode())
-                                .equalsIgnoreCase(code));
-        if (duplicateCategory) {
-            throw new ApiException(HttpStatus.CONFLICT, "A category rate with this categoryCode already exists for the product");
+        List<ProductRule> versions = rules.findAllByProductProductIdAndRuleType(
+                product.getProductId(), ProductRule.TYPE_CATEGORY_PRICING).stream()
+                .filter(existing -> categoryCode(decode(existing.getRuleDefinition()), existing.getRuleCode())
+                        .equalsIgnoreCase(code))
+                .filter(existing -> existing.getStatus() == RecordStatus.ACTIVE).toList();
+        boolean overlaps = versions.stream().anyMatch(existing -> intervalsOverlap(
+                request.effectiveFrom(), request.effectiveTo(),
+                existing.getEffectiveFrom(), existing.getEffectiveTo()));
+        if (overlaps) {
+            throw new ApiException(HttpStatus.CONFLICT,
+                    "Category rate effective dates overlap an existing version for this categoryCode");
         }
         ProductRule rule = new ProductRule(code, request.displayName().trim(),
                 ProductRule.TYPE_CATEGORY_PRICING, encode(request), request.effectiveFrom());
@@ -134,13 +152,21 @@ public class CategoryPricingService {
                 product.getProductId(), ProductRule.TYPE_CATEGORY_PRICING, RecordStatus.ACTIVE, at).stream()
                 .filter(rule -> rule.getEffectiveTo() == null || !rule.getEffectiveTo().isBefore(at)).toList();
         Map<String, ProductRule> byCode = new HashMap<>();
+        Set<String> ambiguousCodes = new LinkedHashSet<>();
         for (ProductRule rule : available) {
-            byCode.putIfAbsent(categoryCode(decode(rule.getRuleDefinition()), rule.getRuleCode()), rule);
+            String code = categoryCode(decode(rule.getRuleDefinition()), rule.getRuleCode());
+            if (byCode.putIfAbsent(code, rule) != null) {
+                ambiguousCodes.add(code);
+            }
         }
 
         BigDecimal totalAdjustment = BigDecimal.ZERO;
         List<String> applied = new ArrayList<>();
         for (String key : normalized) {
+            if (ambiguousCodes.contains(key)) {
+                throw new ApiException(HttpStatus.CONFLICT,
+                        "Multiple active category rate versions exist for category: " + key);
+            }
             ProductRule rule = byCode.get(key);
             if (rule == null) throw new ApiException(HttpStatus.BAD_REQUEST, "Unknown or inactive category: " + key);
             JsonNode definition = decode(rule.getRuleDefinition());
@@ -249,6 +275,13 @@ public class CategoryPricingService {
     }
 
     private String blankToNull(String value) { return value == null || value.isBlank() ? null : value; }
+
+    private boolean intervalsOverlap(LocalDate leftFrom, LocalDate leftTo,
+                                     LocalDate rightFrom, LocalDate rightTo) {
+        LocalDate leftEnd = leftTo == null ? LocalDate.MAX : leftTo;
+        LocalDate rightEnd = rightTo == null ? LocalDate.MAX : rightTo;
+        return !leftFrom.isAfter(rightEnd) && !rightFrom.isAfter(leftEnd);
+    }
 
     private String categoryCode(JsonNode definition, String fallback) {
         String code = definition.path("categoryCode").asText();

@@ -1,11 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FDAccountApiService } from '../../../core/api/fd-account-api.service';
 import { UserApiService } from '../../../core/api/user-api.service';
 import { FixedDepositAccountRequest } from '../../../core/models/fd.models';
 import { ToastService } from '../../../shared/services/toast.service';
-import { Observable } from 'rxjs';
+import { Observable, Subject, Subscription, timer, of } from 'rxjs';
+import { catchError, switchMap, takeUntil } from 'rxjs/operators';
+import { FDProductApiService } from '../../../core/api/fd-product-api.service';
+import { ProductRecord } from '../../../core/models/product.models';
 import { AuthService } from '../../../core/auth.service';
 
 @Component({
@@ -49,11 +52,10 @@ import { AuthService } from '../../../core/auth.service';
             <div class="form-group">
               <label class="form-label" for="fd-prod-code">Product Code *</label>
               <select id="fd-prod-code" class="form-select" formControlName="productCode">
-                <option value="PROD_FD_STANDARD">PROD_FD_STANDARD — Standard Fixed Deposit</option>
-                <option value="PROD_FD_CUMULATIVE">PROD_FD_CUMULATIVE — Cumulative Growth FD</option>
-                <option value="PROD_FD_SENIOR">PROD_FD_SENIOR — Senior Citizen Deposit</option>
-                <option value="PROD_FD_QUARTERLY">PROD_FD_QUARTERLY — Quarterly Payout FD</option>
+                <option value="">{{ productsLoading ? 'Loading products…' : 'Select a product' }}</option>
+                <option *ngFor="let product of products" [value]="product.productCode">{{ product.productCode }} — {{ product.productName }}</option>
               </select>
+              <small *ngIf="!productsLoading && !products.length">No active FD products have synchronized yet. Create one in Products & Pricing and allow a few seconds.</small>
             </div>
 
             <app-input
@@ -69,12 +71,12 @@ import { AuthService } from '../../../core/auth.service';
           <div class="grid-3">
             <app-input
               id="fd-principal"
-              label="Principal Deposit Amount (₹)"
+              [label]="'Principal Deposit Amount (' + (selectedProduct?.currency || 'INR') + ')'"
               type="number"
               placeholder="e.g. 100000"
               formControlName="principalAmount"
               [required]="true"
-              hint="Minimum: ₹ 1,000"
+              hint="Minimum amount: 1,000"
             ></app-input>
 
             <app-input
@@ -84,7 +86,7 @@ import { AuthService } from '../../../core/auth.service';
               placeholder="e.g. 7.50"
               formControlName="interestRate"
               [required]="true"
-              hint="Subject to 8.5% regulatory cap"
+              hint="Automatically quoted from the selected product"
             ></app-input>
 
             <app-input
@@ -96,6 +98,19 @@ import { AuthService } from '../../../core/auth.service';
               [required]="true"
             ></app-input>
           </div>
+
+          <div class="initial-txn-box" *ngIf="selectedProduct as product">
+            <strong>{{ product.productName }}</strong>
+            <p>{{ product.description }}</p>
+            <p>Currency: {{ product.currency }} · Term: {{ product.termLimit.min }}–{{ product.termLimit.max }} months · Rate range: {{ product.rateLimit.min }}%–{{ product.rateLimit.max }}%</p>
+            <p *ngIf="product.baseRate != null">Base rate: {{ product.baseRate }}% p.a.</p>
+            <p *ngIf="product.rateMatrix.length">This product has amount and tenure based rates. The quoted rate updates when those values change.</p>
+            <p *ngFor="let charge of product.charges">{{ charge.chargeCode }}: {{ charge.calculationType === 'PERCENTAGE' ? charge.percentage + '%' : charge.amount + ' ' + (charge.currencyCode || product.currency) }}</p>
+            <small>Payout frequency is selected separately; it is not configured by this product.</small>
+          </div>
+          <p *ngIf="productsError" role="alert">{{ productsError }}</p>
+          <p *ngIf="quoteLoading">Fetching current product pricing…</p>
+          <p *ngIf="quoteError" role="alert">{{ quoteError }}</p>
 
           <div class="grid-3">
             <div class="form-group">
@@ -150,7 +165,7 @@ import { AuthService } from '../../../core/auth.service';
               type="submit"
               variant="primary"
               [loading]="submitting"
-              [disabled]="fdForm.invalid || submitting || (isCustomer && (!profileReady || !kycActive))"
+              [disabled]="fdForm.invalid || !quoteReady || quoteLoading || submitting || (isCustomer && (!profileReady || !kycActive))"
             >
               {{ submitting ? 'Generating Account...' : 'Confirm & Create Account' }}
             </app-button>
@@ -194,7 +209,7 @@ import { AuthService } from '../../../core/auth.service';
     }
   `]
 })
-export class FDCreateComponent implements OnInit {
+export class FDCreateComponent implements OnInit, OnDestroy {
   fdForm!: FormGroup;
   submitting = false;
   isCustomer = false;
@@ -202,6 +217,15 @@ export class FDCreateComponent implements OnInit {
   kycActive = false;
   profileError = '';
   private ownCustomerId = '';
+  products: ProductRecord[] = [];
+  selectedProduct: ProductRecord | null = null;
+  productsLoading = true;
+  productsError = '';
+  quoteError = '';
+  quoteLoading = false;
+  quoteReady = false;
+  private readonly destroy$ = new Subject<void>();
+  private quoteSubscription?: Subscription;
 
   constructor(
     private readonly fb: FormBuilder,
@@ -210,7 +234,9 @@ export class FDCreateComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly toastService: ToastService,
     public readonly router: Router,
-    private readonly route: ActivatedRoute
+    private readonly route: ActivatedRoute,
+    private readonly productApi: FDProductApiService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -221,15 +247,34 @@ export class FDCreateComponent implements OnInit {
 
     this.fdForm = this.fb.group({
       customerId: [initialCust, Validators.required],
-      productCode: ['PROD_FD_CUMULATIVE', Validators.required],
+      productCode: ['', Validators.required],
       branchCode: [initialBranch, [Validators.required, Validators.pattern(/^\d{3}$/)]],
       principalAmount: [q['principal'] ? Number(q['principal']) : 100000, [Validators.required, Validators.min(1000)]],
-      interestRate: [q['rate'] ? Number(q['rate']) : 7.25, [Validators.required, Validators.min(0.1), Validators.max(8.5)]],
+      interestRate: [{ value: null, disabled: true }],
       termMonths: [q['term'] ? Number(q['term']) : 12, [Validators.required, Validators.min(1)]],
-      interestType: [q['interestType'] || 'COMPOUND', Validators.required],
+      interestType: [{ value: '', disabled: true }],
       interestPayoutType: ['MATURITY', Validators.required],
-      interestFrequency: ['QUARTERLY', Validators.required],
+      interestFrequency: [{ value: '', disabled: true }],
       createWithTxn: [true]
+    });
+
+    this.fdForm.get('productCode')!.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => this.selectProduct());
+    for (const name of ['principalAmount', 'termMonths']) {
+      this.fdForm.get(name)!.valueChanges.pipe(takeUntil(this.destroy$)).subscribe(() => this.refreshQuote());
+    }
+    timer(0, 10000).pipe(takeUntil(this.destroy$), switchMap(() => this.productApi.list().pipe(
+      catchError(err => { this.productsError = err.error?.detail || 'Unable to load synchronized products from the FD service.'; return of(null); })
+    ))).subscribe(products => {
+      this.productsLoading = false;
+      if (products) {
+        this.productsError = '';
+        const previous = JSON.stringify(this.selectedProduct);
+        this.products = products;
+        const code = this.fdForm.get('productCode')!.value;
+        if (!code && products.length) this.fdForm.patchValue({ productCode: products.some(p => p.productCode === q['productCode']) ? q['productCode'] : products[0].productCode });
+        else if (previous !== JSON.stringify(products.find(p => p.productCode === code) || null)) this.selectProduct();
+      } else { this.products = []; this.selectProduct(); }
+      this.cdr.markForCheck();
     });
 
     this.userApi.getMe().subscribe({
@@ -243,22 +288,69 @@ export class FDCreateComponent implements OnInit {
         } else if (profile?.customerId && !q['customerId']) {
           this.fdForm.patchValue({ customerId: String(profile.customerId) });
         }
+        this.cdr.markForCheck();
       },
       error: () => {
         this.profileReady = true;
         this.profileError = 'Unable to load your profile. Refresh the page and try again.';
+        this.cdr.markForCheck();
       }
     });
   }
 
+  private selectProduct(): void {
+    const code = this.fdForm.get('productCode')!.value;
+    this.selectedProduct = this.products.find(product => product.productCode === code) || null;
+    if (this.selectedProduct) {
+      const term = this.fdForm.get('termMonths')!;
+      const limits = this.selectedProduct.termLimit;
+      term.setValidators([Validators.required, Validators.min(limits.min), Validators.max(limits.max), Validators.pattern(/^\d+$/)]);
+      if (!term.value || term.value < limits.min || term.value > limits.max) term.setValue(limits.min, { emitEvent: false });
+      term.updateValueAndValidity({ emitEvent: false });
+    } else this.fdForm.patchValue({ productCode: '' }, { emitEvent: false });
+    this.refreshQuote();
+  }
+
+  private refreshQuote(): void {
+    this.quoteSubscription?.unsubscribe();
+    this.quoteReady = false; this.quoteLoading = false; this.quoteError = '';
+    this.fdForm.patchValue({ interestRate: null, interestType: '', interestFrequency: '' }, { emitEvent: false });
+    const product = this.selectedProduct;
+    if (!product) return;
+    if (this.fdForm.get('principalAmount')!.invalid || this.fdForm.get('termMonths')!.invalid) {
+      this.quoteError = `Enter a valid deposit amount and a whole-month term between ${product.termLimit.min} and ${product.termLimit.max}.`;
+      return;
+    }
+    const value = this.fdForm.getRawValue();
+    this.quoteLoading = true;
+    this.quoteSubscription = timer(250).pipe(switchMap(() => this.productApi.quote(product.productCode, Number(value.principalAmount), Number(value.termMonths))))
+      .subscribe({
+        next: quote => {
+          this.quoteLoading = false;
+          const frequency = quote.interestFrequency === 'ANNUALLY' ? 'ANNUAL' : quote.interestFrequency;
+          if (!quote.valid || quote.interestRate == null) this.quoteError = quote.message;
+          else if (!['MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'ANNUAL'].includes(frequency)) this.quoteError = 'This product frequency is not supported for FD accounts.';
+          else {
+            this.fdForm.patchValue({ interestRate: quote.interestRate, interestType: quote.interestType, interestFrequency: frequency }, { emitEvent: false });
+            this.quoteReady = product.currency === 'INR';
+            if (!this.quoteReady) this.quoteError = `This product uses ${product.currency}. FD accounts currently support INR only; select an INR product to create an account.`;
+          }
+          this.cdr.markForCheck();
+        },
+        error: err => { this.quoteLoading = false; this.quoteError = err.error?.detail || 'Pricing is unavailable. Check Kafka and Product & Pricing, then change the amount or reselect the product to retry.'; this.cdr.markForCheck(); }
+      });
+  }
+
+  ngOnDestroy(): void { this.destroy$.next(); this.destroy$.complete(); this.quoteSubscription?.unsubscribe(); }
+
   onSubmit(): void {
-    if (this.fdForm.invalid || this.submitting || (this.isCustomer && (!this.profileReady || !this.kycActive || !this.ownCustomerId))) {
+    if (this.fdForm.invalid || !this.quoteReady || this.quoteLoading || this.submitting || (this.isCustomer && (!this.profileReady || !this.kycActive || !this.ownCustomerId))) {
       this.fdForm.markAllAsTouched();
       return;
     }
 
     this.submitting = true;
-    const formVal = this.fdForm.value;
+    const formVal = this.fdForm.getRawValue();
     const req: FixedDepositAccountRequest = {
       customerId: this.isCustomer ? this.ownCustomerId : String(formVal.customerId).trim(),
       productCode: formVal.productCode,
@@ -286,6 +378,7 @@ export class FDCreateComponent implements OnInit {
         this.submitting = false;
         const msg = err.error?.detail || err.error?.message || err.message || 'Fixed deposit creation failed. Ensure customer is KYC approved and synced via Kafka.';
         this.toastService.error(msg, 'Account Origination Failed');
+        this.cdr.markForCheck();
       }
     });
   }

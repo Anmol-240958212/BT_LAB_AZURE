@@ -28,17 +28,20 @@ public class FixedDepositAccountServiceImpl
         private final AccountNumberGenerator accountNumberGenerator;
         private final FDTransactionRepository fdTransactionRepository;
         private final com.BankingTech.demo.service.FdCustomerValidationService customerValidation;
+        private final com.BankingTech.demo.service.FdProductPricingService productPricing;
 
         public FixedDepositAccountServiceImpl(
                         FixedDepositAccountRepository fixedDepositAccountRepository,
                         AccountNumberGenerator accountNumberGenerator,
                         FDTransactionRepository fdTransactionRepository,
-                        com.BankingTech.demo.service.FdCustomerValidationService customerValidation) {
+                        com.BankingTech.demo.service.FdCustomerValidationService customerValidation,
+                        com.BankingTech.demo.service.FdProductPricingService productPricing) {
 
                 this.fixedDepositAccountRepository = fixedDepositAccountRepository;
                 this.accountNumberGenerator = accountNumberGenerator;
                 this.fdTransactionRepository = fdTransactionRepository;
                 this.customerValidation = customerValidation;
+                this.productPricing = productPricing;
         }
 
         @Override
@@ -47,6 +50,7 @@ public class FixedDepositAccountServiceImpl
                         FixedDepositAccountRequestDTO request) {
 
                 customerValidation.requireApprovedCustomer(request.getCustomerId());
+                productPricing.applyAuthoritativePricing(request);
 
                 String fdAccountNo = accountNumberGenerator.generate(
                                 request.getBranchCode());
@@ -99,6 +103,7 @@ public class FixedDepositAccountServiceImpl
                         FixedDepositAccountRequestDTO request) {
 
                 customerValidation.requireApprovedCustomer(request.getCustomerId());
+                productPricing.applyAuthoritativePricing(request);
 
                 // 1. Generate FD account number.
                 String fdAccountNo = accountNumberGenerator.generate(

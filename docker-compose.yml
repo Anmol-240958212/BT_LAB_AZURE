@@ -6,7 +6,7 @@ services:
     container_name: vaultone-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: Shrey@26
+      MYSQL_ROOT_PASSWORD: "#Iamgood1"
     ports:
       - "3306:3306"
     volumes:

@@ -9,7 +9,7 @@ Requirements: Java 17+, Maven, and MySQL 8.0.16+.
 1. Start MySQL and set `DB_USERNAME` / `DB_PASSWORD` if they differ from the local defaults.
 2. Run `mvn spring-boot:run` from this folder. Flyway applies V1/V2/V3 and Hibernate validates entity mappings. Service listens on port 8082.
 3. Obtain a JWT from the Auth service. For local integration, the product service's `AUTH_JWT_SECRET` must match the Auth service signing secret. The fallback value is only for local development; configure a shared secret through environment variables in a deployed environment.
-4. Open `/swagger-ui/index.html` for interactive API documentation or `/v3/api-docs` for OpenAPI JSON. `start.sh` starts this service on port 8082 alongside Auth, FD, and the Angular app.
+4. Open `/swagger-ui/index.html` for interactive API documentation or `/v3/api-docs` for OpenAPI JSON. Start this service separately with `mvn spring-boot:run`; the root startup scripts currently launch Auth, FD, and Angular only.
 
 ## Authentication and roles
 
@@ -21,9 +21,40 @@ Set `PRODUCT_CORS_ALLOWED_ORIGINS` to pipe-separated trusted origin patterns for
 
 ## Frontend integration
 
-The Angular app proxies `/api/product/**` to `http://localhost:8082`; the shared JWT interceptor attaches the Auth access token. Bank officers and admins can open `/products` to create, search, update, and inactivate products and add category-rate rules. The FD calculator loads active FD products and category rules, asks this service for the final effective rate using the selected product, amount, term, and customer profile, then sends that quoted rate to the FD calculation endpoint. FD account creation also loads active products and refreshes the quote when the amount, term, or product changes.
+The Angular app proxies `/api/product/**` to `http://localhost:8082`; the shared JWT interceptor attaches the Auth access token. Bank officers and admins can open `/products` from **Products & Pricing** to create, search, update, and inactivate products and add dated category-rate rules. The page shows a catalogue summary and provides **Check pricing** for account eligibility, effective-rate quotes, and configured withdrawal charges. Sign in through the running Auth service; the frontend's existing offline/demo sessions cannot authenticate to this backend.
 
-Product records are not inserted by the reference-data migrations. After a fresh database setup, a bank officer or admin should create an active FD product in Products & Pricing before a live calculator quote or FD account can be created. Tiered products can be configured in the product form; include a base rate when a fallback is wanted.
+FD account creation now uses Kafka integration described below. The separate FD calculator and withdrawal flows are not yet connected to Product pricing.
+
+## Kafka integration with FD account creation
+
+Product publishes committed catalogue snapshots to `product-catalogue-v1` every five seconds, keyed by product code. The topic is compacted with one partition. Periodic reconciliation automatically includes existing products and retries after broker outages without relying on an in-memory change notification. FD persists snapshots in `fd_product_catalogue`, ignores duplicate/older offsets, and exposes active, currently effective FD products through `/api/fd/products`. The account form refreshes this catalogue every ten seconds. Products in other currencies display their pricing, but booking is restricted to INR because FD accounts currently store rupee deposits.
+
+For pricing, FD sends a correlated request over `product-quote-requests-v1` and receives the authoritative answer over `product-quote-replies-v1`. The form displays the selected product's term/rate limits, charges, current rate, interest type, and compounding frequency. Amount/tenure changes request a new quote. `ANNUALLY` maps to FD's `ANNUAL`. Payout frequency remains a separate choice because the product has no payout-frequency field. Category bonuses are not automatically inferred for account creation.
+
+Both FD creation endpoints revalidate pricing through Kafka and replace browser-supplied rate/type/frequency with the authoritative values. Invalid or inactive products and unavailable pricing prevent creation. Requests time out after twelve seconds; no default rate is substituted. Keep Auth, FD, Product, and Kafka running.
+
+The previous FD-to-Auth HTTP verification has also been replaced by `auth-profile-requests-v1` / `auth-profile-replies-v1`. Auth validates the token and resolves the profile; FD preserves ownership and KYC checks. These request/reply topics have short retention and requests expire after fifteen seconds. Configure Kafka ACLs and encrypted broker transport for deployments; access-token messages must not be logged. Frontend HTTP calls to each owning backend remain normal UI API calls; backend-to-backend integration uses Kafka.
+
+FD's existing Hibernate schema-update setting creates the catalogue table. Product requires no new schema migration for this integration. New products persist interest type/frequency even without a base rate; older tier-only products without those stored settings use the established compound/quarterly defaults until updated.
+
+Product records are not inserted by the reference-data migrations. After a fresh database setup, a bank officer or admin should create an active FD product in Products & Pricing before using Check pricing. Tiered products can be configured in the product form; include a base rate when a fallback is wanted.
+
+## Merged API additions
+
+- `GET /api/product/report/summary`: officer/admin-only product counts and available base-rate statistics. Active counts reflect the stored status; rate statistics use today's available base rates.
+- `GET /api/product/{productCode}/validate?termMonths=12&amount=50000&currency=INR`: checks active dates/status, positive amount and term, term bounds, currency when supplied, and availability of an applicable rate. Invalid eligibility returns `valid: false` with a reason; it never invents a fallback rate.
+- `GET /api/product/{productCode}/penalty`: returns currently effective configured withdrawal charges. An absent penalty percentage is `null`, not an assumed 1%. This endpoint reports configuration; it does not calculate a withdrawal payout.
+- `GET /api/health`: public application liveness probe. It is not a database-readiness check.
+- Category adjustments support non-overlapping date versions for the same category code. Dates are inclusive: a new version must start after the previous version ends. The UI includes optional effective-to dates.
+- Explicit JSON `null` clears a product description or effective-to date; omitting those properties preserves them.
+
+## Migration and verification
+
+Migrations V1–V3 are unchanged. V4 changes the product-rule unique key to `(product_id, rule_code, effective_from)` without deleting product rows. It runs automatically on the next backend startup. Back up an existing product database before upgrading. `database/preflight_category_rule_overlaps.sql` is a read-only overlap check. Unsupported legacy schemas fail with a diagnostic instead of silently rewriting data.
+
+Run `mvn test` for the offline suite. To include the live MySQL startup test, set `LIVE_DB_TEST=true` and point `SPRING_DATASOURCE_URL` at a disposable test database, with `DB_USERNAME` and `DB_PASSWORD` set appropriately. Never point migration tests at a database containing user data.
+
+Local defaults remain compatible with Auth. The optional `prod` profile requires explicit `AUTH_JWT_SECRET`, `DB_HOST`, `DB_USERNAME`, and `DB_PASSWORD` and uses certificate-verified MySQL TLS. Configure the same JWT secret in Auth and Product. No demo dashboard or token-issuing helper was merged.
 
 ## API contract
 
@@ -145,11 +176,11 @@ API validation and business errors use a consistent JSON shape. Typical statuses
 
 ## Verification
 
-Verification completed against a disposable MySQL 8 database:
+Merge verification (2026-10-17), using a separate disposable MySQL database:
 
-- `mvn -q clean package` passed, including the context-load test, Flyway migrations, and Hibernate schema validation.
-- `database/constraint_tests.sh` passed all 48 database assertions against both the Flyway schema and the standalone Workbench schema.
-- Runtime checks exercised all seven API operations, JWT and role outcomes, duplicate requests, term/age validation, matrix selection/overlap rejection, category-rate capping, legacy seed-data compatibility, audit persistence, and the OpenAPI document.
-- After frontend integration, live HTTP checks against a fresh Product database confirmed customer/staff product reads, a customer category-adjusted quote, officer product/category writes, 401 for missing credentials, 403 for customer mutations, and CORS permission for `http://localhost:4200`.
+- All 45 backend tests passed with `LIVE_DB_TEST=true`, including migrations V1–V4 and Hibernate schema validation. The production-secret regression test was rerun after rejecting the existing development signing-key fallback in production.
+- Angular production build passed.
+- A browser session with an actual Auth-module admin login created a product through Angular and retrieved a 7.5% effective rate from a 6.5% base rate plus a 1% age-qualified bonus.
+- Live API checks through the frontend proxy accepted non-overlapping category versions and rejected overlapping versions with HTTP 409. Nonpositive amount validation and absent penalty configuration were checked against the test database.
 
-The Angular production build and Product Pricing context-load test have been checked after the frontend wiring. A live browser session through the full Auth + FD + Product stack has not been run as part of these checks; the product API contract and proxy configuration are documented above.
+The existing product database was not migrated during initial merge verification. Subsequent account-creation integration uses Kafka as described above; withdrawal integration is separate. The standalone SQL constraint script was not rerun for this merge.

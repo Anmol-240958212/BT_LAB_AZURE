@@ -20,10 +20,14 @@ import com.bankingtech.product.dto.PageResponseDto;
 import com.bankingtech.product.dto.ProductChargeRequestDto;
 import com.bankingtech.product.dto.ProductChargeResponseDto;
 import com.bankingtech.product.dto.ProductCreateRequestDto;
+import com.bankingtech.product.dto.ProductPenaltyResponseDto;
 import com.bankingtech.product.dto.ProductResponseDto;
+import com.bankingtech.product.dto.ProductSummaryReportDto;
 import com.bankingtech.product.dto.ProductUpdateRequestDto;
+import com.bankingtech.product.dto.ProductValidationResponseDto;
 import com.bankingtech.product.dto.RateMatrixRequestDto;
 import com.bankingtech.product.dto.RateMatrixResponseDto;
+import com.bankingtech.product.dto.TermLimitDto;
 import com.bankingtech.product.entity.Charge;
 import com.bankingtech.product.entity.InterestRate;
 import com.bankingtech.product.entity.Product;
@@ -32,6 +36,8 @@ import com.bankingtech.product.entity.ProductCharge;
 import com.bankingtech.product.entity.ProductPricing;
 import com.bankingtech.product.entity.ProductTypeMaster;
 import com.bankingtech.product.entity.RateMatrix;
+import com.bankingtech.product.entity.enums.CalculationType;
+import com.bankingtech.product.entity.enums.ChargeType;
 import com.bankingtech.product.entity.enums.CharacteristicDataType;
 import com.bankingtech.product.entity.enums.Frequency;
 import com.bankingtech.product.entity.enums.DurationUnit;
@@ -102,6 +108,10 @@ public class ProductService {
         product.setEffectiveFrom(request.effectiveDate());
         product.setEffectiveTo(request.effectiveTo());
         product.setStatus(RecordStatus.ACTIVE);
+        product.addCharacteristic(ProductCharacteristic.ofText("INTEREST_TYPE",
+                (request.rateType() == null ? RateType.COMPOUND : request.rateType()).name(), request.effectiveDate()));
+        product.addCharacteristic(ProductCharacteristic.ofText("INTEREST_FREQUENCY",
+                (request.frequency() == null ? Frequency.QUARTERLY : request.frequency()).name(), request.effectiveDate()));
 
         product.addCharacteristic(ProductCharacteristic.ofNumber(TERM_MIN_MONTHS,
                 BigDecimal.valueOf(request.termLimit().min()), request.effectiveDate()));
@@ -182,10 +192,11 @@ public class ProductService {
 
     @Transactional
     public ProductResponseDto update(String productCode, ProductUpdateRequestDto request, String actor) {
-        if (request.productName() == null && request.description() == null && request.effectiveDate() == null
-                && request.effectiveTo() == null && request.status() == null && request.termLimit() == null
+        if (request.productName() == null && !request.descriptionSupplied() && request.effectiveDate() == null
+                && !request.effectiveToSupplied() && request.status() == null && request.termLimit() == null
                 && request.rateLimit() == null && request.baseRate() == null
-                && request.transactionTypes() == null && request.maxAdditionalPercent() == null) {
+                && request.transactionTypes() == null && request.maxAdditionalPercent() == null
+                && request.rateType() == null && request.frequency() == null) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "At least one product field must be supplied");
         }
         Product product = findProduct(productCode);
@@ -195,9 +206,9 @@ public class ProductService {
             }
             product.setProductName(request.productName().trim());
         }
-        if (request.description() != null) product.setDescription(trimToNull(request.description()));
+        if (request.descriptionSupplied()) product.setDescription(trimToNull(request.description()));
         LocalDate effectiveFrom = request.effectiveDate() == null ? product.getEffectiveFrom() : request.effectiveDate();
-        LocalDate effectiveTo = request.effectiveTo() == null ? product.getEffectiveTo() : request.effectiveTo();
+        LocalDate effectiveTo = request.effectiveToSupplied() ? request.effectiveTo() : product.getEffectiveTo();
         validateDateRange(effectiveFrom, effectiveTo);
         product.setEffectiveFrom(effectiveFrom);
         product.setEffectiveTo(effectiveTo);
@@ -252,12 +263,158 @@ public class ProductService {
         if (request.transactionTypes() != null) {
             upsertText(product, existing, TRANSACTION_TYPES, normalizeList(request.transactionTypes()), effectiveFrom);
         }
+        if (request.rateType() != null) upsertText(product, existing, "INTEREST_TYPE", request.rateType().name(), effectiveFrom);
+        if (request.frequency() != null) upsertText(product, existing, "INTEREST_FREQUENCY", request.frequency().name(), effectiveFrom);
         if (request.baseRate() != null) upsertBaseRate(product, request.baseRate(), effectiveFrom,
                 request.rateType(), request.frequency());
         Product saved = products.save(product);
         auditService.record(saved.getProductCode(), "PRODUCT_UPDATED", actor, "{}");
         logger.info("Product {} updated by {}", saved.getProductCode(), actor);
         return toResponse(saved, characteristics.findAllByProductProductId(saved.getProductId()));
+    }
+
+    @Transactional(readOnly = true)
+    public ProductValidationResponseDto validateProductForAccount(String productCode, Integer termMonths,
+                                                                   BigDecimal amount, String currency) {
+        Product product = findProduct(productCode);
+        LocalDate today = LocalDate.now();
+        boolean isActive = product.isActiveOn(today);
+        List<ProductCharacteristic> chars = characteristics.findAllByProductProductId(product.getProductId());
+        BigDecimal termMin = value(chars, TERM_MIN_MONTHS);
+        BigDecimal termMax = value(chars, TERM_MAX_MONTHS);
+        TermLimitDto termLimit = (termMin != null && termMax != null)
+                ? new TermLimitDto(termMin.intValue(), termMax.intValue()) : null;
+
+        StringBuilder reason = new StringBuilder();
+        boolean valid = true;
+
+        if (amount == null || amount.signum() <= 0) {
+            valid = false;
+            reason.append("Amount must be greater than zero. ");
+        }
+        if (termMonths == null || termMonths <= 0) {
+            valid = false;
+            reason.append("Term in months must be greater than zero. ");
+        }
+
+        if (!isActive) {
+            valid = false;
+            reason.append("Product is not active. ");
+        }
+
+        if (termMonths != null && termLimit != null) {
+            if (termMonths < termLimit.min() || termMonths > termLimit.max()) {
+                valid = false;
+                reason.append("Term ").append(termMonths).append(" months is outside allowed range [")
+                        .append(termLimit.min()).append("-").append(termLimit.max()).append("]. ");
+            }
+        }
+
+        if (currency != null && !currency.isBlank() && !product.getCurrencyCode().equalsIgnoreCase(currency.trim())) {
+            valid = false;
+            reason.append("Currency ").append(currency).append(" does not match product currency ")
+                    .append(product.getCurrencyCode()).append(". ");
+        }
+
+        BigDecimal applicableRate = null;
+        RateType rateType = RateType.COMPOUND;
+        Frequency frequency = Frequency.QUARTERLY;
+
+        if (valid) {
+            try {
+                applicableRate = findBaseRate(product.getProductId(), today, amount,
+                        termMonths, DurationUnit.MONTHS);
+            } catch (ApiException unavailable) {
+                valid = false;
+                reason.append("No applicable rate: ").append(unavailable.getMessage()).append(". ");
+            }
+        }
+
+        for (ProductPricing pricing : product.getPricings()) {
+            if (pricing.getStatus() == RecordStatus.ACTIVE && !pricing.getEffectiveFrom().isAfter(today)
+                    && (pricing.getEffectiveTo() == null || !pricing.getEffectiveTo().isBefore(today))) {
+                InterestRate rate = pricing.getInterestRates().stream()
+                    .filter(r -> !r.getEffectiveFrom().isAfter(today) && (r.getEffectiveTo() == null || !r.getEffectiveTo().isBefore(today)))
+                    .max(Comparator.comparing(InterestRate::getEffectiveFrom)).orElse(null);
+                if (rate == null) continue;
+                rateType = rate.getRateType();
+                frequency = rate.getFrequency();
+                break;
+            }
+        }
+        String configuredType = textValue(chars, "INTEREST_TYPE");
+        String configuredFrequency = textValue(chars, "INTEREST_FREQUENCY");
+        if (configuredType != null) rateType = RateType.valueOf(configuredType);
+        if (configuredFrequency != null) frequency = Frequency.valueOf(configuredFrequency);
+
+        String message = valid ? "Product parameters are valid for account creation" : reason.toString().trim();
+        return new ProductValidationResponseDto(valid, product.getProductCode(), product.getProductName(),
+                product.getProductType().getTypeCode(), product.getStatus(), termMonths, termLimit,
+                amount, product.getCurrencyCode(), applicableRate, rateType, frequency, message);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductPenaltyResponseDto getPenaltyDetails(String productCode) {
+        Product product = findProduct(productCode);
+        BigDecimal penaltyPercent = null;
+        BigDecimal flatFee = null;
+        String currency = product.getCurrencyCode();
+
+        for (ProductCharge pc : product.getCharges()) {
+            if (pc.getStatus() == RecordStatus.ACTIVE
+                    && !pc.getEffectiveFrom().isAfter(LocalDate.now())
+                    && (pc.getEffectiveTo() == null || !pc.getEffectiveTo().isBefore(LocalDate.now()))) {
+                String chargeCode = pc.getCharge().getChargeCode();
+                if ("PREMAT_PENALTY".equalsIgnoreCase(chargeCode) || pc.getCharge().getChargeType() == ChargeType.PENALTY) {
+                    if (pc.getPercentage() != null) {
+                        penaltyPercent = pc.getPercentage();
+                    }
+                }
+                if ("PREMAT_WD_FEE".equalsIgnoreCase(chargeCode) || pc.getCharge().getChargeType() == ChargeType.WITHDRAWAL_FEE) {
+                    if (pc.getAmount() != null) {
+                        flatFee = pc.getAmount();
+                        if (pc.getCurrencyCode() != null) currency = pc.getCurrencyCode();
+                    }
+                }
+            }
+        }
+
+        String remarks = (penaltyPercent == null ? "No premature withdrawal penalty percentage is configured."
+                : "Configured premature withdrawal penalty: " + penaltyPercent + "%.")
+                + (flatFee != null ? " Flat withdrawal charge: " + currency + " " + flatFee + "." : "");
+
+        return new ProductPenaltyResponseDto(product.getProductCode(), product.getProductName(),
+                product.getStatus(), penaltyPercent, flatFee, currency, remarks);
+    }
+
+    @Transactional(readOnly = true)
+    public ProductSummaryReportDto getSummaryReport() {
+        List<Product> allProducts = products.findAll();
+        long total = allProducts.size();
+        long active = allProducts.stream().filter(p -> p.getStatus() == RecordStatus.ACTIVE).count();
+        long inactive = total - active;
+
+        java.util.Map<String, Long> countByType = allProducts.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        p -> p.getProductType().getTypeCode(), java.util.stream.Collectors.counting()));
+
+        List<BigDecimal> rates = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (Product p : allProducts) {
+            try {
+                BigDecimal r = findBaseRate(p.getProductId(), today);
+                if (r != null) rates.add(r);
+            } catch (ApiException ignored) {
+            }
+        }
+
+        BigDecimal minRate = rates.stream().min(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+        BigDecimal maxRate = rates.stream().max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+        BigDecimal avgRate = rates.isEmpty() ? BigDecimal.ZERO : rates.stream()
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(rates.size()), 4, java.math.RoundingMode.HALF_UP);
+
+        return new ProductSummaryReportDto(total, active, inactive, countByType, minRate, maxRate, avgRate);
     }
 
     @Transactional(readOnly = true)
@@ -507,6 +664,12 @@ public class ProductService {
     }
 
     private void validateRateMatrix(RateMatrixRequestDto matrix, com.bankingtech.product.dto.RateLimitDto limits) {
+        if (matrix == null || matrix.minAmount() == null || matrix.maxAmount() == null || matrix.durationFrom() == null
+                || matrix.durationTo() == null || matrix.durationUnit() == null || matrix.rate() == null
+                || matrix.effectiveFrom() == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST,
+                    "Rate matrix requires amount bounds, duration bounds and unit, rate, and effectiveFrom");
+        }
         if (matrix.minAmount().compareTo(matrix.maxAmount()) > 0
                 || matrix.durationFrom() < 1 || matrix.durationTo() < 1
                 || matrix.durationFrom() > matrix.durationTo()) {

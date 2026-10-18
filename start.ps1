@@ -10,7 +10,7 @@ Write-Host "  🚀 vaultOne Banking Platform — Starting All Local Services" -F
 Write-Host "=================================================================" -ForegroundColor Cyan
 
 $dbUser = if ($env:DB_USERNAME) { $env:DB_USERNAME } else { "root" }
-$dbPass = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "Shrey@26" }
+$dbPass = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "#Iamgood1" }
 
 # 1. Database & Kafka Check & Setup
 Write-Host ""

@@ -9,7 +9,7 @@ import {
   ProductPage,
   ProductRecord,
   ProductSearch,
-  ProductUpdateRequest
+  ProductUpdateRequest, ProductSummary, ProductValidation, ProductPenalty
 } from '../models/product.models';
 
 @Injectable({ providedIn: 'root' })
@@ -17,6 +17,19 @@ export class ProductPricingApiService {
   private readonly baseUrl = '/api/product';
 
   constructor(private readonly http: HttpClient) {}
+
+  summary(): Observable<ProductSummary> {
+    return this.http.get<ProductSummary>(`${this.baseUrl}/report/summary`);
+  }
+
+  validate(productCode: string, amount: number, termMonths: number, currency: string): Observable<ProductValidation> {
+    return this.http.get<ProductValidation>(`${this.baseUrl}/${encodeURIComponent(productCode)}/validate`,
+      { params: { amount, termMonths, currency } });
+  }
+
+  penalty(productCode: string): Observable<ProductPenalty> {
+    return this.http.get<ProductPenalty>(`${this.baseUrl}/${encodeURIComponent(productCode)}/penalty`);
+  }
 
   search(query: ProductSearch = {}): Observable<ProductPage> {
     let params = new HttpParams();

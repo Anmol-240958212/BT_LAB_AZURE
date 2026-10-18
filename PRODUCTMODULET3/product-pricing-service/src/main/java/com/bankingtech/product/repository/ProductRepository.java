@@ -6,13 +6,19 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import jakarta.persistence.LockModeType;
 
 import com.bankingtech.product.entity.Product;
 
 public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByProductCodeIgnoreCase(String productCode);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Product p where upper(p.productCode) = upper(:productCode)")
+    Optional<Product> findByProductCodeIgnoreCaseForUpdate(@Param("productCode") String productCode);
 
     boolean existsByProductCodeIgnoreCase(String productCode);
 

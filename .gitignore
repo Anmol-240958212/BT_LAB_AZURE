@@ -32,3 +32,6 @@ hs_err_pid*
 replay_pid*
 .vscode/
 NEW/
+
+# Local run output, backups, and downloaded development runtimes
+.runlogs/

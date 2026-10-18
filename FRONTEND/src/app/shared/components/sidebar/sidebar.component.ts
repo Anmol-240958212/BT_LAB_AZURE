@@ -338,6 +338,12 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
 
   readonly allNavItems: NavItem[] = [
     {
+      label: 'Products & Pricing',
+      route: '/products',
+      icon: 'coins',
+      roles: ['BANK_OFFICER', 'ADMIN']
+    },
+    {
       label: 'Dashboard',
       route: '/dashboard',
       icon: 'dashboard',

@@ -1,44 +1,22 @@
 package com.BankingTech.demo.service;
 
 import com.BankingTech.demo.dto.requestdto.FixedDepositAccountRequestDTO;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Uses the auth service to validate the token and resolve the current account. */
+/** Uses Kafka to ask Auth to validate the token and resolve the current account. */
 @Service
 public class FdCreationAuthorization {
-    private final RestClient authClient;
+    private final FdAuthKafkaClient authClient;
 
-    public FdCreationAuthorization(@Value("${banking.auth.base-url:http://localhost:8080}") String baseUrl) {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(3000);
-        factory.setReadTimeout(5000);
-        authClient = RestClient.builder().baseUrl(baseUrl).requestFactory(factory).build();
-    }
+    public FdCreationAuthorization(FdAuthKafkaClient authClient) { this.authClient = authClient; }
 
     public void authorize(String authorization, FixedDepositAccountRequestDTO request) {
         if (authorization == null || !authorization.startsWith("Bearer ") || authorization.substring(7).isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to create a fixed deposit");
         }
-        Profile profile;
-        try {
-            profile = authClient.get().uri("/users/me")
-                    .header(HttpHeaders.AUTHORIZATION, authorization).retrieve().body(Profile.class);
-        } catch (RestClientResponseException ex) {
-            if (ex.getStatusCode().value() == 401 || ex.getStatusCode().value() == 403) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Your session is invalid or expired");
-            }
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Unable to verify your account");
-        } catch (RestClientException ex) {
-            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Auth service is unavailable; please try again");
-        }
+        Profile profile = authClient.profile(authorization);
         if (profile == null || profile.role() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account role is unavailable");
         }

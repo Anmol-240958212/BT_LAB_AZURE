@@ -32,6 +32,10 @@
     </properties>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
         <!-- REST layer (controllers) - used by the Service/Controller pair -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

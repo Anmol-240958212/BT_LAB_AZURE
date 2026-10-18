@@ -1,4 +1,4 @@
-import { Component, forwardRef, Input } from '@angular/core';
+import { ChangeDetectorRef, Component, forwardRef, Input } from '@angular/core';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
 @Component({
@@ -61,6 +61,8 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
   `]
 })
 export class AppInputComponent implements ControlValueAccessor {
+  constructor(private readonly cdr: ChangeDetectorRef) {}
+
   @Input() id = 'input-' + Math.random().toString(36).substring(2, 9);
   @Input() name = '';
   @Input() label = '';
@@ -79,6 +81,7 @@ export class AppInputComponent implements ControlValueAccessor {
 
   writeValue(value: any): void {
     this.value = value ?? '';
+    this.cdr.markForCheck();
   }
 
   registerOnChange(fn: any): void {
@@ -91,6 +94,7 @@ export class AppInputComponent implements ControlValueAccessor {
 
   setDisabledState(isDisabled: boolean): void {
     this.disabled = isDisabled;
+    this.cdr.markForCheck();
   }
 
   onInput(event: Event): void {

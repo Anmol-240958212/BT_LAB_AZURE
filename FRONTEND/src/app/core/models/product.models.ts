@@ -138,3 +138,26 @@ export interface EffectiveRateQuery {
   term?: number;
   termUnit?: ProductDurationUnit;
 }
+
+export interface ProductSummary {
+  totalProducts: number;
+  activeProducts: number;
+  inactiveProducts: number;
+  productCountByType: Record<string, number>;
+  minConfiguredRate: number;
+  maxConfiguredRate: number;
+  averageBaseRate: number;
+}
+
+export interface ProductValidation {
+  valid: boolean;
+  applicableRate: number | null;
+  message: string;
+}
+
+export interface ProductPenalty {
+  penaltyPercent: number | null;
+  flatFee: number | null;
+  currency: string;
+  remarks: string;
+}

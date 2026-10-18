@@ -39,7 +39,7 @@ public class SecurityConfig {
                         .authenticationEntryPoint(securityErrors)
                         .accessDeniedHandler(securityErrors))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api/health/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         // Customers may read product terms and request a rate quote. The controller
                         // keeps mutations restricted to bank officers and administrators.

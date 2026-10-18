@@ -13,7 +13,7 @@ echo "  🚀 vaultOne Banking Platform — Starting All Local Services"
 echo "================================================================="
 
 DB_USER="${DB_USERNAME:-root}"
-DB_PASS="${DB_PASSWORD:-Shrey@26}"
+DB_PASS="${DB_PASSWORD:-#Iamgood1}"
 
 # 1. Database & Kafka Check & Setup
 echo ""

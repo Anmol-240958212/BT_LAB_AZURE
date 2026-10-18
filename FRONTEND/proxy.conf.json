@@ -1,4 +1,9 @@
 {
+  "/api/product/**": {
+    "target": "http://localhost:8082",
+    "secure": false,
+    "changeOrigin": true
+  },
   "/auth/**": {
     "target": "http://localhost:8080",
     "secure": false,
