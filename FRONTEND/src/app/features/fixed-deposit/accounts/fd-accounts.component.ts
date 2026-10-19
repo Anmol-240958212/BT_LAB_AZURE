@@ -87,12 +87,12 @@ import { UserApiService } from '../../../core/api/user-api.service';
                 Inspect
               </button>
               <button
-                *ngIf="account.status === 'ACTIVE' && canCreate"
+              *ngIf="account.status === 'ACTIVE'"
                 type="button"
                 class="btn btn-danger btn-xs"
                 (click)="openWithdrawalModal(account)"
               >
-                Liquidate
+                Withdraw early
               </button>
             </div>
           </ng-template>
@@ -116,8 +116,12 @@ import { UserApiService } from '../../../core/api/user-api.service';
             <span class="detail-val">{{ selectedAccount.productCode }}</span>
           </div>
           <div class="detail-row">
+            <span class="detail-label">Currency:</span>
+            <span class="detail-val">{{ selectedAccount.currency || 'INR' }}</span>
+          </div>
+          <div class="detail-row">
             <span class="detail-label">Principal Amount:</span>
-            <span class="detail-val font-semibold">{{ selectedAccount.principalAmount | currencyInr }}</span>
+            <span class="detail-val font-semibold">{{ selectedAccount.principalAmount | currencyInr:true:(selectedAccount.currency || 'INR') }}</span>
           </div>
           <div class="detail-row">
             <span class="detail-label">Contracted Rate:</span>
@@ -166,7 +170,7 @@ import { UserApiService } from '../../../core/api/user-api.service';
         <div *ngIf="selectedAccount" class="withdrawal-form">
           <div class="notice-box mb-4">
             <app-icon name="alert-triangle" [size]="16"></app-icon>
-            <span>Premature closure applies standard 1.00% penalty on contracted rate per terms.</span>
+            <span>Premature closure settles eligible interest after the applicable penalty. This action closes the deposit permanently.</span>
           </div>
 
           <div class="form-group mb-3">
@@ -197,11 +201,11 @@ import { UserApiService } from '../../../core/api/user-api.service';
             </div>
             <div class="breakdown-row">
               <span class="row-label">Penalty Deducted:</span>
-              <span class="row-val text-error">- {{ withdrawalResult.penaltyApplied | currencyInr }}</span>
+              <span class="row-val text-error">- {{ withdrawalResult.penaltyApplied | currencyInr:true:(selectedAccount.currency || 'INR') }}</span>
             </div>
             <div class="breakdown-row">
               <span class="row-label">Net Proceeds Paid:</span>
-              <span class="row-val text-success font-semibold">{{ withdrawalResult.withdrawalAmount | currencyInr }}</span>
+              <span class="row-val text-success font-semibold">{{ withdrawalResult.withdrawalAmount | currencyInr:true:(selectedAccount.currency || 'INR') }}</span>
             </div>
           </div>
         </div>
@@ -214,7 +218,7 @@ import { UserApiService } from '../../../core/api/user-api.service';
             [disabled]="!transferAccount.trim() || processingWithdrawal"
             (clicked)="confirmWithdrawal()"
           >
-            {{ processingWithdrawal ? 'Executing Settlement...' : 'Confirm Liquidation' }}
+            {{ processingWithdrawal ? 'Executing Settlement...' : 'Confirm Early Withdrawal' }}
           </app-button>
         </div>
       </app-modal>
@@ -652,18 +656,9 @@ export class FDAccountsComponent implements OnInit {
       },
       error: (err) => {
         this.processingWithdrawal = false;
-        // Fallback simulation
-        const principal = Number(this.selectedAccount!.principalAmount);
-        const penalty = principal * 0.01;
-        this.withdrawalResult = {
-          status: 'SUCCESS',
-          message: 'Withdrawal completed with standard penalty.',
-          withdrawalAmount: principal - penalty,
-          penaltyApplied: penalty
-        };
-        this.selectedAccount!.status = 'CLOSED';
-        this.toastService.warning(err.message || 'Withdrawal executed with penalty.', 'Notice');
-        this.applyFilters();
+        const message = err.error?.detail || err.error?.message || 'Early withdrawal could not be completed. Your deposit remains active.';
+        this.toastService.error(message, 'Early Withdrawal Failed');
+        this.cdr.markForCheck();
       }
     });
   }

@@ -42,14 +42,22 @@ import { ToastService } from '../../../shared/services/toast.service';
             <!-- Principal Amount -->
             <app-input
               id="calc-principal"
-              label="Deposit Principal (₹)"
+              [label]="'Deposit Principal (' + currency + ')'"
               type="number"
               placeholder="e.g. 100000"
               [(ngModel)]="principal"
               name="principal"
               [required]="true"
-              hint="Minimum deposit: ₹ 1,000"
+              [hint]="currency === 'JPY' ? 'Minimum deposit: ¥ 1,000' : 'Minimum deposit: ₹ 1,000'"
             ></app-input>
+
+            <div class="form-group">
+              <label class="form-label" for="calc-currency">Currency *</label>
+              <select id="calc-currency" class="form-select" [(ngModel)]="currency" name="currency">
+                <option value="INR">INR — Indian Rupee</option>
+                <option value="JPY">JPY — Japanese Yen</option>
+              </select>
+            </div>
 
             <!-- Term Duration -->
             <div class="grid-2">
@@ -89,9 +97,21 @@ import { ToastService } from '../../../shared/services/toast.service';
             <div class="form-group">
               <label class="form-label" for="calc-interest-type">Interest Accrual Rule *</label>
               <select id="calc-interest-type" class="form-select" [(ngModel)]="interestType" name="interestType">
-                <option value="COMPOUND">Compound Interest (Quarterly Compounding)</option>
+                <option value="COMPOUND">Compound Interest</option>
                 <option value="SIMPLE">Simple Interest (Direct Linear Accrual)</option>
               </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="calc-interest-frequency">Compounding Frequency *</label>
+              <select id="calc-interest-frequency" class="form-select" [(ngModel)]="interestFrequency" name="interestFrequency" [disabled]="interestType === 'SIMPLE'">
+                <option value="DAILY">Daily</option>
+                <option value="MONTHLY">Monthly</option>
+                <option value="QUARTERLY">Quarterly</option>
+                <option value="HALF_YEARLY">Half-yearly</option>
+                <option value="ANNUAL">Annually</option>
+              </select>
+              <span class="form-hint">{{ interestType === 'SIMPLE' ? 'Simple interest does not compound.' : 'Choose how often earned interest is compounded.' }}</span>
             </div>
 
             <!-- Category Add-ons -->
@@ -134,23 +154,23 @@ import { ToastService } from '../../../shared/services/toast.service';
           <div class="yield-display-box">
             <span class="yield-caption">ESTIMATED MATURITY VALUE</span>
             <h2 class="yield-amount" id="calc-maturity-amount">
-              {{ result?.maturityAmount || 0 | currencyInr }}
+              {{ result?.maturityAmount || 0 | currencyInr:true:currency }}
             </h2>
             <div class="yield-badges">
               <span class="badge badge-active">Rate: {{ result?.effectiveRate || effectiveCalculatedRate | number:'1.2-2' }}% p.a.</span>
-              <span class="badge badge-role">{{ interestType }}</span>
+              <span class="badge badge-role">{{ interestType === 'SIMPLE' ? 'SIMPLE' : (result?.interestFrequency || interestFrequency) }}</span>
             </div>
           </div>
 
           <div class="yield-breakdown-list mt-6">
             <div class="breakdown-row">
               <span class="row-label">Initial Principal</span>
-              <span class="row-val">{{ principal | currencyInr }}</span>
+              <span class="row-val">{{ principal | currencyInr:true:currency }}</span>
             </div>
             <div class="breakdown-row">
               <span class="row-label">Total Interest Earned</span>
               <span class="row-val text-success font-semibold" id="calc-interest-earned">
-                + {{ result?.interestEarned || 0 | currencyInr }}
+                + {{ result?.interestEarned || 0 | currencyInr:true:currency }}
               </span>
             </div>
             <div class="breakdown-row">
@@ -172,11 +192,11 @@ import { ToastService } from '../../../shared/services/toast.service';
             <div class="grid-2 mt-2">
               <div class="matrix-card">
                 <span class="matrix-label">Simple Interest Yield</span>
-                <span class="matrix-val">{{ simpleYield | currencyInr }}</span>
+                <span class="matrix-val">{{ simpleYield | currencyInr:true:currency }}</span>
               </div>
               <div class="matrix-card highlight-card">
                 <span class="matrix-label">Compound Interest Yield</span>
-                <span class="matrix-val text-accent">{{ compoundYield | currencyInr }}</span>
+                <span class="matrix-val text-accent">{{ compoundYield | currencyInr:true:currency }}</span>
               </div>
             </div>
           </div>
@@ -333,6 +353,8 @@ export class FDCalculatorComponent implements OnInit {
   termUnit = 'MONTHS';
   baseRate = 7.10;
   interestType = 'COMPOUND';
+  interestFrequency: 'DAILY' | 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'ANNUAL' = 'QUARTERLY';
+  currency: 'INR' | 'JPY' = 'INR';
 
   seniorCitizen = false;
   bankEmployee = false;
@@ -375,6 +397,10 @@ export class FDCalculatorComponent implements OnInit {
     return Math.min(rate, this.MAX_ALLOWED_RATE);
   }
 
+  get compoundingPeriodsPerYear(): number {
+    return { DAILY: 365, MONTHLY: 12, QUARTERLY: 4, HALF_YEARLY: 2, ANNUAL: 1 }[this.interestFrequency] || 4;
+  }
+
   get isRateCapped(): boolean {
     let rawRate = Number(this.baseRate) || 0;
     if (this.seniorCitizen) rawRate += 0.5;
@@ -400,8 +426,9 @@ export class FDCalculatorComponent implements OnInit {
     const simpleInterest = Math.round((numPrincipal * rate * years) * 100) / 100;
     this.simpleYield = numPrincipal + simpleInterest;
 
-    // Compound Interest (Quarterly compounding, n=4: A = P * (1 + r/4)^(4*t))
-    const compoundAmount = Math.round((numPrincipal * Math.pow(1 + rate / 4, 4 * years)) * 100) / 100;
+    // Compound Interest: A = P × (1 + r/n)^(n×t), with n chosen by the customer.
+    const periods = this.compoundingPeriodsPerYear;
+    const compoundAmount = Math.round((numPrincipal * Math.pow(1 + rate / periods, periods * years)) * 100) / 100;
     this.compoundYield = compoundAmount;
 
     // Immediate local calculation ensures responsive feedback with zero UI freeze
@@ -430,7 +457,8 @@ export class FDCalculatorComponent implements OnInit {
       },
       baseRate: numBaseRate,
       categories: this.categories,
-      interestType: this.interestType
+      interestType: this.interestType,
+      interestFrequency: this.interestFrequency
     };
 
     this.calcApi.calculate(req).pipe(

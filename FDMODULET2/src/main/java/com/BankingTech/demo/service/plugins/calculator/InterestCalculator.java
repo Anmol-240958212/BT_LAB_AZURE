@@ -7,6 +7,7 @@ public interface InterestCalculator {
     BigDecimal calculate(
             BigDecimal principal,
             BigDecimal annualRate,
-            Integer termMonths
+            Integer termMonths,
+            int compoundingPeriodsPerYear
     );
 }

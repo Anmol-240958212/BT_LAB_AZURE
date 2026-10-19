@@ -9,6 +9,7 @@ public class FDCalculationResponseDTO {
     private BigDecimal effectiveRate;
 
     private BigDecimal interestEarned;
+    private String interestFrequency;
 
 
     public BigDecimal getMaturityAmount() {
@@ -33,5 +34,13 @@ public class FDCalculationResponseDTO {
 
     public void setInterestEarned(BigDecimal interestEarned) {
         this.interestEarned = interestEarned;
+    }
+
+    public String getInterestFrequency() {
+        return interestFrequency;
+    }
+
+    public void setInterestFrequency(String interestFrequency) {
+        this.interestFrequency = interestFrequency;
     }
 }

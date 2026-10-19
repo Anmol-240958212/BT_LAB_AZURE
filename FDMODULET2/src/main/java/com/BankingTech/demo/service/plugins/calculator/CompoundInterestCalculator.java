@@ -13,22 +13,23 @@ public class CompoundInterestCalculator
         public BigDecimal calculate(
                         BigDecimal principal,
                         BigDecimal annualRate,
-                        Integer termMonths) {
+                        Integer termMonths,
+                        int compoundingPeriodsPerYear) {
 
-                BigDecimal monthlyRate = annualRate
+                BigDecimal periodicRate = annualRate
                                 .divide(
-                                                BigDecimal.valueOf(12 * 100),
+                                                BigDecimal.valueOf(compoundingPeriodsPerYear * 100L),
                                                 12,
                                                 RoundingMode.HALF_UP);
 
                 double base = BigDecimal.ONE
-                                .add(monthlyRate)
+                                .add(periodicRate)
                                 .doubleValue();
 
                 double maturity = principal.doubleValue()
                                 * Math.pow(
-                                                base,
-                                                termMonths);
+                                base,
+                                                (termMonths / 12d) * compoundingPeriodsPerYear);
 
                 return BigDecimal.valueOf(maturity)
                                 .subtract(principal)

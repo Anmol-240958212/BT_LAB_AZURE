@@ -11,6 +11,7 @@ public class FixedDepositAccountResponseDTO {
     private String fdAccountNo;
     private String customerId;
     private String productCode;
+    private String currency;
     private BigDecimal principalAmount;
     private BigDecimal interestRate;
     private Integer termMonths;
@@ -69,6 +70,14 @@ public class FixedDepositAccountResponseDTO {
 
     public void setProductCode(String productCode) {
         this.productCode = productCode;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 
     public BigDecimal getPrincipalAmount() {

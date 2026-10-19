@@ -41,7 +41,7 @@ export interface TableColumn {
               <ng-container [ngSwitch]="col.type">
                 <!-- Currency -->
                 <span *ngSwitchCase="'currency'">
-                  {{ row[col.field] | currencyInr }}
+                  {{ row[col.field] | currencyInr:true:(row.currency || 'INR') }}
                 </span>
 
                 <!-- Masked Email -->

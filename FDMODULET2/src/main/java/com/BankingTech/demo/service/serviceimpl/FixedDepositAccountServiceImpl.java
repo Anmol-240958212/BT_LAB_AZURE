@@ -67,6 +67,7 @@ public class FixedDepositAccountServiceImpl
                 entity.setFdAccountNo(fdAccountNo);
                 entity.setFdAccountCustomerId(request.getCustomerId());
                 entity.setFdAccountProductCode(request.getProductCode());
+                entity.setFdAccountCurrency(request.getCurrency());
                 entity.setFdAccountPrincipal(request.getPrincipalAmount());
                 entity.setFdAccountRate(request.getInterestRate());
                 entity.setFdAccountTerm(request.getTermMonths());
@@ -123,6 +124,7 @@ public class FixedDepositAccountServiceImpl
                 entity.setFdAccountNo(fdAccountNo);
                 entity.setFdAccountCustomerId(request.getCustomerId());
                 entity.setFdAccountProductCode(request.getProductCode());
+                entity.setFdAccountCurrency(request.getCurrency());
                 entity.setFdAccountPrincipal(request.getPrincipalAmount());
                 entity.setFdAccountRate(request.getInterestRate());
                 entity.setFdAccountTerm(request.getTermMonths());
@@ -279,6 +281,7 @@ public class FixedDepositAccountServiceImpl
                 response.setFdAccountNo(entity.getFdAccountNo());
                 response.setCustomerId(entity.getFdAccountCustomerId());
                 response.setProductCode(entity.getFdAccountProductCode());
+                response.setCurrency(entity.getFdAccountCurrency());
                 response.setPrincipalAmount(entity.getFdAccountPrincipal());
                 response.setInterestRate(entity.getFdAccountRate());
                 response.setTermMonths(entity.getFdAccountTerm());

@@ -18,6 +18,9 @@ public class FixedDepositAccountRequestDTO {
     @io.swagger.v3.oas.annotations.media.Schema(example = "FD_STANDARD")
     private String productCode;
 
+    /** Set by the authoritative Product & Pricing Kafka quote, never trusted from the browser. */
+    private String currency;
+
     /*
      * Used only for account number generation.
      * It is not stored in FD_ACCOUNT.
@@ -86,6 +89,14 @@ public class FixedDepositAccountRequestDTO {
 
     public void setProductCode(String productCode) {
         this.productCode = productCode;
+    }
+
+    public String getCurrency() {
+        return currency;
+    }
+
+    public void setCurrency(String currency) {
+        this.currency = currency;
     }
 
     public String getBranchCode() {

@@ -30,6 +30,9 @@ public class FDCalculationRequestDTO {
     @NotBlank(message = "Interest type is required")
     private String interestType;
 
+    /** Applies when interestType is COMPOUND: DAILY, MONTHLY, QUARTERLY, HALF_YEARLY, or ANNUAL. */
+    private String interestFrequency;
+
     public BigDecimal getPrincipal() {
         return principal;
     }
@@ -68,5 +71,13 @@ public class FDCalculationRequestDTO {
 
     public void setInterestType(String interestType) {
         this.interestType = interestType;
+    }
+
+    public String getInterestFrequency() {
+        return interestFrequency;
+    }
+
+    public void setInterestFrequency(String interestFrequency) {
+        this.interestFrequency = interestFrequency;
     }
 }

@@ -394,8 +394,8 @@ export class FDCreateComponent implements OnInit, OnDestroy {
           else if (!['MONTHLY', 'QUARTERLY', 'HALF_YEARLY', 'ANNUAL'].includes(frequency)) this.quoteError = 'This product frequency is not supported for FD accounts.';
           else {
             this.fdForm.patchValue({ interestRate: quote.interestRate, interestType: quote.interestType, interestFrequency: frequency }, { emitEvent: false });
-            this.quoteReady = product.currency === 'INR';
-            if (!this.quoteReady) this.quoteError = `This product uses ${product.currency}. FD accounts currently support INR only; select an INR product to create an account.`;
+            this.quoteReady = ['INR', 'JPY'].includes(product.currency);
+            if (!this.quoteReady) this.quoteError = `This product uses ${product.currency}. FD accounts support INR and JPY products.`;
           }
           this.cdr.markForCheck();
         },
@@ -422,7 +422,8 @@ export class FDCreateComponent implements OnInit, OnDestroy {
       termMonths: Number(formVal.termMonths),
       interestType: formVal.interestType,
       interestPayoutType: formVal.interestPayoutType,
-      interestFrequency: formVal.interestFrequency
+      interestFrequency: formVal.interestFrequency,
+      currency: this.selectedProduct?.currency
     };
 
     const call$: Observable<any> = (this.isCustomer || formVal.createWithTxn)

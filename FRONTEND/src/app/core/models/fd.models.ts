@@ -9,12 +9,14 @@ export interface FDCalculationRequest {
   baseRate: number;
   categories?: string[];
   interestType: 'SIMPLE' | 'COMPOUND' | string;
+  interestFrequency?: 'DAILY' | 'MONTHLY' | 'QUARTERLY' | 'HALF_YEARLY' | 'ANNUAL' | string;
 }
 
 export interface FDCalculationResponse {
   maturityAmount: number;
   effectiveRate: number;
   interestEarned: number;
+  interestFrequency?: string;
 }
 
 export interface FixedDepositAccountRequest {
@@ -27,12 +29,15 @@ export interface FixedDepositAccountRequest {
   interestType: string;
   interestPayoutType: string;
   interestFrequency?: string;
+  /** Derived by the FD service from its Product & Pricing Kafka quote. */
+  currency?: string;
 }
 
 export interface FixedDepositAccountResponse {
   fdAccountNo: string;
   customerId: string;
   productCode: string;
+  currency?: string;
   principalAmount: number;
   interestRate: number;
   termMonths: number;

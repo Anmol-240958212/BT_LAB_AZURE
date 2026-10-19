@@ -77,7 +77,9 @@ import { ToastService } from '../../shared/services/toast.service';
                 <label>Product code<input formControlName="productCode" placeholder="FD001" maxlength="30" /></label>
                 <label>Product type<select formControlName="productType"><option value="FD">Fixed deposit</option><option value="RD">Recurring deposit</option><option value="SB">Savings account</option><option value="CA">Current account</option></select></label>
                 <label class="wide">Product name<input formControlName="productName" placeholder="Fixed Deposit - Short Term" maxlength="100" /></label>
-                <label>Currency<input formControlName="currency" maxlength="3" /></label>
+                <label>Currency
+                  <select formControlName="currency"><option value="INR">INR — Indian Rupee</option><option value="JPY">JPY — Japanese Yen</option></select>
+                </label>
                 <label>Effective from<input type="date" formControlName="effectiveDate" /></label>
                 <label class="wide">Description<input formControlName="description" maxlength="255" /></label>
                 <label>Minimum term (months)<input type="number" min="1" formControlName="termMin" /></label>
@@ -432,7 +434,7 @@ export class ProductManagementComponent implements OnInit {
         chargeCode: value.chargeCode!, calculationType: value.chargeCalculationType!,
         amount: value.chargeCalculationType === 'FLAT' ? Number(value.chargeAmount) : undefined,
         percentage: value.chargeCalculationType === 'PERCENTAGE' ? Number(value.chargePercentage) : undefined,
-        currencyCode: 'INR', frequency: value.chargeFrequency!
+        currencyCode: String(value.currency).trim().toUpperCase(), frequency: value.chargeFrequency!
       }] : [],
       rateMatrix: useRateMatrix ? this.rateMatrixRows.getRawValue().map((row: any) => ({
         ...row, minAmount: Number(row.minAmount), maxAmount: Number(row.maxAmount),

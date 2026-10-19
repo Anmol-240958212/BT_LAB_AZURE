@@ -34,8 +34,11 @@ public class FdProductPricingService {
         var future = new CompletableFuture<Map<String, Object>>();
         pending.put(correlation, future);
         try {
+            // The product catalogue is the source of truth for currency. Do not constrain a
+            // quote to INR here: that would make a valid JPY product fail before Product &
+            // Pricing can return its authoritative currency.
             var request = Map.of("schemaVersion", 1, "correlationId", correlation, "productCode", code,
-                "amount", amount, "termMonths", termMonths, "currency", "INR");
+                "amount", amount, "termMonths", termMonths);
             kafka.send("product-quote-requests-v1", code, json.writeValueAsString(request))
                 .whenComplete((sent, error) -> { if (error != null) future.completeExceptionally(error); });
             return future.get(12, TimeUnit.SECONDS);
@@ -52,8 +55,10 @@ public class FdProductPricingService {
         var quote = quote(request.getProductCode(), request.getPrincipalAmount(), request.getTermMonths());
         if (!Boolean.TRUE.equals(quote.get("valid")) || quote.get("interestRate") == null)
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, String.valueOf(quote.get("message")));
-        if (!"INR".equals(quote.get("currency")))
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "FD accounts currently support INR only. Select an INR product.");
+        String currency = String.valueOf(quote.get("currency")).trim().toUpperCase(Locale.ROOT);
+        if (!Set.of("INR", "JPY").contains(currency))
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                "FD accounts support INR and JPY products. Select a product in one of those currencies.");
         String frequency = String.valueOf(quote.get("interestFrequency"));
         if ("ANNUALLY".equals(frequency)) frequency = "ANNUAL";
         if (!Set.of("MONTHLY", "QUARTERLY", "HALF_YEARLY", "ANNUAL").contains(frequency))
@@ -62,5 +67,6 @@ public class FdProductPricingService {
         request.setInterestType(String.valueOf(quote.get("interestType")));
         request.setInterestFrequency(frequency);
         request.setProductCode(String.valueOf(quote.get("productCode")));
+        request.setCurrency(currency);
     }
 }

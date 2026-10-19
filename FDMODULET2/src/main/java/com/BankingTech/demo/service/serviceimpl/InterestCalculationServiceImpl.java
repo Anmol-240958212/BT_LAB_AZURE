@@ -117,10 +117,10 @@ public class InterestCalculationServiceImpl
                                         "Business date cannot precede FD opening date");
                 }
 
-                if (fd.getFdAccountMaturityDate() != null
-                                && businessDate.isAfter(fd.getFdAccountMaturityDate())) {
-                        businessDate = fd.getFdAccountMaturityDate();
-                }
+                LocalDate postingLimit = fd.getFdAccountMaturityDate() != null
+                                && businessDate.isAfter(fd.getFdAccountMaturityDate())
+                                                ? fd.getFdAccountMaturityDate()
+                                                : businessDate;
 
                 List<FDInterestTransactionEntity> history = interestTransactionRepository
                                 .findByFdInterestTransactionFdAccountNoOrderByFdInterestTransactionDateDesc(
@@ -132,109 +132,66 @@ public class InterestCalculationServiceImpl
                                                 .getFdInterestTransactionDate()
                                                 .toLocalDate();
 
-                if (!businessDate.isAfter(lastPostingDate)) {
+                if (!postingLimit.isAfter(lastPostingDate)) {
                         return;
                 }
 
-                if (!isPostingDue(
-                                fd.getFdAccountInterestFrequency(),
-                                lastPostingDate,
-                                businessDate)) {
-                        return;
-                }
-
-                long days = ChronoUnit.DAYS.between(
-                                lastPostingDate,
-                                businessDate);
-
-                if (days <= 0) {
-                        return;
-                }
-
-                BigDecimal principal = fd.getFdAccountPrincipal();
                 BigDecimal rate = fd.getFdAccountRate();
-
-                BigDecimal interest = calculatePeriodInterest(
-                                fd,
-                                principal,
-                                rate,
-                                days);
-
-                if (interest.signum() <= 0) {
-                        return;
-                }
-
                 boolean capitalize = "CAPITALIZE".equalsIgnoreCase(
                                 fd.getFdAccountInterestPayoutType());
+                while (true) {
+                        LocalDate scheduledPostingDate = nextPostingDate(
+                                        fd.getFdAccountInterestFrequency(), lastPostingDate);
+                        LocalDate postingDate = scheduledPostingDate.isAfter(postingLimit)
+                                        ? (isFinalMaturityPosting(fd, postingLimit) ? postingLimit : null)
+                                        : scheduledPostingDate;
+                        if (postingDate == null || !postingDate.isAfter(lastPostingDate)) break;
 
-                BigDecimal existingAccrued = zeroIfNull(fd.getFdAccountAccruedInterest());
-
-                if (capitalize) {
-                        fd.setFdAccountPrincipal(
-                                        principal.add(interest)
+                        long days = ChronoUnit.DAYS.between(lastPostingDate, postingDate);
+                        BigDecimal principal = fd.getFdAccountPrincipal();
+                        BigDecimal interest = calculatePeriodInterest(fd, principal, rate, days);
+                        if (interest.signum() > 0) {
+                                BigDecimal existingAccrued = zeroIfNull(fd.getFdAccountAccruedInterest());
+                                if (capitalize) {
+                                        fd.setFdAccountPrincipal(principal.add(interest)
                                                         .setScale(MONEY_SCALE, RoundingMode.HALF_UP));
-
-                        fd.setFdAccountAccruedInterest(
-                                        BigDecimal.ZERO.setScale(
-                                                        MONEY_SCALE,
-                                                        RoundingMode.HALF_UP));
-                } else {
-                        fd.setFdAccountAccruedInterest(
-                                        existingAccrued.add(interest)
+                                        fd.setFdAccountAccruedInterest(BigDecimal.ZERO.setScale(MONEY_SCALE, RoundingMode.HALF_UP));
+                                } else {
+                                        fd.setFdAccountAccruedInterest(existingAccrued.add(interest)
                                                         .setScale(MONEY_SCALE, RoundingMode.HALF_UP));
+                                }
+
+                                FDInterestTransactionEntity transaction = new FDInterestTransactionEntity();
+                                transaction.setFdInterestTransactionId(generateTransactionId());
+                                transaction.setFdInterestTransactionFdAccountNo(fdAccountNo);
+                                transaction.setFdInterestTransactionInterestAmount(interest);
+                                transaction.setFdInterestTransactionDate(postingDate.atStartOfDay());
+                                transaction.setFdInterestTransactionStatus(capitalize ? "CAPITALIZED" : "ACCRUED");
+                                interestTransactionRepository.save(transaction);
+                                fdStatementService.generateStatement(fdAccountNo, postingDate);
+                        }
+                        lastPostingDate = postingDate;
                 }
-
                 accountRepository.save(fd);
-
-                FDInterestTransactionEntity transaction = new FDInterestTransactionEntity();
-
-                transaction.setFdInterestTransactionId(
-                                generateTransactionId());
-
-                transaction.setFdInterestTransactionFdAccountNo(fdAccountNo);
-                transaction.setFdInterestTransactionInterestAmount(interest);
-
-                // Use the requested business date, not LocalDate.now().
-                transaction.setFdInterestTransactionDate(
-                                businessDate.atStartOfDay());
-
-                transaction.setFdInterestTransactionStatus(
-                                capitalize ? "CAPITALIZED" : "ACCRUED");
-
-                interestTransactionRepository.save(transaction);
-
-                // Generate the statement for the same business date.
-                fdStatementService.generateStatement(fdAccountNo, businessDate);
-
-                System.out.println(
-                                "FD " + fdAccountNo
-                                                + " | period=" + lastPostingDate
-                                                + " to " + businessDate
-                                                + " | days=" + days
-                                                + " | interest=" + interest
-                                                + " | capitalized=" + capitalize);
         }
 
-        private boolean isPostingDue(
-                        String frequency,
-                        LocalDate lastPostingDate,
-                        LocalDate businessDate) {
-
-                String value = frequency == null
-                                ? "MONTHLY"
-                                : frequency.trim().toUpperCase();
-
+        /** Returns the next reporting boundary after the last successful posting. */
+        private LocalDate nextPostingDate(String frequency, LocalDate lastPostingDate) {
+                String value = frequency == null ? "MONTHLY" : frequency.trim().toUpperCase();
                 return switch (value) {
-                        case "DAILY" -> true;
-                        case "MONTHLY" ->
-                                !businessDate.isBefore(lastPostingDate.plusMonths(1));
-                        case "QUARTERLY" ->
-                                !businessDate.isBefore(lastPostingDate.plusMonths(3));
-                        case "YEARLY", "ANNUALLY" ->
-                                !businessDate.isBefore(lastPostingDate.plusYears(1));
-                        default -> throw new IllegalArgumentException(
-                                        "Unsupported FD interest frequency: " + frequency);
+                        case "DAILY" -> lastPostingDate.plusDays(1);
+                        case "MONTHLY" -> lastPostingDate.plusMonths(1);
+                        case "QUARTERLY" -> lastPostingDate.plusMonths(3);
+                        case "HALF_YEARLY" -> lastPostingDate.plusMonths(6);
+                        case "YEARLY", "ANNUALLY", "ANNUAL" -> lastPostingDate.plusYears(1);
+                        default -> throw new IllegalArgumentException("Unsupported FD interest frequency: " + frequency);
                 };
+        }
+
+        /** A final partial period is posted at maturity so the account settles its full earned interest. */
+        private boolean isFinalMaturityPosting(FixedDepositAccountEntity fd, LocalDate postingLimit) {
+                return fd.getFdAccountMaturityDate() != null
+                                && fd.getFdAccountMaturityDate().equals(postingLimit);
         }
 
         private BigDecimal calculatePeriodInterest(

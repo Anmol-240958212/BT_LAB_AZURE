@@ -9,8 +9,8 @@ interface ChartTimeframe {
   label: string;
   balanceInr: number;
   accruedInr: number;
-  balanceUsd: number;
-  accruedUsd: number;
+  balanceJpy: number;
+  accruedJpy: number;
   growthPct: string;
   points: string;
   fillPoints: string;
@@ -26,7 +26,7 @@ interface ChartTimeframe {
 export class LandingComponent implements OnInit, OnDestroy {
   isScrolled = false;
   mobileMenuOpen = false;
-  currency: 'INR' | 'USD' = 'INR';
+  currency: 'INR' | 'JPY' = 'INR';
 
   // Single Collapsible Theme Switcher State
   currentThemeMode: ThemeMode = 'dark';
@@ -43,8 +43,8 @@ export class LandingComponent implements OnInit, OnDestroy {
       label: 'Day',
       balanceInr: 1248500,
       accruedInr: 285.50,
-      balanceUsd: 15150,
-      accruedUsd: 3.50,
+      balanceJpy: 2250000,
+      accruedJpy: 520,
       growthPct: '+0.12%',
       points: '10,75 55,68 100,72 145,55 190,62 235,45 280,50 325,35 370,42 415,28',
       fillPoints: '10,75 55,68 100,72 145,55 190,62 235,45 280,50 325,35 370,42 415,28 415,95 10,95',
@@ -55,20 +55,20 @@ export class LandingComponent implements OnInit, OnDestroy {
       label: 'Week',
       balanceInr: 1248500,
       accruedInr: 1998.50,
-      balanceUsd: 64573,
-      accruedUsd: 69.00,
+      balanceJpy: 9580000,
+      accruedJpy: 10300,
       growthPct: '+1.45%',
       points: '10,70 55,58 100,64 145,46 190,52 235,32 280,38 325,22 370,30 415,18',
       fillPoints: '10,70 55,58 100,64 145,46 190,52 235,32 280,38 325,22 370,30 415,18 415,95 10,95',
-      hoverPoint: { x: 235, y: 32, label: '$ 69.00' }
+      hoverPoint: { x: 235, y: 32, label: '¥ 10,300' }
     },
     month: {
       key: 'month',
       label: 'Month',
       balanceInr: 1248500,
       accruedInr: 8560.00,
-      balanceUsd: 65420,
-      accruedUsd: 295.00,
+      balanceJpy: 9710000,
+      accruedJpy: 44000,
       growthPct: '+3.40%',
       points: '10,80 55,62 100,50 145,42 190,48 235,26 280,34 325,18 370,24 415,12',
       fillPoints: '10,80 55,62 100,50 145,42 190,48 235,26 280,34 325,18 370,24 415,12 415,95 10,95',
@@ -79,8 +79,8 @@ export class LandingComponent implements OnInit, OnDestroy {
       label: 'Year',
       balanceInr: 1248500,
       accruedInr: 106122.50,
-      balanceUsd: 69850,
-      accruedUsd: 3650.00,
+      balanceJpy: 10370000,
+      accruedJpy: 543000,
       growthPct: '+8.50%',
       points: '10,85 55,70 100,55 145,38 190,44 235,20 280,28 325,14 370,18 415,8',
       fillPoints: '10,85 55,70 100,55 145,38 190,44 235,20 280,28 325,14 370,18 415,8 415,95 10,95',
@@ -162,7 +162,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   toggleCurrency(): void {
-    this.currency = this.currency === 'INR' ? 'USD' : 'INR';
+    this.currency = this.currency === 'INR' ? 'JPY' : 'INR';
   }
 
   toggleMobileMenu(): void {

@@ -42,6 +42,10 @@ public class FixedDepositAccountEntity extends AuditEntity {
     @Column(name = "fd_account_product_code", nullable = false, length = 30)
     private String fdAccountProductCode;
 
+    /** ISO 4217 currency returned by the Product & Pricing Kafka quote. */
+    @Column(name = "fd_account_currency", nullable = false, length = 3, columnDefinition = "CHAR(3) NOT NULL DEFAULT 'INR'")
+    private String fdAccountCurrency = "INR";
+
     @Column(name = "fd_account_principal", nullable = false, precision = 19, scale = 2)
     private BigDecimal fdAccountPrincipal;
 
@@ -98,6 +102,14 @@ public class FixedDepositAccountEntity extends AuditEntity {
 
     public void setFdAccountProductCode(String fdAccountProductCode) {
         this.fdAccountProductCode = fdAccountProductCode;
+    }
+
+    public String getFdAccountCurrency() {
+        return fdAccountCurrency;
+    }
+
+    public void setFdAccountCurrency(String fdAccountCurrency) {
+        this.fdAccountCurrency = fdAccountCurrency;
     }
 
     public BigDecimal getFdAccountPrincipal() {

@@ -28,10 +28,10 @@
       <!-- Right Header Actions -->
       <div class="header-actions">
         <!-- Currency Toggle -->
-        <button (click)="toggleCurrency()" class="btn-currency" title="Toggle Display Currency (₹ INR / $ USD)">
+        <button (click)="toggleCurrency()" class="btn-currency" title="Toggle Display Currency (₹ INR / ¥ JPY)">
           <span [class.active-curr]="currency === 'INR'">₹</span>
           <span class="curr-sep">/</span>
-          <span [class.active-curr]="currency === 'USD'">$</span>
+          <span [class.active-curr]="currency === 'JPY'">¥</span>
         </button>
 
         <!-- 1 Collapsible Dark/Light Mode Switcher Button -->
@@ -179,7 +179,7 @@
         <div class="floating-card floating-card-top-left animate-float-slow">
           <div class="float-card-header">
             <span class="float-stat-val">
-              {{ currency === 'INR' ? '+₹37,400.00' : '+$374.00' }}
+              {{ currency === 'INR' ? '+₹37,400.00' : '+¥56,000' }}
             </span>
             <span class="float-badge-green">
               <app-icon name="trending-up" [size]="11"></app-icon>
@@ -202,7 +202,7 @@
           </div>
           <div class="float-card-main-val">
             <span class="pair-rate-val">
-              {{ currency === 'INR' ? '₹4,19,840.00' : '$41,984.00' }}
+              {{ currency === 'INR' ? '₹4,19,840.00' : '¥6,280,000' }}
             </span>
             <span class="float-badge-green">+18.25%</span>
           </div>
@@ -216,7 +216,7 @@
           <span class="float-card-subhead">Total Maturity</span>
           <div class="float-balance-row">
             <span class="float-balance-num">
-              {{ currency === 'INR' ? '64,57,300.00' : '64,573.00' }}
+              {{ currency === 'INR' ? '64,57,300.00' : '¥9,670,000' }}
             </span>
             <span class="float-badge-green">+57%</span>
           </div>
@@ -266,10 +266,10 @@
               <span class="portfolio-label">Total Spendings</span>
               <div class="portfolio-val-row">
                 <span class="portfolio-currency-symbol">
-                  {{ currency === 'INR' ? '₹' : '$' }}
+                  {{ currency === 'INR' ? '₹' : '¥' }}
                 </span>
                 <span class="portfolio-amount">
-                  {{ currency === 'INR' ? (activeTimeframe.balanceInr | number:'1.2-2') : (activeTimeframe.balanceUsd | number:'1.2-2') }}
+                  {{ currency === 'INR' ? (activeTimeframe.balanceInr | number:'1.2-2') : (activeTimeframe.balanceJpy | number:'1.0-0') }}
                 </span>
                 <span class="phone-growth-tag">{{ activeTimeframe.growthPct }}</span>
               </div>
@@ -319,7 +319,7 @@
                 />
               </svg>
 
-              <!-- Floating Tooltip Pill (matching inspo.png "$ 69.00") -->
+              <!-- Floating Tooltip Pill -->
               <div
                 class="chart-tooltip-badge"
                 [style.left.px]="activeTimeframe.hoverPoint.x - 30"
@@ -341,7 +341,7 @@
                   </svg>
                 </div>
                 <span class="chip-amount-negative">
-                  {{ currency === 'INR' ? '-₹18,985.00' : '-$18,985.00' }}
+                  {{ currency === 'INR' ? '-₹18,985.00' : '-¥2,850,000' }}
                 </span>
               </div>
             </div>
@@ -577,7 +577,7 @@
           <!-- Metric 2 -->
           <div class="metric-card">
             <div class="metric-number">
-              {{ currency === 'INR' ? '₹950M+' : '$9 million' }}
+              {{ currency === 'INR' ? '₹950M+' : '¥14.2B+' }}
             </div>
             <div class="metric-title">Funding raised</div>
             <div class="metric-caption">

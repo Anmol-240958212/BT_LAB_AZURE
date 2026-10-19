@@ -13,7 +13,8 @@ public class SimpleInterestCalculator
     public BigDecimal calculate(
             BigDecimal principal,
             BigDecimal annualRate,
-            Integer termMonths
+            Integer termMonths,
+            int compoundingPeriodsPerYear
     ) {
 
         BigDecimal termYears =

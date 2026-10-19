@@ -74,6 +74,7 @@ public class FDCalculatorServiceImpl
 
 
         InterestCalculator calculator;
+        int compoundingPeriodsPerYear = compoundingPeriodsPerYear(request.getInterestFrequency());
 
 
         if ("COMPOUND".equalsIgnoreCase(
@@ -113,7 +114,8 @@ public class FDCalculatorServiceImpl
                 calculator.calculate(
                         request.getPrincipal(),
                         effectiveRate,
-                        termMonths
+                        termMonths,
+                        compoundingPeriodsPerYear
                 );
 
 
@@ -140,6 +142,7 @@ public class FDCalculatorServiceImpl
         response.setInterestEarned(
                 interest
         );
+        response.setInterestFrequency(normalizeFrequency(request.getInterestFrequency()));
 
         return response;
     }
@@ -165,22 +168,43 @@ public class FDCalculatorServiceImpl
 
         for (String category : categories) {
 
-            if ("Senior Citizen".equalsIgnoreCase(category)) {
+            String normalized = category == null ? "" : category.trim().toUpperCase().replace('-', '_').replace(' ', '_');
+            if ("SENIOR".equals(normalized) || "SENIOR_CITIZEN".equals(normalized)) {
+
+                addition =
+                        addition.add(
+                                new BigDecimal("0.50")
+                        );
+
+            } else if ("EMPLOYEE".equals(normalized) || "BANK_EMPLOYEE".equals(normalized)) {
 
                 addition =
                         addition.add(
                                 BigDecimal.ONE
                         );
-
-            } else if ("Employee".equalsIgnoreCase(category)) {
-
-                addition =
-                        addition.add(
-                                BigDecimal.ONE
-                        );
+            } else if ("PREMIUM".equals(normalized) || "PREMIUM_USER".equals(normalized)
+                    || "PREMIUM_WEALTH_CUSTOMER".equals(normalized)) {
+                addition = addition.add(new BigDecimal("0.25"));
             }
         }
 
         return addition;
+    }
+
+    private String normalizeFrequency(String frequency) {
+        if (frequency == null || frequency.isBlank()) return "QUARTERLY";
+        String normalized = frequency.trim().toUpperCase();
+        return "ANNUALLY".equals(normalized) || "YEARLY".equals(normalized) ? "ANNUAL" : normalized;
+    }
+
+    private int compoundingPeriodsPerYear(String frequency) {
+        return switch (normalizeFrequency(frequency)) {
+            case "DAILY" -> 365;
+            case "MONTHLY" -> 12;
+            case "QUARTERLY" -> 4;
+            case "HALF_YEARLY" -> 2;
+            case "ANNUAL" -> 1;
+            default -> throw new IllegalArgumentException("Unsupported interest frequency: " + frequency);
+        };
     }
 }
