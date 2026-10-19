@@ -114,6 +114,18 @@ public class AuthController {
                 "Registration completed successfully");
     }
 
+    private String getClientIp(jakarta.servlet.http.HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            // First IP in chain is original client
+            String first = xff.split(",")[0].trim();
+            if (!first.isEmpty()) return first;
+        }
+        String xri = request.getHeader("X-Real-IP");
+        if (xri != null && !xri.isBlank()) return xri.trim();
+        return request.getRemoteAddr();
+    }
+
     @PostMapping("/login")
     @Operation(summary = "Authenticate user and obtain JWT tokens",
                description = "Authenticates the user with username and password. On success, returns an access token and a refresh token.")
@@ -125,7 +137,7 @@ public class AuthController {
             @RequestBody LoginRequestDto request,
             jakarta.servlet.http.HttpServletRequest httpRequest) {
 
-        String ipAddress = httpRequest.getRemoteAddr();
+        String ipAddress = getClientIp(httpRequest);
         String userAgent = httpRequest.getHeader("User-Agent");
 
         LoginResponseDto response = authService.login(request, ipAddress, userAgent);

@@ -263,7 +263,18 @@ export class LoginComponent implements OnInit {
       error: (err: any) => {
         this.loading = false;
         const status = err?.status || err?.error?.status;
-        const msg = String(err?.message || err?.error?.detail || err?.error || '');
+        const msg = String(err?.error?.detail || err?.error?.message || err?.message || err?.error || '');
+
+        // Distinguish lock/throttle responses from plain credential failures.
+        if (msg.includes('temporarily locked')) {
+          this.toastService.error('Account is temporarily locked. Please try again later.', 'Account Locked');
+          return;
+        }
+
+        if (msg.includes('Too many failed attempts')) {
+          this.toastService.error('Too many failed attempts from this network. Please try again later.', 'Rate Limited');
+          return;
+        }
 
         if (
           status === 400 ||

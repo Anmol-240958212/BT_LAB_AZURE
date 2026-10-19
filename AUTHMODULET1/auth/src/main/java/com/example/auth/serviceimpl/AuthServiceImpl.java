@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.security.Identity;
+import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,11 +42,24 @@ public class AuthServiceImpl implements AuthService {
         private static final Pattern PASSWORD_PATTERN = Pattern.compile(
                         "(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{6,20}");
 
+        /** Max consecutive failed logins before an account is locked. */
+        private static final short MAX_FAILED_LOGIN_ATTEMPTS = 5;
+
+        /** How long an account stays locked once the limit is hit. */
+        private static final int ACCOUNT_LOCK_MINUTES = 15;
+
+        /** Max failed logins from a single IP within the window before the IP is throttled. */
+        private static final long MAX_FAILED_ATTEMPTS_PER_IP = 10L;
+
+        /** Window (minutes) used for the per-IP failed attempt counter. */
+        private static final int IP_WINDOW_MINUTES = 15;
+
         private final AuthUsrRepository authUsrRepository;
         private final CustDtlRepository custDtlRepository;
         private final AuthRoleRepository authRoleRepository;
         private final OtpService otpService;
         private final PasswordEncoder passwordEncoder;
+        private final com.example.auth.repository.LoginAuditRepository loginAuditRepository;
 
         @Autowired
         private AuditUtil auditUtil;
@@ -84,7 +98,8 @@ public class AuthServiceImpl implements AuthService {
                         OtpService otpService,
                         PasswordEncoder passwordEncoder,
                         com.example.auth.service.LoginAuditService loginAuditService,
-                        JwtService jwtService) {
+                        JwtService jwtService,
+                        com.example.auth.repository.LoginAuditRepository loginAuditRepository) {
 
                 this.authUsrRepository = authUsrRepository;
                 this.custDtlRepository = custDtlRepository;
@@ -93,6 +108,7 @@ public class AuthServiceImpl implements AuthService {
                 this.passwordEncoder = passwordEncoder;
                 this.loginAuditService = loginAuditService;
                 this.jwtService = jwtService;
+                this.loginAuditRepository = loginAuditRepository;
         }
 
         @Override
@@ -410,22 +426,109 @@ public class AuthServiceImpl implements AuthService {
                                 .findByUsername(request.getUsername().trim())
                                 .orElse(null);
 
+                // Check account lock first.
+                if (authUsr != null && isAccountLocked(authUsr)) {
+                        // Count this as an IP-level failure too (locked accounts being brute-force tried).
+                        loginAuditService.recordAudit(authUsr, "FAILED", "ACCOUNT_LOCKED", ipAddress, userAgent);
+                        if (isIpThrottled(ipAddress)) {
+                                throw new IllegalArgumentException(
+                                                "Too many failed attempts. Please try again later.");
+                        }
+                        throw new IllegalArgumentException(
+                                        "Account is temporarily locked. Please try again later.");
+                }
+
+                if (authUsr != null && passwordEncoder.matches(request.getPassword(), authUsr.getPasswordHash())) {
+                        // Valid credentials — clear attempts and allow login.
+                        clearFailedAttempts(authUsr);
+                        loginAuditService.recordAudit(authUsr, "SUCCESS", null, ipAddress, userAgent);
+
+                        String accessToken = jwtService.generateToken(authUsr);
+                        String refreshToken = jwtService.generateRefreshToken(authUsr);
+                        return new LoginResponseDto(accessToken, refreshToken);
+                }
+
+                // At this point either user missing or password wrong.
                 if (authUsr == null) {
                         loginAuditService.recordAudit(null, "FAILED", "UNKNOWN_USERNAME", ipAddress, userAgent);
+                        if (isIpThrottled(ipAddress)) {
+                                throw new IllegalArgumentException(
+                                                "Too many failed attempts. Please try again later.");
+                        }
                         throw new IllegalArgumentException("Invalid username or password");
                 }
 
-                if (!passwordEncoder.matches(request.getPassword(), authUsr.getPasswordHash())) {
-                        loginAuditService.recordAudit(authUsr, "FAILED", "INCORRECT_PASSWORD", ipAddress, userAgent);
-                        throw new IllegalArgumentException("Invalid username or password");
+                // Wrong password for known user.
+                registerFailedAttempt(authUsr);
+                loginAuditService.recordAudit(authUsr, "FAILED", "INCORRECT_PASSWORD", ipAddress, userAgent);
+
+                // After registering failure, check if IP should now throttle.
+                if (isIpThrottled(ipAddress)) {
+                        loginAuditService.recordAudit(authUsr, "FAILED", "IP_THROTTLED", ipAddress, userAgent);
+                        throw new IllegalArgumentException(
+                                        "Too many failed attempts. Please try again later.");
                 }
 
-                loginAuditService.recordAudit(authUsr, "SUCCESS", null, ipAddress, userAgent);
+                throw new IllegalArgumentException("Invalid username or password");
+        }
 
-                String accessToken = jwtService.generateToken(authUsr);
-                String refreshToken = jwtService.generateRefreshToken(authUsr);
+        /**
+         * True when the account is still inside its lock window.
+         */
+        private boolean isAccountLocked(AuthUsr authUsr) {
+                LocalDateTime lockedUntil = authUsr.getLockedUntil();
+                return lockedUntil != null && LocalDateTime.now().isBefore(lockedUntil);
+        }
 
-                return new LoginResponseDto(accessToken, refreshToken);
+        /**
+         * Increments the failed attempt counter and locks the account once the
+         * limit is reached.
+         */
+        @Transactional
+        public void registerFailedAttempt(AuthUsr authUsr) {
+
+                short attempts = authUsr.getFailedLoginAttempts() == null
+                                ? (short) 0
+                                : authUsr.getFailedLoginAttempts();
+
+                attempts++;
+
+                authUsr.setFailedLoginAttempts(attempts);
+
+                if (attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+                        authUsr.setLockedUntil(
+                                        LocalDateTime.now().plusMinutes(ACCOUNT_LOCK_MINUTES));
+                }
+
+                authUsrRepository.save(authUsr);
+        }
+
+        /**
+         * Resets the counter, clears any lock and stamps the login time.
+         */
+        @Transactional
+        public void clearFailedAttempts(AuthUsr authUsr) {
+                authUsr.setFailedLoginAttempts((short) 0);
+                authUsr.setLockedUntil(null);
+                authUsr.setLastLoginAt(LocalDateTime.now());
+                authUsrRepository.save(authUsr);
+        }
+
+        /**
+         * True when this IP has produced too many failed logins inside the
+         * rolling window. Counted from the existing login_audit table.
+         */
+        private boolean isIpThrottled(String ipAddress) {
+
+                if (ipAddress == null || ipAddress.isBlank()) {
+                        return false;
+                }
+
+                LocalDateTime since = LocalDateTime.now().minusMinutes(IP_WINDOW_MINUTES);
+
+                long failed = loginAuditRepository.countFailedByIpInWindow(ipAddress, since);
+
+                return failed >= MAX_FAILED_ATTEMPTS_PER_IP;
         }
 
         @Override
