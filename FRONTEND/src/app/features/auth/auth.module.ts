@@ -9,7 +9,6 @@ import { ForgotPasswordComponent } from './forgot-password/forgot-password.compo
 import { ResetPasswordComponent } from './reset-password/reset-password.component';
 import { RegisterComponent } from './register/register.component';
 import { VerifyOtpComponent } from './verify-otp/verify-otp.component';
-import { KycComponent } from './kyc/kyc.component';
 
 @NgModule({
   declarations: [
@@ -17,8 +16,7 @@ import { KycComponent } from './kyc/kyc.component';
     ForgotPasswordComponent,
     ResetPasswordComponent,
     RegisterComponent,
-    VerifyOtpComponent,
-    KycComponent
+    VerifyOtpComponent
   ],
   imports: [
     CommonModule,

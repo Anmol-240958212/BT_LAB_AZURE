@@ -50,11 +50,6 @@ export class AuthApiService {
     return this.http.post(`${this.baseUrl}/reset-password`, payload, { responseType: 'text' });
   }
 
-  public getLatestOtp(identifier?: string): Observable<{ otp: string; identifier: string }> {
-    const params = identifier ? `?identifier=${encodeURIComponent(identifier)}` : '';
-    return this.http.get<{ otp: string; identifier: string }>(`${this.baseUrl}/latest-otp${params}`);
-  }
-
   public checkUsername(username: string): Observable<{ username: string; exists: boolean; available: boolean }> {
     const params = `?username=${encodeURIComponent(username)}`;
     return this.http.get<{ username: string; exists: boolean; available: boolean }>(`${this.baseUrl}/check-username${params}`);

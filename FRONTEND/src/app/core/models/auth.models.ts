@@ -49,6 +49,7 @@ export interface UserProfileResponse {
   firstName?: string;
   middleName?: string;
   lastName?: string;
+  fullName?: string;
   dateOfBirth?: string;
   gender?: string;
   preferredLanguage?: string;
@@ -147,4 +148,5 @@ export interface AuthState {
   displayName?: string | null;
   role: UserRole | null;
   token: string | null;
+  needsKyc: boolean;
 }

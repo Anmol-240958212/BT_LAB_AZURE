@@ -96,7 +96,15 @@ import { AuthService } from '../../../core/auth.service';
               placeholder="e.g. 12"
               formControlName="termMonths"
               [required]="true"
+              min="3"
+              (focus)="showDurationDates = true"
+              (click)="showDurationDates = true"
             ></app-input>
+          </div>
+
+          <div class="duration-preview" *ngIf="showDurationDates && durationDates as dates">
+            <span><strong>Start date:</strong> {{ dates.start | date:'mediumDate' }}</span>
+            <span><strong>Maturity date:</strong> {{ dates.maturity | date:'mediumDate' }}</span>
           </div>
 
           <div class="initial-txn-box" *ngIf="selectedProduct as product">
@@ -172,6 +180,28 @@ import { AuthService } from '../../../core/auth.service';
           </div>
         </form>
       </app-card>
+
+      <app-modal
+        [isOpen]="kycIncompleteModalOpen"
+        title="Customer KYC is incomplete"
+        subtitle="Complete KYC before creating a fixed deposit"
+        (closeModal)="kycIncompleteModalOpen = false"
+      >
+        <p>
+          Your customer KYC verification is incomplete. Please complete it to create a fixed deposit.
+          You can close this message, but FD creation will remain unavailable until KYC is approved.
+        </p>
+
+        <div modal-footer>
+          <app-button
+            type="button"
+            variant="primary"
+            (clicked)="goToCustomerProfile()"
+          >
+            Complete KYC
+          </app-button>
+        </div>
+      </app-modal>
     </div>
   `,
   styles: [`
@@ -191,6 +221,14 @@ import { AuthService } from '../../../core/auth.service';
       border: 1px solid var(--color-border-subtle);
       border-radius: var(--radius-card);
       padding: var(--space-4);
+    }
+    .duration-preview {
+      display: flex;
+      gap: var(--space-6);
+      padding: var(--space-3) var(--space-4);
+      background-color: var(--color-bg-elevated);
+      border-left: 3px solid var(--color-accent);
+      color: var(--color-text-secondary);
     }
     .checkbox-item {
       display: flex;
@@ -215,6 +253,7 @@ export class FDCreateComponent implements OnInit, OnDestroy {
   isCustomer = false;
   profileReady = false;
   kycActive = false;
+  kycIncompleteModalOpen = false;
   profileError = '';
   private ownCustomerId = '';
   products: ProductRecord[] = [];
@@ -224,6 +263,7 @@ export class FDCreateComponent implements OnInit, OnDestroy {
   quoteError = '';
   quoteLoading = false;
   quoteReady = false;
+  showDurationDates = false;
   private readonly destroy$ = new Subject<void>();
   private quoteSubscription?: Subscription;
 
@@ -251,7 +291,7 @@ export class FDCreateComponent implements OnInit, OnDestroy {
       branchCode: [initialBranch, [Validators.required, Validators.pattern(/^\d{3}$/)]],
       principalAmount: [q['principal'] ? Number(q['principal']) : 100000, [Validators.required, Validators.min(1000)]],
       interestRate: [{ value: null, disabled: true }],
-      termMonths: [q['term'] ? Number(q['term']) : 12, [Validators.required, Validators.min(1)]],
+      termMonths: [q['term'] ? Number(q['term']) : 12, [Validators.required, Validators.min(3)]],
       interestType: [{ value: '', disabled: true }],
       interestPayoutType: ['MATURITY', Validators.required],
       interestFrequency: [{ value: '', disabled: true }],
@@ -282,6 +322,7 @@ export class FDCreateComponent implements OnInit, OnDestroy {
         this.profileReady = true;
         this.kycActive = profile?.customerStatus === 'ACTIVE';
         if (this.isCustomer) {
+          this.kycIncompleteModalOpen = !this.kycActive;
           this.ownCustomerId = profile?.customerId ? String(profile.customerId) : '';
           this.fdForm.patchValue({ customerId: this.ownCustomerId });
           if (!this.ownCustomerId) this.profileError = 'Your account has no customer profile. Please contact support.';
@@ -304,11 +345,32 @@ export class FDCreateComponent implements OnInit, OnDestroy {
     if (this.selectedProduct) {
       const term = this.fdForm.get('termMonths')!;
       const limits = this.selectedProduct.termLimit;
-      term.setValidators([Validators.required, Validators.min(limits.min), Validators.max(limits.max), Validators.pattern(/^\d+$/)]);
-      if (!term.value || term.value < limits.min || term.value > limits.max) term.setValue(limits.min, { emitEvent: false });
+      const minimumTerm = Math.max(3, limits.min);
+      term.setValidators([Validators.required, Validators.min(minimumTerm), Validators.max(limits.max), Validators.pattern(/^\d+$/)]);
+      if (!term.value || term.value < minimumTerm || term.value > limits.max) term.setValue(minimumTerm, { emitEvent: false });
       term.updateValueAndValidity({ emitEvent: false });
     } else this.fdForm.patchValue({ productCode: '' }, { emitEvent: false });
     this.refreshQuote();
+  }
+
+  goToCustomerProfile(): void {
+    this.kycIncompleteModalOpen = false;
+    this.router.navigate(['/customer/profile']);
+  }
+
+  get durationDates(): { start: Date; maturity: Date } | null {
+    const termMonths = Number(this.fdForm?.get('termMonths')?.value);
+    if (!Number.isInteger(termMonths) || termMonths < 3) return null;
+
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const maturity = new Date(start);
+    const dayOfMonth = maturity.getDate();
+    maturity.setDate(1);
+    maturity.setMonth(maturity.getMonth() + termMonths);
+    const lastDayOfMaturityMonth = new Date(maturity.getFullYear(), maturity.getMonth() + 1, 0).getDate();
+    maturity.setDate(Math.min(dayOfMonth, lastDayOfMaturityMonth));
+    return { start, maturity };
   }
 
   private refreshQuote(): void {

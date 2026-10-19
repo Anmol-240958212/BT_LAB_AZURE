@@ -48,8 +48,6 @@ public class AuthController {
         String identifier = (request.getEmail() != null && !request.getEmail().isBlank())
                 ? request.getEmail()
                 : request.getPhoneNumber();
-        String otp = otpService.getLatestOtp(identifier);
-
         String message = "Registration request received. OTP sent.";
 
         return ResponseEntity.ok(message);

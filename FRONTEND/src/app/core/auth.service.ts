@@ -16,10 +16,34 @@ export class AuthService {
     isAuthenticated: false,
     username: null,
     role: null,
-    token: null
+    token: null,
+    needsKyc: false
   });
 
   public readonly authState$: Observable<AuthState> = this.authStateSubject.asObservable();
+
+  public get currentAuthState(): AuthState {
+    return this.authStateSubject.value;
+  }
+
+  public setKycStatus(needsKyc: boolean): void {
+    if (this.authStateSubject.value.role !== 'CUSTOMER') return;
+
+    try {
+      if (needsKyc) {
+        localStorage.removeItem('kycCompleted');
+      } else {
+        localStorage.setItem('kycCompleted', 'true');
+      }
+    } catch {
+      // The in-memory state remains authoritative for this session.
+    }
+
+    this.authStateSubject.next({
+      ...this.authStateSubject.value,
+      needsKyc
+    });
+  }
 
   constructor() {
     this.restoreSessionFromStorage();
@@ -39,18 +63,48 @@ export class AuthService {
         const decoded = this.decodeJwtPayload(storedToken);
 
         const displayName = this.getDisplayName(decoded.username);
+
+        // Check if user has completed KYC by checking local storage
+        const kycCompleted = localStorage.getItem('kycCompleted') === 'true';
+
+        // If user is new and hasn't completed KYC, redirect to KYC page
+        if (!kycCompleted && decoded.role === 'CUSTOMER') {
+          this.authStateSubject.next({
+            isAuthenticated: true,
+            username: decoded.username,
+            displayName,
+            role: decoded.role,
+            token: storedToken,
+            needsKyc: true // Flag to indicate KYC is required
+          });
+          return;
+        }
+
         this.authStateSubject.next({
           isAuthenticated: true,
           username: decoded.username,
           displayName,
           role: decoded.role,
-          token: storedToken
+          token: storedToken,
+          needsKyc: false
         });
       } else if (storedToken) {
         this.clearSession();
       }
     } catch {
       this.clearSession();
+    }
+  }
+
+  /**
+   * Redirects user to KYC page and sets up persistent notification
+   */
+  public redirectToKYC(): void {
+    if (typeof window !== 'undefined' && window.location) {
+      // Store redirect flag for notifications
+      sessionStorage.setItem('redirectToKYC', 'true');
+      // Navigate to KYC page
+      window.location.href = '/kyc';
     }
   }
 
@@ -72,12 +126,17 @@ export class AuthService {
 
     const decoded = this.decodeJwtPayload(authResponse.accessToken);
     const displayName = this.getDisplayName(decoded.username);
+
+    // Check if user has completed KYC
+    const kycCompleted = localStorage.getItem('kycCompleted') === 'true';
+
     this.authStateSubject.next({
       isAuthenticated: true,
       username: decoded.username,
       displayName,
       role: decoded.role,
-      token: authResponse.accessToken
+      token: authResponse.accessToken,
+      needsKyc: !kycCompleted && decoded.role === 'CUSTOMER'
     });
   }
 
@@ -201,7 +260,16 @@ export class AuthService {
       username: null,
       displayName: null,
       role: null,
-      token: null
+      token: null,
+      needsKyc: false
+    });
+  }
+
+  public markKycCompleted(): void {
+    this.authStateSubject.next({
+      ...this.authStateSubject.value,
+      isAuthenticated: true,
+      needsKyc: false
     });
   }
 

@@ -157,12 +157,27 @@ function mobileValidator(control: AbstractControl): ValidationErrors | null {
               <div class="kyc-display-grid">
                 <div class="kyc-field-item">
                   <span class="field-label">LEGAL FIRST NAME</span>
-                  <span class="field-val">{{ kycForm.get('firstName')?.value || currentUser?.firstName || '—' }}</span>
+                  <span class="field-val">
+                    {{
+                      kycForm.get('firstName')?.value ||
+                      currentUser?.firstName ||
+                      (currentUser?.fullName ? currentUser.fullName.split(' ')[0] : '') ||
+                      '—'
+                    }}
+                  </span>
                 </div>
 
                 <div class="kyc-field-item">
                   <span class="field-label">LEGAL LAST NAME</span>
-                  <span class="field-val">{{ kycForm.get('lastName')?.value || currentUser?.lastName || '—' }}</span>
+                  <span class="field-val">
+                    {{
+                      kycForm.get('lastName')?.value ||
+                      currentUser?.lastName ||
+                      (currentUser?.fullName && currentUser.fullName.split(' ').length > 1 ?
+                       currentUser.fullName.split(' ').slice(1).join(' ') : '') ||
+                      '—'
+                    }}
+                  </span>
                 </div>
 
                 <div class="kyc-field-item">
@@ -831,6 +846,9 @@ export class CustomerProfileComponent implements OnInit {
   }
 
   get userDisplayName(): string {
+    if (this.currentUser?.fullName) {
+      return this.currentUser.fullName.trim();
+    }
     if (this.currentUser?.firstName) {
       return `${this.currentUser.firstName} ${this.currentUser.lastName || ''}`.trim();
     }
@@ -843,6 +861,12 @@ export class CustomerProfileComponent implements OnInit {
   }
 
   get userInitials(): string {
+    if (this.currentUser?.fullName) {
+      const name = this.currentUser.fullName;
+      const first = name.charAt(0);
+      const last = name.length > 1 ? name.charAt(name.indexOf(' ') + 1) : '';
+      return (first + last).toUpperCase();
+    }
     if (this.currentUser?.firstName) {
       const first = this.currentUser.firstName[0];
       const last = this.currentUser.lastName ? this.currentUser.lastName[0] : '';
@@ -850,6 +874,16 @@ export class CustomerProfileComponent implements OnInit {
     }
     const name = this.userDisplayName;
     return name.substring(0, 2).toUpperCase();
+  }
+
+  get userFullName(): string {
+    if (this.currentUser?.fullName) {
+      return this.currentUser.fullName;
+    }
+    if (this.currentUser?.firstName) {
+      return `${this.currentUser.firstName} ${this.currentUser.lastName || ''}`.trim();
+    }
+    return '';
   }
 
   get currentIdRule(): IdTypeRule {
@@ -1026,8 +1060,23 @@ export class CustomerProfileComponent implements OnInit {
 
   private patchFormWithUser(user: UserProfileResponse): void {
     const updates: Record<string, any> = {};
-    if (user.firstName) updates['firstName'] = user.firstName;
-    if (user.lastName) updates['lastName'] = user.lastName;
+
+    // Prefill form with user's name from fullName field (from cust_dtl table)
+    if (user.fullName) {
+      const nameParts = user.fullName.split(' ');
+      if (nameParts.length >= 1) {
+        updates['firstName'] = nameParts[0];
+      }
+      if (nameParts.length >= 2) {
+        updates['lastName'] = nameParts[nameParts.length - 1];
+      } else if (nameParts.length === 1 && user.firstName) {
+        updates['firstName'] = user.firstName;
+        updates['lastName'] = user.lastName || '';
+      }
+    } else {
+      if (user.firstName) updates['firstName'] = user.firstName;
+      if (user.lastName) updates['lastName'] = user.lastName;
+    }
     if (user.dateOfBirth) updates['dateOfBirth'] = user.dateOfBirth;
     if (user.gender) updates['gender'] = user.gender;
 
@@ -1111,6 +1160,8 @@ export class CustomerProfileComponent implements OnInit {
           };
         }
         this.isEditingKyc = false;
+        localStorage.setItem('kycCompleted', 'true');
+        this.authService.markKycCompleted();
         this.loadProfile();
         this.toastService.success(res.message || 'KYC Profile successfully updated.', 'Profile Saved');
         this.cdr.detectChanges();

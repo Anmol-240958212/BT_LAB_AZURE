@@ -5,8 +5,4 @@ public interface OtpService {
     void generateAndSendOtp(String identifier);
 
     boolean verifyOtp(String identifier, String enteredOtp);
-
-    String getLatestOtp(String identifier);
-
-    String getLatestIdentifier();
 }

@@ -3,8 +3,11 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { AuthService } from '../../../core/auth.service';
+import { UserApiService } from '../../../core/api/user-api.service';
 import { UserRole } from '../../../core/models/auth.models';
 import { ToastService } from '../../../shared/services/toast.service';
+import { of } from 'rxjs';
+import { catchError, take } from 'rxjs/operators';
 
 function generateDemoJwt(username: string, role: UserRole): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -191,6 +194,7 @@ export class LoginComponent implements OnInit {
     private readonly fb: FormBuilder,
     private readonly authApi: AuthApiService,
     private readonly authService: AuthService,
+    private readonly userApi: UserApiService,
     private readonly toastService: ToastService,
     private readonly router: Router,
     private readonly route: ActivatedRoute
@@ -234,8 +238,8 @@ export class LoginComponent implements OnInit {
       accessToken: mockToken,
       refreshToken: 'demo-refresh-token'
     });
-    this.toastService.info(`Signed in as ${username} [${role}] (Lab Mode)`, 'Session Active');
-    this.router.navigateByUrl(this.getSafeTargetUrl(role));
+    this.toastService.info(`Signed in as ${username} (Lab Mode)`, 'Session Active');
+    this.navigateAfterLogin(role);
   }
 
   onSubmit(): void {
@@ -253,8 +257,8 @@ export class LoginComponent implements OnInit {
         this.authService.setSession(response);
         const role = this.authService.getRole();
         const displayName = this.authService.getDisplayName(username);
-        this.toastService.success(`Welcome back, ${displayName}! [${role}]`, 'Authentication Successful');
-        this.router.navigateByUrl(this.getSafeTargetUrl(role));
+        this.toastService.success(`Welcome back, ${displayName}!`, 'Authentication Successful');
+        this.navigateAfterLogin(role);
       },
       error: (err: any) => {
         this.loading = false;
@@ -288,8 +292,25 @@ export class LoginComponent implements OnInit {
         });
 
         this.toastService.info(`Connected in offline standby mode as ${inferredRole}.`, 'Offline Session');
-        this.router.navigateByUrl(this.getSafeTargetUrl(inferredRole));
+        this.navigateAfterLogin(inferredRole);
       }
+    });
+  }
+
+  private navigateAfterLogin(role: UserRole | null): void {
+    if (role !== 'CUSTOMER') {
+      this.router.navigateByUrl(this.getSafeTargetUrl(role));
+      return;
+    }
+
+    this.userApi.getMe().pipe(
+      take(1),
+      catchError(() => of(null))
+    ).subscribe(profile => {
+      const destination = profile?.customerStatus === 'ACTIVE'
+        ? '/dashboard'
+        : '/customer/profile';
+      this.router.navigateByUrl(destination);
     });
   }
 
@@ -299,17 +320,7 @@ export class LoginComponent implements OnInit {
       return '/dashboard';
     }
 
-    if (role === 'CUSTOMER') {
-      if (
-        raw.startsWith('/admin') ||
-        raw.startsWith('/reports') ||
-        raw.startsWith('/customer/list') ||
-        raw.startsWith('/customer/all') ||
-        raw.startsWith('/fixed-deposit/transactions')
-      ) {
-        return '/dashboard';
-      }
-    } else if (role === 'BANK_OFFICER') {
+    if (role === 'BANK_OFFICER') {
       if (raw.startsWith('/admin') || raw.startsWith('/customer/profile')) {
         return '/dashboard';
       }

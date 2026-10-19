@@ -1,6 +1,7 @@
 package com.BankingTech.demo.dto.requestdto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -40,6 +41,7 @@ public class FixedDepositAccountRequestDTO {
     private BigDecimal interestRate;
 
     @NotNull(message = "Term in months is required")
+    @Min(value = 3, message = "Term must be at least 3 months")
     @io.swagger.v3.oas.annotations.media.Schema(example = "12")
     @Positive(message = "Term must be greater than zero")
     private Integer termMonths;

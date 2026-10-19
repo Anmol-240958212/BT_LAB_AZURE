@@ -32,10 +32,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.security.Identity;
 import java.util.Map;
+import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AuthServiceImpl implements AuthService {
+
+        private static final Pattern PASSWORD_PATTERN = Pattern.compile(
+                        "(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>]).{6,20}");
 
         private final AuthUsrRepository authUsrRepository;
         private final CustDtlRepository custDtlRepository;
@@ -103,13 +107,7 @@ public class AuthServiceImpl implements AuthService {
                                         "Either email or phone number is required");
                 }
 
-                // Password is required
-                if (request.getPassword() == null
-                                || request.getPassword().isBlank()) {
-
-                        throw new IllegalArgumentException(
-                                        "Password is required");
-                }
+                validatePassword(request.getPassword());
 
                 // Name is required
                 if (request.getName() == null
@@ -463,19 +461,13 @@ public class AuthServiceImpl implements AuthService {
                 if (identifier == null || identifier.isBlank())
                         throw new IllegalArgumentException("Email or Phone number is required");
 
-                identifier = identifier.trim();
-                if (identifier.contains("@")) {
-                        identifier = identifier.toLowerCase();
-                        authUsrRepository.findByEmail(identifier).orElseThrow(
-                                        () -> new IllegalArgumentException("No account found with this email"));
+                AuthUsr user = findUserByRecoveryIdentifier(identifier.trim());
+                String email = user.getEmail();
+                if (email == null || email.isBlank()) {
+                        throw new IllegalArgumentException("No email address is registered for this account");
                 }
 
-                else {
-                        authUsrRepository.findByPhoneNumber(identifier).orElseThrow(
-                                        () -> new IllegalArgumentException("No account found with this phone number"));
-                }
-
-                otpService.generateAndSendOtp(identifier);
+                otpService.generateAndSendOtp(email.trim().toLowerCase());
         }
 
         @Override
@@ -483,9 +475,6 @@ public class AuthServiceImpl implements AuthService {
         public void resetPassword(@RequestBody ResetPasswordRequestDto request) {
 
                 String identifier = request.getIdentifier();
-                if (identifier == null || identifier.isBlank()) {
-                        identifier = otpService.getLatestIdentifier();
-                }
                 if (identifier == null || identifier.isBlank()) {
                         throw new IllegalArgumentException("Email or phone number is required");
                 }
@@ -499,28 +488,48 @@ public class AuthServiceImpl implements AuthService {
                         throw new IllegalArgumentException("Reset token / OTP is required");
                 }
 
-                boolean verified = otpService.verifyOtp(identifier, otp);
+                validatePassword(request.getNewPassword());
+                String confirmPassword = request.getConfirmPassword();
+                if (confirmPassword == null || !request.getNewPassword().equals(confirmPassword)) {
+                        throw new IllegalArgumentException("New password not matching confirmation password");
+                }
+
+                AuthUsr authUsr = findUserByRecoveryIdentifier(identifier);
+                String email = authUsr.getEmail();
+                if (email == null || email.isBlank()) {
+                        throw new IllegalArgumentException("No email address is registered for this account");
+                }
+
+                boolean verified = otpService.verifyOtp(email.trim().toLowerCase(), otp);
 
                 if (!verified)
                         throw new IllegalArgumentException("Invalid or expired OTP");
 
-                String confirmPassword = request.getConfirmPassword() != null ? request.getConfirmPassword() : request.getNewPassword();
-
-                if (!request.getNewPassword().equals(confirmPassword))
-                        throw new IllegalArgumentException("New password not matching confirmation password");
-
-                AuthUsr authUsr;
-                if (request.getIdentifier().contains("@")) {
-                        authUsr = authUsrRepository.findByEmail(identifier)
-                                        .orElseThrow(() -> new RuntimeException("User not present with this email"));
-                } else {
-                        authUsr = authUsrRepository.findByPhoneNumber(identifier).orElseThrow(
-                                        () -> new RuntimeException("User not present with this phone number"));
-                }
-
                 authUsr.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
 
                 authUsrRepository.save(authUsr);
+        }
+
+        private AuthUsr findUserByRecoveryIdentifier(String identifier) {
+                String normalized = identifier.trim();
+                if (normalized.contains("@")) {
+                        return authUsrRepository.findByEmail(normalized.toLowerCase())
+                                        .orElseThrow(() -> new IllegalArgumentException("No account found with this email"));
+                }
+
+                return authUsrRepository.findByUsername(normalized)
+                                .or(() -> authUsrRepository.findByPhoneNumber(normalized))
+                                .orElseThrow(() -> new IllegalArgumentException("No account found for this identifier"));
+        }
+
+        private void validatePassword(String password) {
+                if (password == null || password.isBlank()) {
+                        throw new IllegalArgumentException("Password is required");
+                }
+                if (!PASSWORD_PATTERN.matcher(password).matches()) {
+                        throw new IllegalArgumentException(
+                                        "Password must be 6-20 characters and include a letter, a number, and a special character");
+                }
         }
 
         @Override
@@ -562,17 +571,47 @@ public class AuthServiceImpl implements AuthService {
                                 dto.setCustomerStatus(customer.getCustomerStatus().getStatusCode());
                         }
 
-                        // Name
-                        java.util.List<com.example.auth.entity.CustNmeCmpnt> names = custNmeCmpntRepository
-                                        .findByCustomer(customer);
-                        for (com.example.auth.entity.CustNmeCmpnt n : names) {
+                        // Name - First try to get fullName from cust_dtl table
+                        if (customer.getFullName() != null) {
+                            dto.setFullName(customer.getFullName());
+                            // Parse full name into first and last name components
+                            String fullName = customer.getFullName();
+                            String[] nameParts = fullName.split(" ", 2);
+                            if (nameParts.length >= 1) {
+                                dto.setFirstName(nameParts[0]);
+                            }
+                            if (nameParts.length >= 2) {
+                                // Split remaining part to get last name (handles multiple middle names)
+                                String[] remainingParts = nameParts[1].split(" ", 2);
+                                if (remainingParts.length >= 1) {
+                                    dto.setLastName(remainingParts[0]);
+                                }
+                                if (remainingParts.length >= 2) {
+                                    // Middle name handling - join all remaining parts except last as middle name
+                                    StringBuilder middleName = new StringBuilder();
+                                    for (int i = 1; i < remainingParts.length - 1; i++) {
+                                        if (middleName.length() > 0) middleName.append(" ");
+                                        middleName.append(remainingParts[i]);
+                                    }
+                                    if (middleName.length() > 0) {
+                                        dto.setMiddleName(middleName.toString());
+                                    }
+                                    dto.setLastName(remainingParts[remainingParts.length - 1]);
+                                }
+                            }
+                        } else {
+                            // Fallback to individual name components from custNmeCmpnt table
+                            java.util.List<com.example.auth.entity.CustNmeCmpnt> names = custNmeCmpntRepository
+                                            .findByCustomer(customer);
+                            for (com.example.auth.entity.CustNmeCmpnt n : names) {
                                 String type = n.getNameType().getNameType();
                                 if ("FIRST_NAME".equals(type))
-                                        dto.setFirstName(n.getNameTypeValue());
+                                    dto.setFirstName(n.getNameTypeValue());
                                 else if ("MIDDLE_NAME".equals(type))
-                                        dto.setMiddleName(n.getNameTypeValue());
+                                    dto.setMiddleName(n.getNameTypeValue());
                                 else if ("LAST_NAME".equals(type))
-                                        dto.setLastName(n.getNameTypeValue());
+                                    dto.setLastName(n.getNameTypeValue());
+                            }
                         }
 
                         // Identification

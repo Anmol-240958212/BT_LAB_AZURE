@@ -20,9 +20,6 @@ public class OtpServiceImpl implements OtpService {
     private static final int OTP_EXPIRY_MINUTES = 5;
     private static final int MAX_ATTEMPTS = 5;
 
-    private static volatile String latestGeneratedOtp = null;
-    private static volatile String latestIdentifier = null;
-
     private final NotificationService notificationService;
 
     @Autowired
@@ -45,27 +42,8 @@ public class OtpServiceImpl implements OtpService {
         );
 
         otpStore.put(identifier, otpData);
-        latestGeneratedOtp = otp;
-        latestIdentifier = identifier;
-
         // Send OTP via NotificationService
         notificationService.sendOtpNotification(identifier, otp);
-    }
-
-    @Override
-    public String getLatestOtp(String identifier) {
-        if (identifier != null) {
-            OtpData data = otpStore.get(identifier);
-            if (data != null) {
-                return data.otp();
-            }
-        }
-        return latestGeneratedOtp;
-    }
-
-    @Override
-    public String getLatestIdentifier() {
-        return latestIdentifier;
     }
 
     @Override

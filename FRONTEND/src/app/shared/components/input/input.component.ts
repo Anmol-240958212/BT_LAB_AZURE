@@ -27,6 +27,7 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
           [disabled]="disabled"
           [readOnly]="readonly"
           [required]="required"
+          [min]="min"
           [value]="value"
           [class.is-invalid]="!!error"
           class="form-input"
@@ -71,6 +72,7 @@ export class AppInputComponent implements ControlValueAccessor {
   @Input() disabled = false;
   @Input() readonly = false;
   @Input() required = false;
+  @Input() min: number | string | null = null;
   @Input() error: string | null = null;
   @Input() hint: string | null = null;
 

@@ -23,21 +23,6 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
         <p class="subtitle">Enter your verification token and select a new secure password.</p>
       </div>
 
-      <!-- Presentation / Demo Recovery Token Banner -->
-      <div *ngIf="simulatedToken" class="token-banner mb-4">
-        <div class="banner-top">
-          <span class="badge-tag">PRESENTATION SIMULATION</span>
-          <span class="banner-sub">Active Reset Token / OTP</span>
-        </div>
-        <div class="banner-content">
-          <div class="token-code">{{ simulatedToken }}</div>
-          <button type="button" class="btn-token-apply" (click)="useToken()">
-            <app-icon name="check" [size]="12"></app-icon>
-            <span>Auto-fill Token</span>
-          </button>
-        </div>
-      </div>
-
       <form [formGroup]="resetForm" (ngSubmit)="onSubmit()" class="reset-form">
         <app-input
           id="reset-token"
@@ -52,7 +37,7 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
           id="reset-new-password"
           label="New Password"
           type="password"
-          placeholder="Minimum 6 characters"
+          placeholder="6-20 chars, letter, number and special character"
           formControlName="newPassword"
           [required]="true"
           [error]="passwordError"
@@ -183,7 +168,6 @@ export class ResetPasswordComponent implements OnInit {
   resetForm!: FormGroup;
   loading = false;
   identifier = '';
-  simulatedToken = '';
 
   constructor(
     private readonly fb: FormBuilder,
@@ -201,43 +185,17 @@ export class ResetPasswordComponent implements OnInit {
     this.resetForm = this.fb.group(
       {
         token: [tokenParam, [Validators.required]],
-        newPassword: ['', [Validators.required, Validators.minLength(6)]],
+        newPassword: ['', [
+          Validators.required,
+          Validators.minLength(6),
+          Validators.maxLength(20),
+          Validators.pattern(/^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,20}$/)
+        ]],
         confirmPassword: ['', [Validators.required]]
       },
       { validators: passwordMatchValidator }
     );
 
-    const cachedOtp = typeof localStorage !== 'undefined' ? localStorage.getItem('btlab_latest_otp') : null;
-    if (tokenParam) {
-      this.simulatedToken = tokenParam;
-    } else if (cachedOtp) {
-      this.simulatedToken = cachedOtp;
-      if (!this.resetForm.get('token')?.value) {
-        this.resetForm.patchValue({ token: cachedOtp });
-      }
-    }
-
-    this.authApi.getLatestOtp(this.identifier).subscribe({
-      next: (res) => {
-        if (res?.otp) {
-          this.simulatedToken = res.otp;
-          if (!this.resetForm.get('token')?.value) {
-            this.resetForm.patchValue({ token: res.otp });
-          }
-          if (res.identifier && !this.identifier) {
-            this.identifier = res.identifier;
-          }
-        }
-      },
-      error: () => {
-        if (!this.simulatedToken) {
-          this.simulatedToken = '742918';
-          if (!this.resetForm.get('token')?.value) {
-            this.resetForm.patchValue({ token: '742918' });
-          }
-        }
-      }
-    });
   }
 
   get tokenError(): string | null {
@@ -253,6 +211,8 @@ export class ResetPasswordComponent implements OnInit {
     if (ctrl?.touched && ctrl.errors) {
       if (ctrl.errors['required']) return 'New password is required';
       if (ctrl.errors['minlength']) return 'Password must be at least 6 characters';
+      if (ctrl.errors['maxlength']) return 'Password must not exceed 20 characters';
+      if (ctrl.errors['pattern']) return 'Use a letter, a number, and a special character';
     }
     return null;
   }
@@ -264,14 +224,6 @@ export class ResetPasswordComponent implements OnInit {
       if (this.resetForm.errors?.['passwordMismatch']) return 'Passwords do not match';
     }
     return null;
-  }
-
-  useToken(): void {
-    if (this.simulatedToken) {
-      this.resetForm.patchValue({ token: this.simulatedToken });
-      this.resetForm.get('token')?.markAsDirty();
-      this.toastService.info(`Token ${this.simulatedToken} applied to form.`, 'Token Auto-filled');
-    }
   }
 
   onSubmit(): void {
@@ -294,7 +246,6 @@ export class ResetPasswordComponent implements OnInit {
         this.loading = false;
         this.toastService.success(msg || 'Password updated successfully. Please sign in.', 'Password Reset Complete');
         try {
-          localStorage.removeItem('btlab_latest_otp');
           localStorage.removeItem('btlab_forgot_identifier');
         } catch {}
         this.router.navigate(['/login']);

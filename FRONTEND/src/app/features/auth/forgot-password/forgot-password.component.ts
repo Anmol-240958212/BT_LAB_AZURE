@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
-import { Router } from '@angular/router';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { finalize, timeout } from 'rxjs/operators';
 
 @Component({
   selector: 'app-forgot-password',
@@ -16,20 +16,6 @@ import { ToastService } from '../../../shared/services/toast.service';
       <div *ngIf="submitted" class="notice-box mb-4">
         <app-icon name="mail" [size]="16"></app-icon>
         <span>If an account exists for <strong>{{ identifier }}</strong>, recovery instructions and token have been issued.</span>
-      </div>
-
-      <!-- Simulation Recovery Token Display -->
-      <div *ngIf="submitted && simulatedToken" class="token-banner mb-6">
-        <div class="banner-top">
-          <span class="badge-tag">PRESENTATION SIMULATION</span>
-          <span class="banner-sub">Generated Recovery Token</span>
-        </div>
-        <div class="banner-content">
-          <div class="token-code">{{ simulatedToken }}</div>
-          <button type="button" class="btn-token-apply" (click)="proceedToReset()">
-            <span>Auto-fill & Proceed →</span>
-          </button>
-        </div>
       </div>
 
       <div *ngIf="!submitted" class="form-container">
@@ -55,8 +41,8 @@ import { ToastService } from '../../../shared/services/toast.service';
       </div>
 
       <div class="auth-aux-links">
-        <a *ngIf="submitted && !simulatedToken" routerLink="/reset-password" class="btn btn-secondary btn-sm mb-4">
-          Proceed to Enter Reset Token →
+        <a *ngIf="identifier.trim()" [routerLink]="['/reset-password']" [queryParams]="{ identifier: identifier }" class="btn btn-secondary btn-sm mb-4">
+          Enter the OTP from your email →
         </a>
         <div class="back-link">
           <a routerLink="/login">← Back to Sign In</a>
@@ -160,12 +146,10 @@ export class ForgotPasswordComponent {
   identifier = '';
   loading = false;
   submitted = false;
-  simulatedToken = '';
 
   constructor(
     private readonly authApi: AuthApiService,
-    private readonly toastService: ToastService,
-    private readonly router: Router
+    private readonly toastService: ToastService
   ) {}
 
   onSubmit(): void {
@@ -177,45 +161,16 @@ export class ForgotPasswordComponent {
       localStorage.setItem('btlab_forgot_identifier', cleanId);
     } catch {}
 
-    this.authApi.forgotPassword({ identifier: cleanId }).subscribe({
-      next: (msg) => {
-        this.loading = false;
+    this.authApi.forgotPassword({ identifier: cleanId }).pipe(
+      timeout(15000),
+      finalize(() => { this.loading = false; })
+    ).subscribe({
+      next: () => {
         this.submitted = true;
-        const match = msg && msg.match(/\[SIMULATED OTP:\s*([0-9A-Za-z]+)\]/i);
-        if (match && match[1]) {
-          this.simulatedToken = match[1];
-          try { localStorage.setItem('btlab_latest_otp', match[1]); } catch {}
-        } else {
-          this.authApi.getLatestOtp(cleanId).subscribe({
-            next: (res) => {
-              if (res?.otp) {
-                this.simulatedToken = res.otp;
-                try { localStorage.setItem('btlab_latest_otp', res.otp); } catch {}
-              }
-            },
-            error: () => {
-              this.simulatedToken = '742918';
-              try { localStorage.setItem('btlab_latest_otp', '742918'); } catch {}
-            }
-          });
-        }
-        this.toastService.success('Reset instructions accepted. Recovery token generated below.', 'Recovery Dispatched');
+        this.toastService.success('A password reset OTP was sent to your registered email address.', 'Recovery Email Sent');
       },
-      error: () => {
-        this.loading = false;
-        this.submitted = true;
-        this.simulatedToken = '742918';
-        try { localStorage.setItem('btlab_latest_otp', '742918'); } catch {}
-        this.toastService.info('If the account exists, recovery instructions have been sent.', 'Request Processed');
-      }
-    });
-  }
-
-  proceedToReset(): void {
-    this.router.navigate(['/reset-password'], {
-      queryParams: {
-        identifier: this.identifier.trim(),
-        token: this.simulatedToken
+      error: (err) => {
+        this.toastService.error(err.error?.detail || err.error?.message || err.message || 'Unable to send the password reset email.', 'Recovery Failed');
       }
     });
   }

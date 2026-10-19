@@ -16,6 +16,7 @@ public class UserResponseDto {
     private String preferredLanguage;
     private String countryOfOrigin;
     private String customerStatus;
+    private String fullName;
 
     // 2. Identification (masked)
     private String identificationType;
@@ -75,6 +76,8 @@ public class UserResponseDto {
     public void setCountryOfOrigin(String countryOfOrigin) { this.countryOfOrigin = countryOfOrigin; }
     public String getCustomerStatus() { return customerStatus; }
     public void setCustomerStatus(String customerStatus) { this.customerStatus = customerStatus; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
     public String getIdentificationType() { return identificationType; }
     public void setIdentificationType(String identificationType) { this.identificationType = identificationType; }
     public String getIdentificationNumber() { return identificationNumber; }
