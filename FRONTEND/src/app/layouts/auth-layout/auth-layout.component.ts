@@ -15,17 +15,9 @@ export interface BankingVideo {
     <app-toast></app-toast>
 
     <div class="auth-layout-container">
-      <!-- Fixed Ambient RBI Video Background Layer (Pure Black Base) -->
+      <!-- Static VaultOne background shared by every authentication route -->
       <div class="video-background-layer" aria-hidden="true">
-        <iframe
-          #videoIframe
-          id="rbi-bg-video"
-          [src]="safeVideoUrl"
-          title="RBI Banking Awareness Stream"
-          frameborder="0"
-          allow="autoplay; encrypted-media"
-          (load)="onIframeLoad()"
-        ></iframe>
+        <img src="/assets/login-bg.png" alt="" class="auth-background-image" />
 
         <!-- Transparent Black Vignette Overlay -->
         <div class="video-ambient-overlay"></div>
@@ -71,33 +63,6 @@ export interface BankingVideo {
         </div>
       </div>
 
-      <!-- Minimalist Source Attribution & Audio Toggle Pill -->
-      <div class="rbi-source-pill animate-fade-in" aria-label="RBI Video Source and Audio Control">
-        <span class="source-label">Source: RBI (YouTube)</span>
-        <span class="source-divider">|</span>
-        <button
-          type="button"
-          class="source-audio-btn"
-          [class.unmuted]="!isMuted"
-          (click)="toggleAudio()"
-          title="{{ isMuted ? 'Click to Unmute Audio' : 'Click to Mute Audio' }}"
-          id="rbi-mute-toggle-btn"
-        >
-          <app-icon [name]="isMuted ? 'volume-x' : 'volume-2'" [size]="13"></app-icon>
-          <span>{{ isMuted ? 'Unmute' : 'Mute' }}</span>
-        </button>
-        <button
-          type="button"
-          class="source-audio-btn"
-          [class.unmuted]="!isPaused"
-          (click)="togglePause()"
-          title="{{ isPaused ? 'Play Video' : 'Pause Video' }}"
-          id="rbi-pause-toggle-btn"
-        >
-          <app-icon [name]="isPaused ? 'play' : 'pause'" [size]="13"></app-icon>
-          <span>{{ isPaused ? 'Play' : 'Pause' }}</span>
-        </button>
-      </div>
     </div>
   `,
   styles: [`
@@ -137,19 +102,18 @@ export interface BankingVideo {
       background-color: #000000;
     }
 
-    .video-background-layer iframe {
+    .auth-background-image {
       position: absolute;
       top: 50%;
       left: 50%;
       width: 100vw;
-      height: 56.25vw; /* 16:9 Aspect Ratio */
+      height: 100vh;
       min-height: 100vh;
-      min-width: 177.78vh; /* 16:9 Aspect Ratio */
-      transform: translate(-50%, -50%) scale(1.15); /* Slightly enlarged to crop player chrome */
+      object-fit: cover;
+      transform: translate(-50%, -50%);
       pointer-events: none;
-      opacity: 1;
-      filter: brightness(0.96) contrast(1.04) saturate(1.05);
-      transition: opacity var(--transition-normal);
+      user-select: none;
+      filter: brightness(.78) saturate(1.08);
     }
 
     /* Transparent Black Vignette Overlay: 
@@ -157,7 +121,7 @@ export interface BankingVideo {
     .video-ambient-overlay {
       position: absolute;
       inset: 0;
-      background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.52) 100%);
+      background: radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.075) 0%, rgba(0, 0, 0, 0.0) 100%);
       pointer-events: none;
     }
 

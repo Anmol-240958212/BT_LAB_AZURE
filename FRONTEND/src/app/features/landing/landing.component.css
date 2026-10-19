@@ -52,7 +52,8 @@
 }
 
 .header-inner {
-  max-width: 1240px;
+  max-width: 1720px;
+  width: calc(100% - 48px);
   margin: 0 auto;
   padding: 0 24px;
   display: flex;
@@ -70,13 +71,9 @@
 }
 
 .brand-logo-img {
-  height: 38px;
-  width: 38px;
+  height: 106px;
+  width: 400px;
   object-fit: contain;
-  border-radius: 9px;
-  background-color: #ffffff;
-  padding: 3px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
   display: block;
 }
 
@@ -1144,6 +1141,128 @@
   color: #64748b;
   max-width: 480px;
   margin: 0;
+}
+
+.mobile-nav-link.active {
+  color: #4ade80;
+}
+
+/* Product roadmap: connected milestones with a restrained flowing mint highlight. */
+.feature-roadmap {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(150px, 1fr));
+  gap: 18px;
+  min-height: 330px;
+  padding: 34px 0 12px;
+}
+
+.roadmap-line,
+.roadmap-progress {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  top: 142px;
+  height: 2px;
+  border-top: 2px dotted rgba(0, 200, 151, .42);
+  pointer-events: none;
+}
+
+.roadmap-progress {
+  right: auto;
+  width: 34%;
+  border-top: 2px solid transparent;
+  background: linear-gradient(90deg, transparent, #00E693, transparent) center / 160px 2px repeat-x;
+  filter: drop-shadow(0 0 6px rgba(0, 230, 147, .75));
+  animation: roadmapFlow 3.5s linear infinite;
+}
+
+.roadmap-step {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.roadmap-step-offset { padding-top: 92px; }
+
+.roadmap-dot {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(0, 230, 147, .72);
+  border-radius: 50%;
+  background: #071914;
+  box-shadow: 0 0 0 7px rgba(0, 230, 147, .07), 0 0 18px rgba(0, 230, 147, .28);
+}
+
+.roadmap-dot span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #00E693;
+  box-shadow: 0 0 12px #00E693;
+  animation: roadmapPulse 2.4s ease-in-out infinite;
+}
+
+.roadmap-step:nth-child(3) .roadmap-dot span { animation-delay: .35s; }
+.roadmap-step:nth-child(4) .roadmap-dot span { animation-delay: .7s; }
+.roadmap-step:nth-child(5) .roadmap-dot span { animation-delay: 1.05s; }
+.roadmap-step:nth-child(6) .roadmap-dot span { animation-delay: 1.4s; }
+.roadmap-step:nth-child(7) .roadmap-dot span { animation-delay: 1.75s; }
+
+.roadmap-card {
+  width: 100%;
+  min-height: 154px;
+  margin-top: 24px;
+  padding: 18px 16px;
+  border: 1px solid rgba(0, 200, 151, .25);
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(10, 43, 34, .96), rgba(7, 25, 20, .96));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(0, 230, 147, .08);
+  transition: transform 220ms ease, border-color 220ms ease, box-shadow 220ms ease;
+}
+
+.roadmap-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(0, 230, 147, .72);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, .28), 0 0 24px rgba(0, 230, 147, .1);
+}
+
+.roadmap-index {
+  display: block;
+  margin-bottom: 14px;
+  color: rgba(0, 230, 147, .72);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.roadmap-card h3 {
+  margin: 12px 0 8px;
+  color: #F4F7F6;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+.roadmap-card p {
+  margin: 0;
+  color: #9cd0be;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@keyframes roadmapFlow {
+  from { transform: translateX(-160px); }
+  to { transform: translateX(520px); }
+}
+
+@keyframes roadmapPulse {
+  0%, 100% { transform: scale(.8); opacity: .65; }
+  50% { transform: scale(1.25); opacity: 1; }
 }
 
 :host-context([data-theme="dark"]) .features-header-desc,
@@ -2561,6 +2680,43 @@
 }
 
 @media (max-width: 768px) {
+  .feature-roadmap {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 12px 0;
+  }
+  .roadmap-line,
+  .roadmap-progress {
+    top: 22px;
+    bottom: 22px;
+    left: 10px;
+    right: auto;
+    width: 2px;
+    height: auto;
+    border-top: 0;
+    border-left: 2px dotted rgba(0, 200, 151, .42);
+  }
+  .roadmap-progress {
+    bottom: auto;
+    height: 28%;
+    border-left: 2px solid transparent;
+    background: linear-gradient(180deg, transparent, #00E693, transparent) center / 2px 150px repeat-y;
+    animation: roadmapFlowVertical 3.5s linear infinite;
+  }
+  .roadmap-step,
+  .roadmap-step-offset {
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 18px;
+    align-items: start;
+    padding: 0;
+  }
+  .roadmap-card { margin-top: 0; }
+  @keyframes roadmapFlowVertical {
+    from { transform: translateY(-150px); }
+    to { transform: translateY(320px); }
+  }
+
   .desktop-nav,
   .nav-link-sign-in {
     display: none;
@@ -2633,4 +2789,101 @@
     gap: 12px;
     text-align: center;
   }
+}
+
+/* --------------------------------------------------------------------------
+   Landing page light theme
+   The global ThemeService changes the root attribute; these rules ensure the
+   homepage itself follows it instead of retaining the dark hero palette.
+   -------------------------------------------------------------------------- */
+:host-context([data-theme="light"]) {
+  background: #f1f5f3;
+  color: #12201a;
+}
+
+:host-context([data-theme="light"]) .landing-header {
+  background-color: rgba(7, 25, 20, .96);
+}
+
+:host-context([data-theme="light"]) .landing-header.header-scrolled {
+  background-color: rgba(7, 25, 20, .94);
+  border-bottom-color: rgba(0, 230, 147, .2);
+}
+
+:host-context([data-theme="light"]) .hero-section {
+  background-color: #f1f5f3;
+}
+
+:host-context([data-theme="light"]) .hero-grid-bg {
+  background-image:
+    linear-gradient(rgba(37, 95, 72, .07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 95, 72, .07) 1px, transparent 1px);
+}
+
+:host-context([data-theme="light"]) .hero-glow-spot {
+  background: radial-gradient(ellipse at center, rgba(0, 200, 151, .16) 0%, rgba(241, 245, 243, 0) 70%);
+}
+
+:host-context([data-theme="light"]) .hero-title,
+:host-context([data-theme="light"]) .features-main-title,
+:host-context([data-theme="light"]) .stats-main-heading,
+:host-context([data-theme="light"]) .calc-title,
+:host-context([data-theme="light"]) .rates-title,
+:host-context([data-theme="light"]) .arch-title,
+:host-context([data-theme="light"]) .win-title {
+  color: #12201a;
+}
+
+:host-context([data-theme="light"]) .hero-subtitle,
+:host-context([data-theme="light"]) .features-header-desc,
+:host-context([data-theme="light"]) .stats-sub-heading,
+:host-context([data-theme="light"]) .calc-subtitle,
+:host-context([data-theme="light"]) .rates-subtitle,
+:host-context([data-theme="light"]) .arch-subtitle {
+  color: #40574d;
+}
+
+:host-context([data-theme="light"]) .features-section,
+:host-context([data-theme="light"]) .stats-social-proof-section,
+:host-context([data-theme="light"]) .calculator-section,
+:host-context([data-theme="light"]) .rates-section,
+:host-context([data-theme="light"]) .architecture-section,
+:host-context([data-theme="light"]) .cta-banner-section {
+  background-color: #f1f5f3;
+}
+
+:host-context([data-theme="light"]) .feature-card-light,
+:host-context([data-theme="light"]) .feature-card-subtle,
+:host-context([data-theme="light"]) .metric-card,
+:host-context([data-theme="light"]) .calc-box-card,
+:host-context([data-theme="light"]) .rates-table-wrapper,
+:host-context([data-theme="light"]) .arch-card {
+  background-color: #ffffff;
+  border-color: #c9d7d0;
+  box-shadow: 0 8px 24px rgba(18, 32, 26, .07);
+}
+
+:host-context([data-theme="light"]) .feature-card-title,
+:host-context([data-theme="light"]) .metric-title,
+:host-context([data-theme="light"]) .arch-card-heading,
+:host-context([data-theme="light"]) .calc-label,
+:host-context([data-theme="light"]) .rates-table th,
+:host-context([data-theme="light"]) .rates-table td {
+  color: #12201a;
+}
+
+:host-context([data-theme="light"]) .feature-card-desc,
+:host-context([data-theme="light"]) .metric-caption,
+:host-context([data-theme="light"]) .arch-card-body,
+:host-context([data-theme="light"]) .rates-table td {
+  color: #40574d;
+}
+
+:host-context([data-theme="light"]) .roadmap-card {
+  background: linear-gradient(145deg, #0A2B22, #071914);
+  border-color: rgba(0, 160, 116, .34);
+}
+
+:host-context([data-theme="light"]) .cta-banner-section {
+  border-top: 1px solid #dbe4df;
 }

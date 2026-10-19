@@ -12,17 +12,16 @@
     <div class="header-inner">
       <!-- Brand Logo using /logo.png -->
       <a routerLink="/" class="brand-logo" id="landing-brand-logo">
-        <img src="/logo.png" alt="vaultOne Logo" class="brand-logo-img" />
-        <span class="brand-name">vaultOne</span>
+        <img src="/assets/vaultone-navbar.png" alt="VaultOne" class="brand-logo-img" />
       </a>
 
       <!-- Desktop Nav Links -->
       <nav class="desktop-nav" aria-label="Main Navigation">
-        <a (click)="scrollTo('hero')" class="nav-link active">Home</a>
-        <a (click)="scrollTo('features')" class="nav-link">Features</a>
-        <a (click)="scrollTo('calculator')" class="nav-link">FD Calculator</a>
-        <a (click)="scrollTo('rates')" class="nav-link">Rates &amp; Schemes</a>
-        <a (click)="scrollTo('solutions')" class="nav-link">Solutions</a>
+        <a (click)="scrollTo('hero')" class="nav-link" [class.active]="activeNavSection === 'hero'">Home</a>
+        <a (click)="scrollTo('features')" class="nav-link" [class.active]="activeNavSection === 'features'">Features</a>
+        <a (click)="scrollTo('calculator')" class="nav-link" [class.active]="activeNavSection === 'calculator'">FD Calculator</a>
+        <a (click)="scrollTo('rates')" class="nav-link" [class.active]="activeNavSection === 'rates'">Rates &amp; Schemes</a>
+        <a (click)="scrollTo('solutions')" class="nav-link" [class.active]="activeNavSection === 'solutions'">Solutions</a>
       </nav>
 
       <!-- Right Header Actions -->
@@ -110,11 +109,11 @@
     <!-- Mobile Drawer Navigation -->
     <div class="mobile-drawer" *ngIf="mobileMenuOpen">
       <div class="mobile-nav-links">
-        <a (click)="scrollTo('hero')" class="mobile-nav-link">Home</a>
-        <a (click)="scrollTo('features')" class="mobile-nav-link">Features</a>
-        <a (click)="scrollTo('calculator')" class="mobile-nav-link">FD Calculator</a>
-        <a (click)="scrollTo('rates')" class="mobile-nav-link">Rates &amp; Schemes</a>
-        <a (click)="scrollTo('solutions')" class="mobile-nav-link">Solutions</a>
+        <a (click)="scrollTo('hero')" class="mobile-nav-link" [class.active]="activeNavSection === 'hero'">Home</a>
+        <a (click)="scrollTo('features')" class="mobile-nav-link" [class.active]="activeNavSection === 'features'">Features</a>
+        <a (click)="scrollTo('calculator')" class="mobile-nav-link" [class.active]="activeNavSection === 'calculator'">FD Calculator</a>
+        <a (click)="scrollTo('rates')" class="mobile-nav-link" [class.active]="activeNavSection === 'rates'">Rates &amp; Schemes</a>
+        <a (click)="scrollTo('solutions')" class="mobile-nav-link" [class.active]="activeNavSection === 'solutions'">Solutions</a>
       </div>
       <div class="mobile-drawer-actions">
         <ng-container *ngIf="!isLoggedIn; else mobileLoggedInTpl">
@@ -375,69 +374,10 @@
 
 
   <!-- ========================================================================
-       3. CLIENTS & PARTNERS TRUST BAR (1:1 MATCHING INSPO.PNG)
-       ======================================================================== -->
-  <section class="partners-section">
-    <div class="section-container">
-      <h2 class="partners-label">Our Recent Clients &amp; Partners</h2>
-      <div class="partners-grid">
-        <!-- Boltshift Logo -->
-        <div class="partner-logo-item">
-          <svg class="partner-icon" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13 3h1l-1 7h3.5c.49 0 .77.34.42.78L11 21z"/>
-          </svg>
-          <span class="partner-text">Boltshift</span>
-        </div>
-
-        <!-- Lightbox Logo -->
-        <div class="partner-logo-item">
-          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-          </svg>
-          <span class="partner-text">Lightbox</span>
-        </div>
-
-        <!-- FeatherDev Logo -->
-        <div class="partner-logo-item">
-          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/>
-            <line x1="16" y1="8" x2="2" y2="22"/>
-            <line x1="17.5" y1="15" x2="9" y2="15"/>
-          </svg>
-          <span class="partner-text">FeatherDev</span>
-        </div>
-
-        <!-- GlobalBank Logo -->
-        <div class="partner-logo-item">
-          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="2" y1="12" x2="22" y2="12"/>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-          </svg>
-          <span class="partner-text">GlobalBank</span>
-        </div>
-
-        <!-- Nietzsche Logo -->
-        <div class="partner-logo-item">
-          <svg class="partner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <circle cx="12" cy="12" r="4"/>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
-          </svg>
-          <span class="partner-text">Nietzsche</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-
-  <!-- ========================================================================
-       4. POWERFUL FEATURES SECTION (EXACT COMPOSITION & HIGHLIGHT FROM INSPO.PNG)
+       3. PRODUCT ROADMAP SECTION
        ======================================================================== -->
   <section class="features-section" id="features">
     <div class="section-container">
-      <!-- Section Header: Left Title, Right Description -->
       <div class="features-header-split">
         <h2 class="features-main-title">
           Powerful Banking Features<br>To Realize Product Vision
@@ -448,83 +388,69 @@
         </p>
       </div>
 
-      <!-- 3 Primary Feature Cards (As shown in inspo.png) -->
-      <div class="features-trio-grid">
+      <div class="feature-roadmap" aria-label="VaultOne product roadmap">
+        <div class="roadmap-line" aria-hidden="true"></div>
+        <div class="roadmap-progress" aria-hidden="true"></div>
 
-        <!-- Card 1: Light Card (Smart Portfolio Management) -->
-        <div class="feature-card feature-card-light">
-          <div class="feature-icon-badge light-badge">
-            <app-icon name="pie-chart" [size]="20" color="#1e293b"></app-icon>
+        <article class="roadmap-step">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">01</span>
+            <app-icon name="pie-chart" [size]="20" color="#00E693"></app-icon>
+            <h3>Smart portfolio management</h3>
+            <p>Track deposits, projected maturity, and yield from one clear view.</p>
           </div>
-          <h3 class="feature-card-title">Smart Portfolio Management</h3>
-          <p class="feature-card-desc">
-            Easily track, optimize, and grow your investments with intelligent portfolio insights,
-            maturity projections, and automated yield tracking.
-          </p>
-        </div>
+        </article>
 
-        <!-- Card 2: DARK EMERALD HIGHLIGHT CARD (Exact match of inspo.png!) -->
-        <div class="feature-card feature-card-dark-highlight">
-          <div class="feature-icon-badge dark-badge">
-            <app-icon name="smartphone" [size]="20" color="#092820"></app-icon>
+        <article class="roadmap-step roadmap-step-offset">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">02</span>
+            <app-icon name="smartphone" [size]="20" color="#00E693"></app-icon>
+            <h3>Access anywhere</h3>
+            <p>Move between devices with secure, continuous account access.</p>
           </div>
-          <h3 class="feature-card-title text-white">Seamless Access Across Devices</h3>
-          <p class="feature-card-desc text-sage">
-            Manage your wealth and financial operations securely from any device, anytime with
-            biometric authentication, continuous sync, and instant verification.
-          </p>
-        </div>
+        </article>
 
-        <!-- Card 3: Light Card (Fast & Secure Transactions) -->
-        <div class="feature-card feature-card-light">
-          <div class="feature-icon-badge light-badge">
-            <app-icon name="shield" [size]="20" color="#1e293b"></app-icon>
+        <article class="roadmap-step">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">03</span>
+            <app-icon name="shield" [size]="20" color="#00E693"></app-icon>
+            <h3>Fast, secure transactions</h3>
+            <p>Open, fund, and manage fixed deposits with confidence.</p>
           </div>
-          <h3 class="feature-card-title">Fast &amp; Secure Transactions</h3>
-          <p class="feature-card-desc">
-            Experience lightning-fast payments, instant deposit creation, and seamless
-            fund settlements with top-grade institutional security.
-          </p>
-        </div>
-      </div>
+        </article>
 
-      <!-- Secondary Trio: Commercial Banking Pillars -->
-      <div class="features-secondary-grid">
-        <!-- Card 4: Automated Daily Compounding -->
-        <div class="feature-card feature-card-subtle">
-          <div class="feature-icon-badge light-badge">
-            <app-icon name="zap" [size]="20" color="#255f48"></app-icon>
+        <article class="roadmap-step roadmap-step-offset">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">04</span>
+            <app-icon name="zap" [size]="20" color="#00E693"></app-icon>
+            <h3>Automated compounding</h3>
+            <p>Precision interest accruals keep your money working daily.</p>
           </div>
-          <h3 class="feature-card-title">Automated Daily Compounding</h3>
-          <p class="feature-card-desc">
-            Precision financial algorithms calculate daily interest accruals and execute quarterly
-            compounding reinvestment cycles to maximize your effective yield.
-          </p>
-        </div>
+        </article>
 
-        <!-- Card 5: Tiered Relationship Yields -->
-        <div class="feature-card feature-card-subtle">
-          <div class="feature-icon-badge light-badge">
-            <app-icon name="trending-up" [size]="20" color="#255f48"></app-icon>
+        <article class="roadmap-step">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">05</span>
+            <app-icon name="trending-up" [size]="20" color="#00E693"></app-icon>
+            <h3>Tiered relationship yields</h3>
+            <p>Unlock better rates through flexible tenures and benefits.</p>
           </div>
-          <h3 class="feature-card-title">Tiered Relationship Yields</h3>
-          <p class="feature-card-desc">
-            Enjoy premium yield tiers across flexible tenures from 7 days to 10 years,
-            including a 50 bps bonus for senior citizens and preferred client benefits.
-          </p>
-        </div>
+        </article>
 
-        <!-- Card 6: Complete Capital Protection -->
-        <div class="feature-card feature-card-subtle">
-          <div class="feature-icon-badge light-badge">
-            <app-icon name="lock" [size]="20" color="#255f48"></app-icon>
+        <article class="roadmap-step roadmap-step-offset">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">06</span>
+            <app-icon name="lock" [size]="20" color="#00E693"></app-icon>
+            <h3>Institutional capital safety</h3>
+            <p>Built around protection, encryption, and regulatory discipline.</p>
           </div>
-          <h3 class="feature-card-title">Institutional Capital Safety</h3>
-          <p class="feature-card-desc">
-            All customer term deposits are backed by statutory DICGC deposit insurance and
-            fortified by 256-bit encryption and strict regulatory compliance.
-          </p>
-        </div>
+        </article>
       </div>
     </div>
   </section>

@@ -27,6 +27,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   isScrolled = false;
   mobileMenuOpen = false;
   currency: 'INR' | 'JPY' = 'INR';
+  activeNavSection = 'hero';
 
   // Single Collapsible Theme Switcher State
   currentThemeMode: ThemeMode = 'dark';
@@ -133,6 +134,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   @HostListener('window:scroll', [])
   onWindowScroll(): void {
     this.isScrolled = window.scrollY > 40;
+    this.updateActiveNavSection();
   }
 
   @HostListener('document:click', [])
@@ -175,10 +177,26 @@ export class LandingComponent implements OnInit, OnDestroy {
 
   scrollTo(sectionId: string): void {
     this.closeMobileMenu();
+    this.activeNavSection = sectionId;
     const element = document.getElementById(sectionId);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
+  }
+
+  private updateActiveNavSection(): void {
+    const sections = ['hero', 'features', 'calculator', 'rates', 'solutions'];
+    const marker = window.scrollY + 140;
+    let activeSection = 'hero';
+
+    for (const sectionId of sections) {
+      const section = document.getElementById(sectionId);
+      if (section && section.offsetTop <= marker) {
+        activeSection = sectionId;
+      }
+    }
+
+    this.activeNavSection = activeSection;
   }
 
   // Calculator Logic adhering to commercial deposit pricing
