@@ -5,6 +5,7 @@ import com.BankingTech.demo.dto.responsedto.FDAccountCreationResponseDTO;
 import com.BankingTech.demo.dto.responsedto.FixedDepositAccountResponseDTO;
 
 import java.util.List;
+import java.time.LocalDate;
 
 public interface FixedDepositAccountService {
 
@@ -26,5 +27,7 @@ public interface FixedDepositAccountService {
 
         FDAccountCreationResponseDTO createAccountWithTransaction(
                         FixedDepositAccountRequestDTO request);
+
+        FixedDepositAccountResponseDTO adjustAccountDates(String fdAccountNo, LocalDate openingDate, LocalDate maturityDate);
 
 }

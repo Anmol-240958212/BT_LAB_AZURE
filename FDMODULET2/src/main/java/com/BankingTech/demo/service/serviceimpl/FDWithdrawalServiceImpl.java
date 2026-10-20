@@ -9,6 +9,7 @@ import com.BankingTech.demo.repository.FDInterestTransactionRepository;
 import com.BankingTech.demo.repository.FixedDepositAccountRepository;
 import com.BankingTech.demo.service.FDTransactionService;
 import com.BankingTech.demo.service.FDWithdrawalService;
+import com.BankingTech.demo.service.EmailNotificationService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +37,20 @@ public class FDWithdrawalServiceImpl implements FDWithdrawalService {
         private final FDInterestTransactionRepository fdInterestTransactionRepository;
 
         private final FDTransactionService fdTransactionService;
+        private final EmailNotificationService notifications;
 
         public FDWithdrawalServiceImpl(
                         FixedDepositAccountRepository fixedDepositAccountRepository,
                         FDInterestTransactionRepository fdInterestTransactionRepository,
-                        FDTransactionService fdTransactionService) {
+                        FDTransactionService fdTransactionService,
+                        EmailNotificationService notifications) {
 
                 this.fixedDepositAccountRepository = fixedDepositAccountRepository;
 
                 this.fdInterestTransactionRepository = fdInterestTransactionRepository;
 
                 this.fdTransactionService = fdTransactionService;
+                this.notifications = notifications;
         }
 
         @Override
@@ -231,6 +235,13 @@ public class FDWithdrawalServiceImpl implements FDWithdrawalService {
                                 withdrawalDate.atStartOfDay(),
                                 "Premature FD withdrawal. Transfer account: "
                                                 + request.getTransferAccount().trim());
+
+                notifications.queuePrematureWithdrawalNotification(
+                                fd.getFdAccountCustomerId(),
+                                fdAccountNo,
+                                withdrawalAmount,
+                                penalty,
+                                withdrawalDate);
 
                 return new FDWithdrawalResponseDTO(
                                 "success",

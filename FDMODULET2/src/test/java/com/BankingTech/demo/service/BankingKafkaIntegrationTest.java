@@ -47,6 +47,8 @@ class BankingKafkaIntegrationTest {
     @Autowired MaturityEventPublisher publisher;
     @MockitoBean JavaMailSender mail;
     @MockitoBean AccountNumberGenerator numbers;
+    // Authentication is covered by FdCreationAuthorizationTest; this test exercises the Kafka/maturity path.
+    @MockitoBean FdCreationAuthorization creationAuthorization;
     @MockitoSpyBean EmailNotificationServiceImpl notifications;
 
     @Test void kafkaCustomerValidationMaturityEmailAndSwagger() throws Exception {
@@ -68,6 +70,7 @@ class BankingKafkaIntegrationTest {
                      "interestRate":7,"termMonths":12,"interestType":"SIMPLE","interestPayoutType":"CAPITALIZE","interestFrequency":"MONTHLY"}
                     """;
             when(numbers.generate("001")).thenReturn("0019999990");
+            doNothing().when(creationAuthorization).authorize(any(), any());
             assertEquals(404, post(client, "/api/fd/account/create-with-txn", body.replace("\"10\"", "\"999\"")).statusCode());
             assertEquals(0, accounts.count());
             assertEquals(200, post(client, "/api/fd/account/create-with-txn", body).statusCode());

@@ -22,7 +22,9 @@ public class AuthProfileKafkaConfig {
     KafkaAdmin.NewTopics authProfileTopics() {
         return new KafkaAdmin.NewTopics(
             TopicBuilder.name("auth-profile-requests-v1").partitions(1).replicas(1).config("retention.ms", "60000").config("segment.ms", "60000").build(),
-            TopicBuilder.name("auth-profile-replies-v1").partitions(1).replicas(1).config("retention.ms", "60000").config("segment.ms", "60000").build());
+            TopicBuilder.name("auth-profile-replies-v1").partitions(1).replicas(1).config("retention.ms", "60000").config("segment.ms", "60000").build(),
+            TopicBuilder.name("auth-customer-report-requests-v1").partitions(1).replicas(1).config("retention.ms", "60000").config("segment.ms", "60000").build(),
+            TopicBuilder.name("auth-customer-report-replies-v1").partitions(1).replicas(1).config("retention.ms", "60000").config("segment.ms", "60000").build());
     }
     @Bean
     KafkaTemplate<String, String> authProfileKafkaTemplate(@Value("${spring.kafka.producer.bootstrap-servers:localhost:9092}") String brokers) {
@@ -34,9 +36,17 @@ public class AuthProfileKafkaConfig {
     @Bean
     ConcurrentKafkaListenerContainerFactory<String, String> authProfileRequestsFactory(
             @Value("${spring.kafka.producer.bootstrap-servers:localhost:9092}") String brokers) {
+        return requestFactory(brokers, "auth-profile-service-v1");
+    }
+    @Bean
+    ConcurrentKafkaListenerContainerFactory<String, String> authCustomerReportRequestsFactory(
+            @Value("${spring.kafka.producer.bootstrap-servers:localhost:9092}") String brokers) {
+        return requestFactory(brokers, "auth-customer-report-service-v1");
+    }
+    private ConcurrentKafkaListenerContainerFactory<String, String> requestFactory(String brokers, String groupId) {
         var factory = new ConcurrentKafkaListenerContainerFactory<String, String>();
         factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(Map.of(
-            "bootstrap.servers", brokers, "group.id", "auth-profile-service-v1", "auto.offset.reset", "latest",
+            "bootstrap.servers", brokers, "group.id", groupId, "auto.offset.reset", "latest",
             "enable.auto.commit", false), new StringDeserializer(), new StringDeserializer()));
         // Never log request payloads: they contain access tokens.
         factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000, Long.MAX_VALUE)));

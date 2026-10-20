@@ -407,7 +407,7 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       label: 'Analytics & Reports',
       route: '/reports',
       icon: 'bar-chart',
-      roles: ['BANK_OFFICER', 'ADMIN']
+      roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN']
     }
   ];
 

@@ -7,6 +7,7 @@ import com.BankingTech.demo.dto.responsedto.FixedDepositAccountResponseDTO;
 import com.BankingTech.demo.entity.FDTransactionEntity;
 import com.BankingTech.demo.entity.FixedDepositAccountEntity;
 import com.BankingTech.demo.repository.FDTransactionRepository;
+import com.BankingTech.demo.repository.FDInterestTransactionRepository;
 import com.BankingTech.demo.repository.FixedDepositAccountRepository;
 import com.BankingTech.demo.service.FixedDepositAccountService;
 import com.BankingTech.demo.service.plugins.accountnumber.AccountNumberGenerator;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -27,21 +29,34 @@ public class FixedDepositAccountServiceImpl
         private final FixedDepositAccountRepository fixedDepositAccountRepository;
         private final AccountNumberGenerator accountNumberGenerator;
         private final FDTransactionRepository fdTransactionRepository;
+        private final FDInterestTransactionRepository interestTransactionRepository;
         private final com.BankingTech.demo.service.FdCustomerValidationService customerValidation;
         private final com.BankingTech.demo.service.FdProductPricingService productPricing;
 
+        @org.springframework.beans.factory.annotation.Autowired
         public FixedDepositAccountServiceImpl(
                         FixedDepositAccountRepository fixedDepositAccountRepository,
                         AccountNumberGenerator accountNumberGenerator,
                         FDTransactionRepository fdTransactionRepository,
+                        FDInterestTransactionRepository interestTransactionRepository,
                         com.BankingTech.demo.service.FdCustomerValidationService customerValidation,
                         com.BankingTech.demo.service.FdProductPricingService productPricing) {
 
                 this.fixedDepositAccountRepository = fixedDepositAccountRepository;
                 this.accountNumberGenerator = accountNumberGenerator;
                 this.fdTransactionRepository = fdTransactionRepository;
+                this.interestTransactionRepository = interestTransactionRepository;
                 this.customerValidation = customerValidation;
                 this.productPricing = productPricing;
+        }
+
+        /** Compatibility constructor used by the existing creation-flow unit tests. */
+        public FixedDepositAccountServiceImpl(FixedDepositAccountRepository fixedDepositAccountRepository,
+                        AccountNumberGenerator accountNumberGenerator, FDTransactionRepository fdTransactionRepository,
+                        com.BankingTech.demo.service.FdCustomerValidationService customerValidation,
+                        com.BankingTech.demo.service.FdProductPricingService productPricing) {
+                this(fixedDepositAccountRepository, accountNumberGenerator, fdTransactionRepository, null,
+                                customerValidation, productPricing);
         }
 
         @Override
@@ -187,6 +202,40 @@ public class FixedDepositAccountServiceImpl
                 response.setMessage("Account and initial deposit created.");
 
                 return response;
+        }
+
+        @Override
+        @Transactional
+        public FixedDepositAccountResponseDTO adjustAccountDates(String fdAccountNo, LocalDate openingDate, LocalDate maturityDate) {
+                FixedDepositAccountEntity account = fixedDepositAccountRepository.findByFdAccountNo(fdAccountNo)
+                                .orElseThrow(() -> new IllegalArgumentException("FD account not found"));
+                if ("CLOSED".equalsIgnoreCase(account.getFdAccountStatus())) {
+                        throw new IllegalStateException("Closed FD accounts cannot have their dates adjusted");
+                }
+                LocalDate expectedMaturity = openingDate.plusMonths(account.getFdAccountTerm());
+                if (!expectedMaturity.equals(maturityDate)) {
+                        throw new IllegalArgumentException("Maturity date must be " + expectedMaturity
+                                        + " to preserve the existing " + account.getFdAccountTerm() + " month term");
+                }
+                account.setFdAccountOpenedAt(openingDate.atTime(account.getFdAccountOpenedAt().toLocalTime()));
+                account.setFdAccountMaturityDate(maturityDate);
+                // A new opening date creates a new posting timeline. Retaining the old timeline would
+                // make the batch think those periods are already posted.
+                interestTransactionRepository.deleteByFdInterestTransactionFdAccountNo(fdAccountNo);
+                fdTransactionRepository.findFirstByFdTransactionFdAccountNoAndFdTransactionTxnTypeOrderByFdTransactionTxnDateAsc(
+                                fdAccountNo, "DEPOSIT")
+                                .ifPresent(deposit -> {
+                                        // The deposit is the start of the contract, so keep the report timeline aligned
+                                        // when an administrator backdates the account opening date.
+                                        deposit.setFdTransactionTxnDate(openingDate.atTime(deposit.getFdTransactionTxnDate().toLocalTime()));
+                                        fdTransactionRepository.save(deposit);
+                                        account.setFdAccountPrincipal(deposit.getFdTransactionAmount());
+                                });
+                account.setFdAccountAccruedInterest(BigDecimal.ZERO);
+                account.setCrudValue("UPDATE");
+                account.setUserId("ADMIN_DATE_ADJUSTMENT");
+                account.setLocalTs(LocalDateTime.now());
+                return convertToResponseDTO(fixedDepositAccountRepository.save(account));
         }
 
         /*

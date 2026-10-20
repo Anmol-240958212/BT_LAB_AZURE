@@ -24,6 +24,9 @@ public class FdAuthKafkaClient {
         if (future != null) future.complete(json.convertValue(reply, Map.class));
     }
     public FdCreationAuthorization.Profile profile(String authorization) {
+        if (authorization == null || authorization.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
+        }
         String id = UUID.randomUUID().toString();
         var future = new CompletableFuture<Map<String, Object>>();
         pending.put(id, future);
