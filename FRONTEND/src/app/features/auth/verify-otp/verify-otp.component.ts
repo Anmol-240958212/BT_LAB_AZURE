@@ -10,14 +10,14 @@ import { ToastService } from '../../../shared/services/toast.service';
   template: `
     <div class="otp-container">
       <div class="otp-header">
-        <h2 class="title">Verify OTP</h2>
-        <p class="subtitle">Enter the verification code sent to your email or phone.</p>
+        <h2 class="title">{{ 'auth.verifyOtp' | transloco }}</h2>
+        <p class="subtitle">{{ 'auth.enterVerificationCode' | transloco }}</p>
       </div>
       <form [formGroup]="otpForm" (ngSubmit)="onSubmit()" class="otp-form" novalidate>
-        <app-input id="otp-code" label="OTP Code" type="text" placeholder="Enter 6-digit code"
+        <app-input id="otp-code" [label]="'auth.verificationCode' | transloco" type="text" [placeholder]="'auth.enterOtpCode' | transloco"
           formControlName="otp" [required]="true" [error]="otpError"></app-input>
         <app-button type="submit" variant="primary" [loading]="loading" [disabled]="otpForm.invalid || loading" [block]="true">
-          {{ loading ? 'Verifying...' : 'Verify OTP' }}
+          {{ loading ? ('auth.verifying' | transloco) : ('auth.verifyOtp' | transloco) }}
         </app-button>
       </form>
       <div class="auth-switch-link"><a routerLink="/register">Back to registration</a></div>

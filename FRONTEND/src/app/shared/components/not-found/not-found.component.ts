@@ -8,12 +8,12 @@ import { Router } from '@angular/router';
     <div class="not-found-page animate-fade-in">
       <div class="not-found-card">
         <span class="error-code">404</span>
-        <h2 class="error-title">Endpoint Not Found</h2>
+        <h2 class="error-title">{{ 'errors.notFoundTitle' | transloco }}</h2>
         <p class="error-description">
-          The requested banking resource or route does not exist on this platform.
+          {{ 'errors.notFoundDescription' | transloco }}
         </p>
         <app-button variant="primary" (clicked)="goToDashboard()">
-          Return to Dashboard
+          {{ 'nav.goToDashboard' | transloco }}
         </app-button>
       </div>
     </div>

@@ -5,7 +5,7 @@ import { ToastMessage, ToastService } from '../../services/toast.service';
   selector: 'app-toast',
   standalone: false,
   template: `
-    <div class="toast-viewport" role="region" aria-label="Notifications">
+    <div class="toast-viewport" role="region" [attr.aria-label]="'common.notifications' | transloco">
       <div
         *ngFor="let toast of toastService.toasts$ | async; trackBy: trackById"
         [class]="'toast-card toast-' + toast.type"
@@ -20,7 +20,7 @@ import { ToastMessage, ToastService } from '../../services/toast.service';
           type="button"
           class="toast-close"
           (click)="toastService.dismiss(toast.id)"
-          aria-label="Close notification"
+          [attr.aria-label]="'common.closeNotification' | transloco"
         >
           <app-icon name="x" [size]="12"></app-icon>
         </button>

@@ -23,6 +23,9 @@ import { UnauthorizedComponent } from './components/unauthorized/unauthorized.co
 import { NotFoundComponent } from './components/not-found/not-found.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { AppIconComponent } from './components/icon/icon.component';
+import { LanguageToggleComponent } from './components/language-toggle/language-toggle.component';
+import { TranslocoModule } from '@jsverse/transloco';
+import { TranslocoAutoDirective } from './directives/transloco-auto.directive';
 
 // Layouts
 import { AuthLayoutComponent } from '../layouts/auth-layout/auth-layout.component';
@@ -47,6 +50,8 @@ const COMPONENTS = [
   AppTopbarComponent,
   ThemeToggleComponent,
   AppIconComponent,
+  LanguageToggleComponent,
+  TranslocoAutoDirective,
   UnauthorizedComponent,
   NotFoundComponent,
   AuthLayoutComponent,
@@ -62,11 +67,13 @@ const COMPONENTS = [
     CommonModule,
     FormsModule,
     RouterModule
+    ,TranslocoModule
   ],
   exports: [
     CommonModule,
     FormsModule,
     RouterModule,
+    TranslocoModule,
     ...PIPES,
     ...COMPONENTS
   ]

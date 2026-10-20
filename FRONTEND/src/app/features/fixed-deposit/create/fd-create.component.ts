@@ -19,8 +19,8 @@ import { AuthService } from '../../../core/auth.service';
       <div class="card mb-6">
         <div class="flex-between">
           <div>
-            <span class="section-tag">ACCOUNT ORIGINATION WORKFLOW</span>
-            <h1 class="card-title mt-1">Open Fixed Deposit Account</h1>
+            <span class="section-tag">{{ 'fd.originationWorkflow' | transloco }}</span>
+            <h1 class="card-title mt-1">{{ 'fd.create' | transloco }}</h1>
             <p class="card-subtitle">
               Open a fixed deposit linked to a verified customer profile.
             </p>
@@ -30,13 +30,13 @@ import { AuthService } from '../../../core/auth.service';
       </div>
 
       <!-- Creation Form Card -->
-      <app-card title="Deposit Contract Specifications" subtitle="Fill required parameters to generate FD account number">
-        <p *ngIf="isCustomer && !profileReady">Loading your customer profile...</p>
+      <app-card [title]="'fd.contractSpecifications' | transloco" [subtitle]="'fd.contractSubtitle' | transloco">
+        <p *ngIf="isCustomer && !profileReady">{{ 'fd.loadingProfile' | transloco }}</p>
         <p *ngIf="profileError">{{ profileError }}</p>
         <p *ngIf="isCustomer && profileReady && !kycActive">
           Complete your <a routerLink="/customer/profile">KYC verification</a> before opening a fixed deposit.
         </p>
-        <p *ngIf="isCustomer && profileReady && kycActive">This deposit will be opened for your own customer profile.</p>
+        <p *ngIf="isCustomer && profileReady && kycActive">{{ 'fd.ownProfile' | transloco }}</p>
         <form [formGroup]="fdForm" (ngSubmit)="onSubmit()" class="fd-create-form">
           <div class="grid-3">
             <app-input
@@ -50,9 +50,9 @@ import { AuthService } from '../../../core/auth.service';
             ></app-input>
 
             <div class="form-group">
-              <label class="form-label" for="fd-prod-code">Product Code *</label>
+              <label class="form-label" for="fd-prod-code">{{ 'fd.productCode' | transloco }} *</label>
               <select id="fd-prod-code" class="form-select" formControlName="productCode">
-                <option value="">{{ productsLoading ? 'Loading products…' : 'Select a product' }}</option>
+                <option value="">{{ productsLoading ? ('common.loading' | transloco) : ('fd.selectProduct' | transloco) }}</option>
                 <option *ngFor="let product of products" [value]="product.productCode">{{ product.productCode }} — {{ product.productName }}</option>
               </select>
               <small *ngIf="!productsLoading && !products.length">No active FD products have synchronized yet. Create one in Products & Pricing and allow a few seconds.</small>
@@ -118,30 +118,30 @@ import { AuthService } from '../../../core/auth.service';
             <small>Payout frequency is selected separately; it is not configured by this product.</small>
           </div>
           <p *ngIf="productsError" role="alert">{{ productsError }}</p>
-          <p *ngIf="quoteLoading">Fetching current product pricing…</p>
+            <p *ngIf="quoteLoading">{{ 'fd.loadingPricing' | transloco }}</p>
           <p *ngIf="quoteError" role="alert">{{ quoteError }}</p>
 
           <div class="grid-3">
             <div class="form-group">
-              <label class="form-label" for="fd-interest-type">Interest Accrual Type *</label>
+              <label class="form-label" for="fd-interest-type">{{ 'fd.interestType' | transloco }} *</label>
               <select id="fd-interest-type" class="form-select" formControlName="interestType">
-                <option value="COMPOUND">Compound Interest</option>
-                <option value="SIMPLE">Simple Interest</option>
+                <option value="COMPOUND">{{ 'common.compound' | transloco }}</option>
+                <option value="SIMPLE">{{ 'common.simple' | transloco }}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="fd-payout-type">Payout Frequency *</label>
+              <label class="form-label" for="fd-payout-type">{{ 'fd.payoutFrequency' | transloco }} *</label>
               <select id="fd-payout-type" class="form-select" formControlName="interestPayoutType">
-                <option value="MATURITY">At Maturity</option>
-                <option value="ANNUAL">Annual Payout</option>
-                <option value="QUARTERLY">Quarterly Payout</option>
-                <option value="MONTHLY">Monthly Credit</option>
+                <option value="MATURITY">{{ 'common.atMaturity' | transloco }}</option>
+                <option value="ANNUAL">{{ 'fd.annualPayout' | transloco }}</option>
+                <option value="QUARTERLY">{{ 'fd.quarterlyPayout' | transloco }}</option>
+                <option value="MONTHLY">{{ 'fd.monthlyCredit' | transloco }}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="fd-frequency">Compounding Frequency *</label>
+              <label class="form-label" for="fd-frequency">{{ 'fd.compoundingFrequency' | transloco }} *</label>
               <select id="fd-frequency" class="form-select" formControlName="interestFrequency">
                 <option value="MONTHLY">Monthly</option>
                 <option value="QUARTERLY">Quarterly</option>
@@ -184,13 +184,13 @@ import { AuthService } from '../../../core/auth.service';
 
       <app-modal
         [isOpen]="kycIncompleteModalOpen"
-        title="Customer KYC is incomplete"
-        subtitle="Complete KYC before creating a fixed deposit"
+        [title]="'fd.kycIncomplete' | transloco"
+        [subtitle]="'fd.completeKyc' | transloco"
         (closeModal)="kycIncompleteModalOpen = false"
       >
         <p>
           Your customer KYC verification is incomplete. Please complete it to create a fixed deposit.
-          You can close this message, but FD creation will remain unavailable until KYC is approved.
+          {{ 'fd.kycBlocked' | transloco }}
         </p>
 
         <div modal-footer>

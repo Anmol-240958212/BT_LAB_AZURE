@@ -3,6 +3,7 @@ import { Component, ContentChild, EventEmitter, Input, OnChanges, Output, Simple
 export interface TableColumn {
   field: string;
   header: string;
+  translationKey?: string;
   width?: string;
   type?: 'text' | 'currency' | 'date' | 'badge' | 'mask-email' | 'mask-phone' | 'mask-id' | 'mask-account';
   align?: 'left' | 'center' | 'right';
@@ -14,7 +15,7 @@ export interface TableColumn {
   template: `
     <div class="table-container">
       <div *ngIf="loading" class="table-loading-overlay">
-        <app-spinner size="md" message="Loading records..."></app-spinner>
+        <app-spinner size="md" [message]="'common.loadingRecords' | transloco"></app-spinner>
       </div>
 
       <table class="data-table" [attr.aria-busy]="loading">
@@ -25,9 +26,9 @@ export interface TableColumn {
               [style.width]="col.width || 'auto'"
               [style.text-align]="col.align || 'left'"
             >
-              {{ col.header }}
+              {{ col.translationKey ? (col.translationKey | transloco) : col.header }}
             </th>
-            <th *ngIf="hasActions" class="actions-header">Actions</th>
+            <th *ngIf="hasActions" class="actions-header">{{ 'common.actions' | transloco }}</th>
           </tr>
         </thead>
 

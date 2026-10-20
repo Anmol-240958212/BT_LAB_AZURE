@@ -9,20 +9,20 @@ import { finalize, timeout } from 'rxjs/operators';
   template: `
     <div class="forgot-container">
       <div class="forgot-header">
-        <h2 class="title">Password Recovery</h2>
-        <p class="subtitle">Enter your registered email address or username to receive a reset code.</p>
+        <h2 class="title">{{ 'auth.passwordRecovery' | transloco }}</h2>
+        <p class="subtitle">{{ 'auth.enterRegisteredEmail' | transloco }}</p>
       </div>
 
       <div *ngIf="submitted" class="notice-box mb-4">
         <app-icon name="mail" [size]="16"></app-icon>
-        <span>If an account exists for <strong>{{ identifier }}</strong>, recovery instructions and token have been issued.</span>
+          <span>{{ 'auth.recoveryIssued' | transloco:{ identifier: identifier } }}</span>
       </div>
 
       <div *ngIf="!submitted" class="form-container">
         <app-input
           id="forgot-identifier"
-          label="Email or Username"
-          placeholder="e.g. user@example.com"
+          [label]="'auth.emailOrUsername' | transloco"
+          [placeholder]="'auth.emailExample' | transloco"
           [(ngModel)]="identifier"
           [required]="true"
         ></app-input>
@@ -35,7 +35,7 @@ import { finalize, timeout } from 'rxjs/operators';
             [block]="true"
             (clicked)="onSubmit()"
           >
-            {{ loading ? 'Dispatching Reset Token...' : 'Send Recovery Instructions' }}
+            {{ loading ? ('auth.dispatchingToken' | transloco) : ('auth.sendRecovery' | transloco) }}
           </app-button>
         </div>
       </div>

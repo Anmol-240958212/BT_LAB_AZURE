@@ -6,16 +6,16 @@ import { ThemeService, ThemeMode } from '../../../core/theme.service';
   selector: 'app-theme-toggle',
   standalone: false,
   template: `
-    <div class="theme-switch" [class.compact]="compact" role="group" aria-label="Theme selection">
+    <div class="theme-switch" [class.compact]="compact" role="group" [attr.aria-label]="'nav.toggleTheme' | transloco">
       <button
         type="button"
         class="theme-opt-btn"
         [class.active]="currentMode === 'light'"
         (click)="onSelect('light')"
-        title="Switch to Light mode"
+        [title]="'nav.lightMode' | transloco"
       >
         <app-icon name="sun" [size]="13" class="icon"></app-icon>
-        <span *ngIf="!compact" class="label">Light</span>
+        <span *ngIf="!compact" class="label">{{ 'nav.light' | transloco }}</span>
       </button>
 
       <button
@@ -23,10 +23,10 @@ import { ThemeService, ThemeMode } from '../../../core/theme.service';
         class="theme-opt-btn"
         [class.active]="currentMode === 'dark'"
         (click)="onSelect('dark')"
-        title="Switch to Dark mode"
+        [title]="'nav.darkMode' | transloco"
       >
         <app-icon name="moon" [size]="13" class="icon"></app-icon>
-        <span *ngIf="!compact" class="label">Dark</span>
+        <span *ngIf="!compact" class="label">{{ 'nav.dark' | transloco }}</span>
       </button>
 
       <button
@@ -34,10 +34,10 @@ import { ThemeService, ThemeMode } from '../../../core/theme.service';
         class="theme-opt-btn"
         [class.active]="currentMode === 'system'"
         (click)="onSelect('system')"
-        title="Match system theme"
+        [title]="'nav.systemDefault' | transloco"
       >
         <app-icon name="monitor" [size]="13" class="icon"></app-icon>
-        <span *ngIf="!compact" class="label">Auto</span>
+        <span *ngIf="!compact" class="label">{{ 'nav.auto' | transloco }}</span>
       </button>
     </div>
   `,

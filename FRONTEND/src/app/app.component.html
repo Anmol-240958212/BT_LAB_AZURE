@@ -1,5 +1,7 @@
-<div *ngIf="pageLoadFailed" class="page-load-recovery" role="alert">
-  <span>This page could not load. The app may have been updated or the connection interrupted. Reload to try again; unsaved form entries will be lost.</span>
-  <button type="button" class="btn btn-primary" (click)="reloadPage()">Reload app</button>
+<div translocoAuto>
+  <div *ngIf="pageLoadFailed" class="page-load-recovery" role="alert">
+    <span>{{ 'errors.loadFailed' | transloco }}</span>
+    <button type="button" class="btn btn-primary" (click)="reloadPage()">{{ 'common.refresh' | transloco }}</button>
+  </div>
+  <router-outlet></router-outlet>
 </div>
-<router-outlet></router-outlet>

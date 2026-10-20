@@ -1,4 +1,5 @@
 import { Component, Input } from '@angular/core';
+import { TranslocoService } from '@jsverse/transloco';
 
 export type BadgeVariant = 'active' | 'closed' | 'pending' | 'role' | 'info' | 'warning';
 
@@ -9,7 +10,7 @@ export type BadgeVariant = 'active' | 'closed' | 'pending' | 'role' | 'info' | '
     <span [class]="'badge badge-' + variant">
       <span *ngIf="showDot" class="badge-dot"></span>
       <ng-content></ng-content>
-      {{ text }}
+      {{ localizedText }}
     </span>
   `,
   styles: [`
@@ -38,4 +39,24 @@ export class AppBadgeComponent {
   @Input() variant: BadgeVariant = 'role';
   @Input() text = '';
   @Input() showDot = true;
+
+  constructor(private readonly transloco: TranslocoService) {}
+
+  get localizedText(): string {
+    const normalized = this.text.trim().toLowerCase().replace(/[ /-]+/g, '_');
+    const known: Record<string, string> = {
+      active: 'status.active',
+      closed: 'status.closed',
+      closed_liquidated: 'status.closed',
+      pending: 'status.pending',
+      credited: 'status.credited',
+      growing: 'status.growing',
+      locked: 'status.locked',
+      customer: 'role.customer',
+      bank_officer: 'role.bankOfficer',
+      admin: 'role.admin',
+      staff: 'role.staff'
+    };
+    return known[normalized] ? this.transloco.translate(known[normalized]) : this.text;
+  }
 }

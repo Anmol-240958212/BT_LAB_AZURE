@@ -22,17 +22,17 @@ function generateDemoJwt(username: string, role: UserRole): string {
   template: `
     <div class="login-container">
       <div class="login-header">
-        <h2 class="title">Secure Sign In</h2>
-        <p class="subtitle">Access your banking portal with verified credentials.</p>
+        <h2 class="title">{{ 'auth.login' | transloco }}</h2>
+        <p class="subtitle">{{ 'dashboard.accessAssets' | transloco }}</p>
       </div>
 
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
         <!-- Email Field -->
         <app-input
           id="login-email"
-          label="Email"
+          [label]="'common.email' | transloco"
           type="email"
-          placeholder="Enter email"
+          [placeholder]="'auth.enterEmail' | transloco"
           formControlName="username"
           [required]="true"
           [error]="usernameError"
@@ -42,7 +42,7 @@ function generateDemoJwt(username: string, role: UserRole): string {
         <div class="password-wrapper">
           <app-input
             id="login-password"
-            label="Password"
+            [label]="'auth.password' | transloco"
             type="password"
             placeholder="••••••••••••"
             formControlName="password"
@@ -52,7 +52,7 @@ function generateDemoJwt(username: string, role: UserRole): string {
         </div>
 
         <div class="form-aux-row">
-          <a routerLink="/forgot-password" class="forgot-link">Forgot password?</a>
+          <a routerLink="/forgot-password" class="forgot-link">{{ 'auth.forgotPassword' | transloco }}</a>
         </div>
 
         <app-button
@@ -63,19 +63,19 @@ function generateDemoJwt(username: string, role: UserRole): string {
           [block]="true"
           id="login-submit-btn"
         >
-          {{ loading ? 'Verifying Credentials...' : 'Sign In' }}
+          {{ loading ? ('auth.verifying' | transloco) : ('auth.login' | transloco) }}
         </app-button>
       </form>
 
       <!-- Discreet Quick Demo Profiles Bar -->
       <div class="demo-profiles-bar">
-        <span class="demo-label">Demo Profiles:</span>
+        <span class="demo-label">{{ 'auth.demoProfiles' | transloco }}</span>
         <button
           type="button"
           class="demo-chip"
           (click)="fillLiveCredentials('alice@test.com', 'Pass@123')"
         >
-          Customer
+          {{ 'common.customer' | transloco }}
         </button>
         <span class="demo-sep">/</span>
         <button
@@ -96,8 +96,8 @@ function generateDemoJwt(username: string, role: UserRole): string {
       </div>
 
       <div class="auth-switch-link">
-        <span>Don't have an account?</span>
-        <a routerLink="/register">Register new account</a>
+        <span>{{ 'auth.noAccount' | transloco }}</span>
+        <a routerLink="/register">{{ 'auth.registerNew' | transloco }}</a>
       </div>
     </div>
   `,

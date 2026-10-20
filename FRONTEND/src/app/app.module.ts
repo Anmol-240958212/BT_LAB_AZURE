@@ -5,6 +5,8 @@ import { AppRoutingModule } from './app-routing.module';
 import { CoreModule } from './core/core.module';
 import { SharedModule } from './shared/shared.module';
 import { App } from './app.component';
+import { provideTransloco } from '@jsverse/transloco';
+import { TranslocoHttpLoader } from './core/transloco-http-loader';
 
 @NgModule({
   declarations: [
@@ -18,7 +20,17 @@ import { App } from './app.component';
   ],
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withInterceptorsFromDi())
+    provideHttpClient(withInterceptorsFromDi()),
+    provideTransloco({
+      config: {
+        availableLangs: ['en', 'hi'],
+        defaultLang: 'en',
+        fallbackLang: 'en',
+        reRenderOnLangChange: true,
+        prodMode: false
+      },
+      loader: TranslocoHttpLoader
+    })
   ],
   bootstrap: [App]
 })

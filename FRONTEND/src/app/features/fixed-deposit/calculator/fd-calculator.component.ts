@@ -16,8 +16,8 @@ import { ToastService } from '../../../shared/services/toast.service';
       <div class="card mb-6">
         <div class="flex-between">
           <div>
-            <span class="section-tag">PRECISION FINANCIAL ENGINE</span>
-            <h1 class="card-title mt-1">Fixed Deposit Yield & Maturity Calculator</h1>
+            <span class="section-tag">{{ 'fd.precisionEngine' | transloco }}</span>
+            <h1 class="card-title mt-1">{{ 'fd.calculator' | transloco }}</h1>
             <p class="card-subtitle">
               Simulate maturity yields under Simple and Compound interest rules with category bonus rates.
             </p>
@@ -37,7 +37,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 
       <div class="grid-2 mb-6">
         <!-- Input Parameters Card -->
-        <app-card title="Deposit Parameters" subtitle="Specify principal, term duration, and customer categories">
+        <app-card [title]="'fd.depositParameters' | transloco" [subtitle]="'fd.parametersSubtitle' | transloco">
           <form (ngSubmit)="calculate()" class="calc-form">
             <!-- Principal Amount -->
             <app-input
@@ -53,7 +53,7 @@ import { ToastService } from '../../../shared/services/toast.service';
             ></app-input>
 
             <div class="form-group">
-              <label class="form-label" for="calc-currency">Currency *</label>
+              <label class="form-label" for="calc-currency">{{ 'common.currency' | transloco }} *</label>
               <select id="calc-currency" class="form-select" [(ngModel)]="currency" (ngModelChange)="calculate()" name="currency">
                 <option value="INR">INR — Indian Rupee</option>
                 <option value="JPY">JPY — Japanese Yen</option>
@@ -74,11 +74,11 @@ import { ToastService } from '../../../shared/services/toast.service';
               ></app-input>
 
               <div class="form-group">
-                <label class="form-label" for="calc-term-unit">Term Unit *</label>
+                <label class="form-label" for="calc-term-unit">{{ 'fd.termUnit' | transloco }} *</label>
                 <select id="calc-term-unit" class="form-select" [(ngModel)]="termUnit" (ngModelChange)="calculate()" name="termUnit">
-                  <option value="MONTHS">Months</option>
-                  <option value="DAYS">Days</option>
-                  <option value="YEARS">Years</option>
+                  <option value="MONTHS">{{ 'common.months' | transloco }}</option>
+                  <option value="DAYS">{{ 'common.days' | transloco }}</option>
+                  <option value="YEARS">{{ 'fd.years' | transloco }}</option>
                 </select>
               </div>
             </div>
@@ -98,15 +98,15 @@ import { ToastService } from '../../../shared/services/toast.service';
 
             <!-- Interest Accrual Mechanism -->
             <div class="form-group">
-              <label class="form-label" for="calc-interest-type">Interest Accrual Rule *</label>
+              <label class="form-label" for="calc-interest-type">{{ 'fd.interestRule' | transloco }} *</label>
               <select id="calc-interest-type" class="form-select" [(ngModel)]="interestType" (ngModelChange)="calculate()" name="interestType">
-                <option value="COMPOUND">Compound Interest</option>
-                <option value="SIMPLE">Simple Interest (Direct Linear Accrual)</option>
+                <option value="COMPOUND">{{ 'common.compound' | transloco }}</option>
+                <option value="SIMPLE">{{ 'fd.simpleDirect' | transloco }}</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label class="form-label" for="calc-interest-frequency">Compounding Frequency *</label>
+              <label class="form-label" for="calc-interest-frequency">{{ 'fd.compoundingFrequency' | transloco }} *</label>
               <select id="calc-interest-frequency" class="form-select" [(ngModel)]="interestFrequency" (ngModelChange)="calculate()" name="interestFrequency" [disabled]="interestType === 'SIMPLE'">
                 <option value="DAILY">Daily</option>
                 <option value="MONTHLY">Monthly</option>
@@ -114,7 +114,7 @@ import { ToastService } from '../../../shared/services/toast.service';
                 <option value="HALF_YEARLY">Half-yearly</option>
                 <option value="ANNUAL">Annually</option>
               </select>
-              <span class="form-hint">{{ interestType === 'SIMPLE' ? 'Simple interest does not compound.' : 'Choose how often earned interest is compounded.' }}</span>
+              <span class="form-hint">{{ (interestType === 'SIMPLE' ? 'fd.simpleNoCompound' : 'fd.chooseCompounding') | transloco }}</span>
             </div>
 
             <!-- Category Add-ons -->
@@ -123,15 +123,15 @@ import { ToastService } from '../../../shared/services/toast.service';
               <div class="checkbox-group">
                 <label class="checkbox-item">
                   <input type="checkbox" [(ngModel)]="seniorCitizen" (ngModelChange)="calculate()" name="seniorCitizen" />
-                  <span>Senior Citizen (+0.50%)</span>
+                  <span>{{ 'fd.seniorCitizen' | transloco }} (+0.50%)</span>
                 </label>
                 <label class="checkbox-item">
                   <input type="checkbox" [(ngModel)]="bankEmployee" (ngModelChange)="calculate()" name="bankEmployee" />
-                  <span>Bank Employee / Staff (+1.00%)</span>
+                  <span>{{ 'fd.bankStaff' | transloco }} (+1.00%)</span>
                 </label>
                 <label class="checkbox-item">
                   <input type="checkbox" [(ngModel)]="premiumCustomer" (ngModelChange)="calculate()" name="premiumCustomer" />
-                  <span>Premium Wealth Customer (+0.25%)</span>
+                  <span>{{ 'fd.premiumCustomer' | transloco }} (+0.25%)</span>
                 </label>
               </div>
             </div>
@@ -153,9 +153,9 @@ import { ToastService } from '../../../shared/services/toast.service';
         </app-card>
 
         <!-- Calculation Yield Output Card -->
-        <app-card title="Maturity Projection & Yield" subtitle="Verified calculation response per formula">
+        <app-card [title]="'fd.maturityProjection' | transloco" [subtitle]="'fd.verifiedFormula' | transloco">
           <div class="yield-display-box">
-            <span class="yield-caption">ESTIMATED MATURITY VALUE</span>
+              <span class="yield-caption">{{ 'fd.estimatedMaturity' | transloco }}</span>
             <h2 class="yield-amount" id="calc-maturity-amount">
               {{ result?.maturityAmount || 0 | currencyInr:true:currency }}
             </h2>
@@ -167,39 +167,39 @@ import { ToastService } from '../../../shared/services/toast.service';
 
           <div class="yield-breakdown-list mt-6">
             <div class="breakdown-row">
-              <span class="row-label">Initial Principal</span>
+                <span class="row-label">{{ 'fd.initialPrincipal' | transloco }}</span>
               <span class="row-val">{{ principal | currencyInr:true:currency }}</span>
             </div>
             <div class="breakdown-row">
-              <span class="row-label">Total Interest Earned</span>
+                <span class="row-label">{{ 'fd.totalInterest' | transloco }}</span>
               <span class="row-val text-success font-semibold" id="calc-interest-earned">
                 + {{ result?.interestEarned || 0 | currencyInr:true:currency }}
               </span>
             </div>
             <div class="breakdown-row">
-              <span class="row-label">Effective Applicable Rate</span>
+                <span class="row-label">{{ 'fd.effectiveRate' | transloco }}</span>
               <span class="row-val">
                 {{ result?.effectiveRate || effectiveCalculatedRate | number:'1.2-2' }}%
                 <span *ngIf="isRateCapped" class="capped-tag">(CAPPED AT 8.5%)</span>
               </span>
             </div>
             <div class="breakdown-row">
-              <span class="row-label">Tenure</span>
+                <span class="row-label">{{ 'fd.tenure' | transloco }}</span>
               <span class="row-val">{{ termValue }} {{ termUnit | lowercase }}</span>
             </div>
           </div>
 
           <!-- Comparative Simple vs Compound Matrix per guidelines Section 9 -->
           <div class="comparison-matrix mt-6">
-            <span class="matrix-title">Comparison Preview: Simple vs Compound</span>
+            <span class="matrix-title">{{ 'fd.comparison' | transloco }}</span>
             <div class="grid-2 mt-2">
               <div class="matrix-card" [class.highlight-card]="interestType === 'SIMPLE'">
-                <span class="matrix-label">Simple Interest (Linear)</span>
+                <span class="matrix-label">{{ 'fd.simpleLinear' | transloco }}</span>
                 <span class="matrix-val">{{ simpleYield | currencyInr:true:currency }}</span>
                 <span class="matrix-sub">Interest: +{{ simpleInterestEarned | currencyInr:true:currency }}</span>
               </div>
               <div class="matrix-card" [class.highlight-card]="interestType === 'COMPOUND'">
-                <span class="matrix-label">Compound ({{ interestFrequency | lowercase }})</span>
+                <span class="matrix-label">{{ 'common.compound' | transloco }} ({{ interestFrequency | lowercase }})</span>
                 <span class="matrix-val text-accent">{{ compoundYield | currencyInr:true:currency }}</span>
                 <span class="matrix-sub text-success">Interest: +{{ compoundInterestEarned | currencyInr:true:currency }}</span>
               </div>

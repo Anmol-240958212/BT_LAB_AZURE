@@ -19,15 +19,15 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
   template: `
     <div class="reset-container">
       <div class="reset-header">
-        <h2 class="title">Reset Account Password</h2>
-        <p class="subtitle">Enter your verification token and select a new secure password.</p>
+        <h2 class="title">{{ 'auth.resetAccountPassword' | transloco }}</h2>
+        <p class="subtitle">{{ 'auth.chooseNewPassword' | transloco }}</p>
       </div>
 
       <form [formGroup]="resetForm" (ngSubmit)="onSubmit()" class="reset-form">
         <app-input
           id="reset-token"
-          label="Reset Token"
-          placeholder="Paste token received via email/admin"
+          [label]="'auth.resetToken' | transloco"
+          [placeholder]="'auth.pasteToken' | transloco"
           formControlName="token"
           [required]="true"
           [error]="tokenError"
@@ -35,9 +35,9 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
 
         <app-input
           id="reset-new-password"
-          label="New Password"
+          [label]="'auth.newPassword' | transloco"
           type="password"
-          placeholder="6-20 chars, letter, number and special character"
+          [placeholder]="'auth.passwordRules' | transloco"
           formControlName="newPassword"
           [required]="true"
           [error]="passwordError"
@@ -45,9 +45,9 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
 
         <app-input
           id="reset-confirm-password"
-          label="Confirm New Password"
+          [label]="'auth.confirmNewPassword' | transloco"
           type="password"
-          placeholder="Re-enter new password"
+          [placeholder]="'auth.reenterPassword' | transloco"
           formControlName="confirmPassword"
           [required]="true"
           [error]="confirmPasswordError"
@@ -61,7 +61,7 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
           [block]="true"
           id="reset-submit-btn"
         >
-          {{ loading ? 'Updating Password...' : 'Save New Password' }}
+          {{ loading ? ('auth.updatingPassword' | transloco) : ('auth.saveNewPassword' | transloco) }}
         </app-button>
       </form>
 

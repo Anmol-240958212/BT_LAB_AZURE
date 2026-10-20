@@ -14,7 +14,7 @@ export interface BankingVideo {
   template: `
     <app-toast></app-toast>
 
-    <div class="auth-layout-container" languageUi>
+    <div class="auth-layout-container">
       <!-- Static VaultOne background shared by every authentication route -->
       <div class="video-background-layer" aria-hidden="true">
         <img src="/assets/login-bg.png" alt="" class="auth-background-image" />
@@ -25,27 +25,28 @@ export interface BankingVideo {
 
       <!-- Top Left Back to Home Button -->
       <div class="auth-home-corner">
-        <a routerLink="/" class="back-home-btn" id="auth-back-home-btn" title="Return to Home Page">
+        <a routerLink="/" class="back-home-btn" id="auth-back-home-btn" [title]="'nav.returnHome' | transloco">
           <app-icon name="arrow-left" [size]="14"></app-icon>
-          <span>Back to Home</span>
+          <span>{{ 'nav.backHome' | transloco }}</span>
         </a>
       </div>
 
       <!-- Top Corner Theme Switcher -->
       <div class="auth-theme-corner">
         <app-theme-toggle [compact]="false"></app-theme-toggle>
+        <app-language-toggle></app-language-toggle>
       </div>
 
       <!-- Main Floating Authentication Card -->
       <div class="auth-card-wrapper animate-fade-in">
         <!-- Brand Header (clickable to home) -->
         <header class="auth-header">
-          <a routerLink="/" class="auth-brand-link" title="Return to Home Page">
+          <a routerLink="/" class="auth-brand-link" [title]="'nav.returnHome' | transloco">
             <div class="auth-logo-box">
               <img src="/logo.png" alt="vaultOne Logo" class="auth-logo-img" />
             </div>
             <h1 class="auth-brand-title">vaultOne</h1>
-            <p class="auth-brand-tagline">Enterprise Core Banking Platform</p>
+            <p class="auth-brand-tagline">{{ 'auth.enterprisePlatform' | transloco }}</p>
           </a>
         </header>
 
@@ -56,9 +57,9 @@ export interface BankingVideo {
 
         <!-- Card Footer Return to Home link -->
         <div class="auth-card-footer">
-          <a routerLink="/" class="card-home-link" id="auth-card-home-link" title="Return to Home Page">
+          <a routerLink="/" class="card-home-link" id="auth-card-home-link" [title]="'nav.returnHome' | transloco">
             <app-icon name="home" [size]="13"></app-icon>
-            <span>Back to Home Page</span>
+            <span>{{ 'nav.backHomePage' | transloco }}</span>
           </a>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthApiService } from '../../../core/api/auth-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
+import { TranslocoService } from '@jsverse/transloco';
 
 @Component({
   selector: 'app-register',
@@ -10,25 +11,25 @@ import { ToastService } from '../../../shared/services/toast.service';
   template: `
     <div class="register-container">
       <div class="register-header">
-        <h2 class="title">{{ step === 'register' ? 'Create Account' : 'Verify OTP' }}</h2>
-        <p class="subtitle">{{ step === 'register' ? 'Join our banking platform.' : 'Enter the OTP sent to your email/phone.' }}</p>
+        <h2 class="title">{{ step === 'register' ? ('auth.createAccount' | transloco) : ('auth.verifyOtp' | transloco) }}</h2>
+        <p class="subtitle">{{ step === 'register' ? ('auth.joinPlatform' | transloco) : ('auth.otpSentToContact' | transloco) }}</p>
       </div>
 
       <form *ngIf="step === 'register'" [formGroup]="registerForm" (ngSubmit)="onRegister()" class="register-form" novalidate>
-        <app-input id="register-name" label="Full Name" type="text" placeholder="Enter full name" formControlName="name" [required]="true" [error]="nameError"></app-input>
-        <app-input id="register-phone" label="Phone Number" type="tel" placeholder="Enter phone" formControlName="phoneNumber" [required]="true" [error]="phoneError"></app-input>
-        <app-input id="register-email" label="Email" type="email" placeholder="Enter email" formControlName="email" [required]="true" [error]="emailError"></app-input>
-        <app-input id="register-password" label="Password" type="password" placeholder="6+ chars, letters+numbers+special" formControlName="password" [required]="true" [error]="passwordError"></app-input>
-        <app-button type="submit" variant="primary" [loading]="loading" [disabled]="registerForm.invalid || loading" [block]="true">{{ loading ? 'Sending OTP...' : 'Register' }}</app-button>
+        <app-input id="register-name" [label]="'common.fullName' | transloco" type="text" [placeholder]="'auth.enterFullName' | transloco" formControlName="name" [required]="true" [error]="nameError"></app-input>
+        <app-input id="register-phone" [label]="'customer.mobileNumber' | transloco" type="tel" [placeholder]="'auth.enterPhone' | transloco" formControlName="phoneNumber" [required]="true" [error]="phoneError"></app-input>
+        <app-input id="register-email" [label]="'common.email' | transloco" type="email" [placeholder]="'auth.enterEmail' | transloco" formControlName="email" [required]="true" [error]="emailError"></app-input>
+        <app-input id="register-password" [label]="'auth.password' | transloco" type="password" [placeholder]="'auth.passwordHint' | transloco" formControlName="password" [required]="true" [error]="passwordError"></app-input>
+        <app-button type="submit" variant="primary" [loading]="loading" [disabled]="registerForm.invalid || loading" [block]="true">{{ loading ? ('auth.sendingOtp' | transloco) : ('auth.register' | transloco) }}</app-button>
       </form>
 
       <form *ngIf="step === 'verify'" [formGroup]="otpForm" (ngSubmit)="onVerifyOtp()" class="register-form" novalidate>
-        <app-input id="verify-otp" label="OTP Code" type="text" placeholder="Enter 6-digit OTP" formControlName="otp" [required]="true" [error]="otpError"></app-input>
-        <app-button type="submit" variant="primary" [loading]="loading" [disabled]="otpForm.invalid || loading" [block]="true">{{ loading ? 'Verifying...' : 'Verify & Complete' }}</app-button>
-        <a (click)="backToRegister()" class="back-link">Back to registration</a>
+        <app-input id="verify-otp" [label]="'auth.verificationCode' | transloco" type="text" [placeholder]="'auth.enterOtp' | transloco" formControlName="otp" [required]="true" [error]="otpError"></app-input>
+        <app-button type="submit" variant="primary" [loading]="loading" [disabled]="otpForm.invalid || loading" [block]="true">{{ loading ? ('auth.verifying' | transloco) : ('auth.verifyComplete' | transloco) }}</app-button>
+        <a (click)="backToRegister()" class="back-link">{{ 'auth.backRegistration' | transloco }}</a>
       </form>
 
-      <div class="auth-switch-link"><span>Already have an account?</span><a routerLink="/login">Sign in</a></div>
+      <div class="auth-switch-link"><span>{{ 'auth.alreadyAccount' | transloco }}</span><a routerLink="/login">{{ 'auth.signIn' | transloco }}</a></div>
     </div>
   `,
   styles: [`
@@ -48,7 +49,7 @@ export class RegisterComponent implements OnInit {
   loading = false;
   identifier = '';
 
-  constructor(private readonly fb: FormBuilder, private readonly authApi: AuthApiService, private readonly toastService: ToastService, private readonly router: Router) {}
+  constructor(private readonly fb: FormBuilder, private readonly authApi: AuthApiService, private readonly toastService: ToastService, private readonly router: Router, private readonly transloco: TranslocoService) {}
 
   ngOnInit(): void {
     this.registerForm = this.fb.group({
@@ -60,11 +61,11 @@ export class RegisterComponent implements OnInit {
     this.otpForm = this.fb.group({ otp: ['', [Validators.required, Validators.pattern(/^[0-9]{4,6}$/)]] });
   }
 
-  get nameError(): string | null { const c = this.registerForm.get('name'); return (c?.touched && c.errors) ? (c.errors['required'] ? 'Full name required' : c.errors['minlength'] ? 'Min 2 chars' : 'Too long') : null; }
-  get phoneError(): string | null { const c = this.registerForm.get('phoneNumber'); return (c?.touched && c.errors) ? (c.errors['required'] ? 'Phone required' : 'Enter 10-15 digits') : null; }
-  get emailError(): string | null { const c = this.registerForm.get('email'); return (c?.touched && c.errors) ? (c.errors['required'] ? 'Email required' : 'Invalid email') : null; }
-  get passwordError(): string | null { const c = this.registerForm.get('password'); if (!c?.touched || !c.errors) return null; if (c.errors['required']) return 'Password required'; if (c.errors['minlength']) return 'Min 6 chars'; if (c.errors['maxlength']) return 'Max 20 chars'; if (c.errors['pattern']) return 'Need letters, numbers, special'; return null; }
-  get otpError(): string | null { const c = this.otpForm.get('otp'); return (c?.touched && c.errors) ? (c.errors['required'] ? 'OTP required' : 'Enter 4-6 digit OTP') : null; }
+  get nameError(): string | null { const c = this.registerForm.get('name'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.fullNameRequired') : c.errors['minlength'] ? this.transloco.translate('validation.min2Chars') : this.transloco.translate('validation.tooLong')) : null; }
+  get phoneError(): string | null { const c = this.registerForm.get('phoneNumber'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.phoneRequired') : this.transloco.translate('validation.phoneDigits')) : null; }
+  get emailError(): string | null { const c = this.registerForm.get('email'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.emailRequired') : this.transloco.translate('validation.invalidEmail')) : null; }
+  get passwordError(): string | null { const c = this.registerForm.get('password'); if (!c?.touched || !c.errors) return null; if (c.errors['required']) return this.transloco.translate('validation.passwordRequired'); if (c.errors['minlength']) return this.transloco.translate('validation.min6Chars'); if (c.errors['maxlength']) return this.transloco.translate('validation.max20Chars'); if (c.errors['pattern']) return this.transloco.translate('validation.passwordPattern'); return null; }
+  get otpError(): string | null { const c = this.otpForm.get('otp'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.otpRequired') : this.transloco.translate('validation.otpDigits')) : null; }
 
   onRegister(): void {
     if (this.registerForm.invalid || this.loading) { this.registerForm.markAllAsTouched(); return; }

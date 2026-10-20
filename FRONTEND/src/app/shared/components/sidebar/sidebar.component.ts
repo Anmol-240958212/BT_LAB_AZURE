@@ -6,6 +6,7 @@ import { UserRole } from '../../../core/models/auth.models';
 
 export interface NavItem {
   label: string;
+  translationKey?: string;
   route: string;
   icon: string;
   roles: UserRole[];
@@ -24,14 +25,14 @@ export interface NavItem {
         <div class="brand-info">
           <span class="app-title">VaultOne</span>
           <span class="app-dept">
-            {{ currentRole === 'CUSTOMER' ? 'Customer Banking Portal' : 'Admin Portal' }}
+            {{ currentRole === 'CUSTOMER' ? ('nav.customerPortal' | transloco) : ('nav.adminPortal' | transloco) }}
           </span>
         </div>
       </div>
 
       <!-- Navigation Menu -->
       <nav class="sidebar-nav">
-        <div class="nav-section-title">MAIN NAVIGATION</div>
+        <div class="nav-section-title">{{ 'nav.mainNavigation' | transloco }}</div>
 
         <ul class="nav-list">
           <li *ngFor="let item of visibleNavItems">
@@ -42,7 +43,7 @@ export interface NavItem {
               class="nav-link"
             >
               <app-icon [name]="item.icon" [size]="18" class="nav-icon"></app-icon>
-              <span class="nav-label">{{ item.label }}</span>
+              <span class="nav-label">{{ item.translationKey ? (item.translationKey | transloco) : item.label }}</span>
             </a>
           </li>
         </ul>
@@ -57,7 +58,7 @@ export interface NavItem {
             class="theme-toggle-header"
             [class.open]="isThemeOpen"
             (click)="toggleThemeMenu()"
-            title="Toggle color theme options"
+            [title]="'nav.toggleTheme' | transloco"
           >
             <div class="theme-header-left">
               <app-icon [name]="getThemeIconName()" [size]="14" class="theme-mode-icon"></app-icon>
@@ -75,7 +76,7 @@ export interface NavItem {
               (click)="selectTheme('light')"
             >
               <app-icon name="sun" [size]="14" class="opt-icon"></app-icon>
-              <span class="opt-label">Light Theme</span>
+              <span class="opt-label">{{ 'nav.lightMode' | transloco }}</span>
               <app-icon *ngIf="currentTheme === 'light'" name="check" [size]="12" class="opt-check"></app-icon>
             </button>
             <button
@@ -85,7 +86,7 @@ export interface NavItem {
               (click)="selectTheme('dark')"
             >
               <app-icon name="moon" [size]="14" class="opt-icon"></app-icon>
-              <span class="opt-label">Dark Theme</span>
+              <span class="opt-label">{{ 'nav.darkMode' | transloco }}</span>
               <app-icon *ngIf="currentTheme === 'dark'" name="check" [size]="12" class="opt-check"></app-icon>
             </button>
             <button
@@ -95,7 +96,7 @@ export interface NavItem {
               (click)="selectTheme('system')"
             >
               <app-icon name="monitor" [size]="14" class="opt-icon"></app-icon>
-              <span class="opt-label">System Auto</span>
+              <span class="opt-label">{{ 'nav.auto' | transloco }}</span>
               <app-icon *ngIf="currentTheme === 'system'" name="check" [size]="12" class="opt-check"></app-icon>
             </button>
           </div>
@@ -340,73 +341,73 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
 
   readonly allNavItems: NavItem[] = [
     {
-      label: 'Products & Pricing',
+      label: 'Products & Pricing', translationKey: 'sidebar.products',
       route: '/products',
       icon: 'coins',
       roles: ['BANK_OFFICER', 'ADMIN']
     },
     {
-      label: 'Dashboard',
+      label: 'Dashboard', translationKey: 'nav.dashboard',
       route: '/dashboard',
       icon: 'dashboard',
       roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN', 'STAFF']
     },
     {
-      label: 'My Fixed Deposits',
+      label: 'My Fixed Deposits', translationKey: 'sidebar.myDeposits',
       route: '/fixed-deposit/accounts',
       icon: 'coins',
       roles: ['CUSTOMER']
     },
     {
-      label: 'FD Accounts (All)',
+      label: 'FD Accounts (All)', translationKey: 'sidebar.allAccounts',
       route: '/fixed-deposit/accounts',
       icon: 'clipboard',
       roles: ['BANK_OFFICER', 'ADMIN']
     },
     {
-      label: 'Create FD Account',
+      label: 'Create FD Account', translationKey: 'sidebar.createAccount',
       route: '/fixed-deposit/create',
       icon: 'plus',
       roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN']
     },
     {
-      label: 'FD Calculator',
+      label: 'FD Calculator', translationKey: 'nav.calculator',
       route: '/fixed-deposit/calculator',
       icon: 'calculator',
       roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN', 'STAFF']
     },
     {
-      label: 'Transactions',
+      label: 'Transactions', translationKey: 'sidebar.transactions',
       route: '/fixed-deposit/transactions',
       icon: 'exchange',
       roles: ['BANK_OFFICER', 'ADMIN']
     },
     {
-      label: 'Customer KYC & Accounts',
+      label: 'Customer KYC & Accounts', translationKey: 'sidebar.customerKyc',
       route: '/customer/list',
       icon: 'users',
       roles: ['BANK_OFFICER', 'ADMIN']
     },
     {
-      label: 'My KYC Profile',
+      label: 'My KYC Profile', translationKey: 'sidebar.myKyc',
       route: '/customer/profile',
       icon: 'user',
       roles: ['CUSTOMER']
     },
     {
-      label: 'Batch Operations',
+      label: 'Batch Operations', translationKey: 'sidebar.batch',
       route: '/admin/batch',
       icon: 'zap',
       roles: ['ADMIN']
     },
     {
-      label: 'Employee Management',
+      label: 'Employee Management', translationKey: 'sidebar.employees',
       route: '/admin/employees',
       icon: 'shield',
       roles: ['ADMIN']
     },
     {
-      label: 'Analytics & Reports',
+      label: 'Analytics & Reports', translationKey: 'sidebar.reports',
       route: '/reports',
       icon: 'bar-chart',
       roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN']

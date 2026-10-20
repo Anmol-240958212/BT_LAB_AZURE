@@ -20,14 +20,14 @@ import { TableColumn } from '../../shared/components/table/table.component';
           <div>
             <span class="system-time">SESSION ACTIVE • {{ currentDate | date:'fullDate' }}</span>
             <h1 class="welcome-heading">
-              Welcome back, {{ displayName }}
+              {{ 'auth.welcomeBack' | transloco:{ name: displayName } }}
             </h1>
             <p class="welcome-sub">
-              Access your fixed deposit assets, run calculations, and oversee customer operations.
+              {{ 'dashboard.accessAssets' | transloco }}
             </p>
           </div>
           <div class="role-display-box">
-            <span class="role-label">Current Role</span>
+            <span class="role-label">{{ 'nav.currentRole' | transloco }}</span>
             <app-badge variant="role" [text]="currentRole || 'CUSTOMER'"></app-badge>
           </div>
         </div>
@@ -35,33 +35,33 @@ import { TableColumn } from '../../shared/components/table/table.component';
         <!-- Metric Stat Cards Row -->
         <div class="grid-4 mt-6">
             <div class="stat-card">
-              <span class="stat-label">TOTAL PORTFOLIO VALUE</span>
+              <span class="stat-label">{{ 'dashboard.totalPortfolio' | transloco }}</span>
               <span class="stat-value">{{ totalDepositValue | currencyInr:true:'INR' }}</span>
               <span class="stat-value currency-secondary" *ngFor="let total of otherPortfolioValues">
                 {{ total.value | currencyInr:true:total.currency }}
               </span>
-              <span class="stat-meta text-accent">Active Fixed Deposits</span>
+              <span class="stat-meta text-accent">{{ 'dashboard.activeDeposits' | transloco }}</span>
             </div>
 
           <div class="stat-card">
-            <span class="stat-label">ACTIVE ACCOUNTS</span>
+            <span class="stat-label">{{ 'dashboard.activeAccounts' | transloco }}</span>
             <span class="stat-value">{{ activeAccountCount }}</span>
-            <span class="stat-meta text-secondary">Verified & Earning Interest</span>
+            <span class="stat-meta text-secondary">{{ 'dashboard.verifiedInterest' | transloco }}</span>
           </div>
 
             <div class="stat-card">
-              <span class="stat-label">ACCRUED INTEREST</span>
+              <span class="stat-label">{{ 'dashboard.accruedInterest' | transloco }}</span>
               <span class="stat-value">{{ totalAccruedInterest | currencyInr:true:'INR' }}</span>
               <span class="stat-value currency-secondary" *ngFor="let total of otherAccruedInterestValues">
                 {{ total.value | currencyInr:true:total.currency }}
               </span>
-              <span class="stat-meta text-success">Compounded to Date</span>
+              <span class="stat-meta text-success">{{ 'dashboard.compoundedToDate' | transloco }}</span>
             </div>
 
           <div class="stat-card">
-            <span class="stat-label">MAX REGULATORY RATE</span>
+            <span class="stat-label">{{ 'dashboard.maxRate' | transloco }}</span>
             <span class="stat-value">8.50%</span>
-            <span class="stat-meta text-warning">Regulatory Rate Cap</span>
+            <span class="stat-meta text-warning">{{ 'dashboard.regulatoryCap' | transloco }}</span>
           </div>
         </div>
       </div>
@@ -69,13 +69,13 @@ import { TableColumn } from '../../shared/components/table/table.component';
       <!-- Quick Action Navigation Shortcuts -->
       <div class="card mb-6">
         <div class="card-header">
-          <h2 class="card-title">Quick Actions & Workflows</h2>
-          <span class="card-subtitle">One-click access to core banking operations</span>
+          <h2 class="card-title">{{ 'dashboard.quickActions' | transloco }}</h2>
+          <span class="card-subtitle">{{ 'dashboard.oneClick' | transloco }}</span>
         </div>
         <div class="quick-actions-row">
           <app-button variant="primary" (clicked)="navigate('/fixed-deposit/calculator')">
             <app-icon name="calculator" [size]="15"></app-icon>
-            <span>Launch FD Calculator</span>
+            <span>{{ 'dashboard.launchCalculator' | transloco }}</span>
           </app-button>
 
           <app-button
@@ -84,7 +84,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
             (clicked)="navigate('/fixed-deposit/create')"
           >
             <app-icon name="plus" [size]="15"></app-icon>
-            <span>Create New FD Account</span>
+            <span>{{ 'fd.createNew' | transloco }}</span>
           </app-button>
 
           <app-button
@@ -93,7 +93,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
             (clicked)="navigate('/customer/list')"
           >
             <app-icon name="users" [size]="15"></app-icon>
-            <span>Manage Customer KYC</span>
+            <span>{{ 'customer.manageKyc' | transloco }}</span>
           </app-button>
 
           <app-button
@@ -102,7 +102,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
             (clicked)="navigate('/admin/batch')"
           >
             <app-icon name="zap" [size]="15"></app-icon>
-            <span>Run Batch Operations</span>
+            <span>{{ 'admin.runBatch' | transloco }}</span>
           </app-button>
 
           <app-button
@@ -111,7 +111,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
             (clicked)="navigate('/customer/profile')"
           >
             <app-icon name="user" [size]="15"></app-icon>
-            <span>Update My KYC Profile</span>
+            <span>{{ 'dashboard.updateKyc' | transloco }}</span>
           </app-button>
 
           <app-button
@@ -120,7 +120,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
             (clicked)="navigate('/reports')"
           >
             <app-icon name="bar-chart" [size]="15"></app-icon>
-            <span>My Deposit Portfolio</span>
+            <span>{{ 'dashboard.myPortfolio' | transloco }}</span>
           </app-button>
 
           <app-button
@@ -129,24 +129,24 @@ import { TableColumn } from '../../shared/components/table/table.component';
             (clicked)="navigate('/reports')"
           >
             <app-icon name="bar-chart" [size]="15"></app-icon>
-            <span>View Analytics</span>
+            <span>{{ 'dashboard.viewAnalytics' | transloco }}</span>
           </app-button>
         </div>
       </div>
 
       <!-- Recent Fixed Deposits Table -->
       <app-card
-        [title]="currentRole === 'CUSTOMER' ? 'My Fixed Deposit Accounts' : 'Recent Fixed Deposit Accounts'"
-        [subtitle]="currentRole === 'CUSTOMER' ? 'Your active deposit instruments and accrued returns' : 'Live registry of active deposit instruments under management'"
+        [title]="(currentRole === 'CUSTOMER' ? 'dashboard.myFdAccounts' : 'dashboard.recentFdAccounts') | transloco"
+        [subtitle]="(currentRole === 'CUSTOMER' ? 'dashboard.activeDescription' : 'dashboard.liveDescription') | transloco"
         class="mb-6"
       >
         <div card-action class="flex-row">
           <app-button variant="ghost" (clicked)="loadAccounts(true)">
             <app-icon name="refresh" [size]="13"></app-icon>
-            <span>Refresh Data</span>
+            <span>{{ 'common.refresh' | transloco }}</span>
           </app-button>
           <app-button variant="secondary" (clicked)="navigate('/fixed-deposit/accounts')">
-            <span>{{ currentRole === 'CUSTOMER' ? 'View My Deposits' : 'View All Accounts' }}</span>
+            <span>{{ (currentRole === 'CUSTOMER' ? 'dashboard.viewDeposits' : 'dashboard.viewAllAccounts') | transloco }}</span>
             <app-icon name="arrow-right" [size]="13"></app-icon>
           </app-button>
         </div>
@@ -156,7 +156,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
           [data]="recentAccounts"
           [loading]="loadingAccounts"
           [pageSize]="5"
-          emptyMessage="No fixed deposit accounts found."
+          [emptyMessage]="'fd.noAccounts' | transloco"
         ></app-table>
       </app-card>
     </div>
@@ -234,13 +234,13 @@ export class DashboardComponent implements OnInit {
   loadingAccounts = false;
 
   readonly fdColumns: TableColumn[] = [
-    { field: 'fdAccountNo', header: 'FD Account No.', width: '150px', type: 'mask-account' },
-    { field: 'customerId', header: 'Customer ID', width: '130px' },
-    { field: 'principalAmount', header: 'Principal', type: 'currency', align: 'right' },
-    { field: 'interestRate', header: 'Rate (%)', align: 'center' },
-    { field: 'termMonths', header: 'Term (Months)', align: 'center' },
-    { field: 'interestType', header: 'Interest Type' },
-    { field: 'status', header: 'Status', type: 'badge', align: 'center' }
+    { field: 'fdAccountNo', header: 'FD Account No.', translationKey: 'dashboard.fdAccountNo', width: '150px', type: 'mask-account' },
+    { field: 'customerId', header: 'Customer ID', translationKey: 'dashboard.customerId', width: '130px' },
+    { field: 'principalAmount', header: 'Principal', translationKey: 'dashboard.principal', type: 'currency', align: 'right' },
+    { field: 'interestRate', header: 'Rate (%)', translationKey: 'dashboard.rate', align: 'center' },
+    { field: 'termMonths', header: 'Term (Months)', translationKey: 'dashboard.term', align: 'center' },
+    { field: 'interestType', header: 'Interest Type', translationKey: 'dashboard.interestType' },
+    { field: 'status', header: 'Status', translationKey: 'common.status', type: 'badge', align: 'center' }
   ];
 
   allLoadedAccounts: FixedDepositAccountResponse[] = [

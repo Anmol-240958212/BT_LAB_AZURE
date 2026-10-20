@@ -23,7 +23,7 @@ import { AuthState } from '../../../core/models/auth.models';
         <ng-container *ngIf="authState?.isAuthenticated; else guestTpl">
           <!-- User info -->
           <div class="user-meta">
-            <span class="user-greeting">Welcome,</span>
+            <span class="user-greeting">{{ 'nav.welcome' | transloco }}</span>
             <span class="username" id="topbar-username" [title]="authState?.username || ''">{{ displayName }}</span>
           </div>
 
@@ -40,9 +40,9 @@ import { AuthState } from '../../../core/models/auth.models';
             class="btn btn-ghost btn-sm logout-btn"
             id="topbar-logout-btn"
             (click)="onLogout()"
-            title="Sign out of current session"
+            [title]="'nav.signOut' | transloco"
           >
-            <span>Sign Out</span>
+            <span>{{ 'nav.signOut' | transloco }}</span>
             <app-icon name="log-out" [size]="14" class="logout-icon"></app-icon>
           </button>
         </ng-container>
@@ -50,12 +50,14 @@ import { AuthState } from '../../../core/models/auth.models';
         <!-- Guest template -->
         <ng-template #guestTpl>
           <a routerLink="/login" class="btn btn-primary btn-sm" id="topbar-login-btn">
-            Sign In
+            {{ 'nav.signIn' | transloco }}
           </a>
           <a routerLink="/register" class="btn btn-secondary btn-sm" id="topbar-register-btn">
-            Register
+            {{ 'nav.register' | transloco }}
           </a>
         </ng-template>
+
+        <app-language-toggle></app-language-toggle>
 
       </div>
     </header>

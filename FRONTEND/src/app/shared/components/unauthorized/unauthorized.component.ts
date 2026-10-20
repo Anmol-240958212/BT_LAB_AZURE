@@ -14,21 +14,20 @@ import { AuthService } from '../../../core/auth.service';
 
         <h2 class="error-title">403 — Access Restricted</h2>
         <p class="error-description">
-          You do not have the required role permissions to access this banking resource.
-          Access policies are strictly enforced according to vaultOne security specifications.
+          {{ 'errors.roleRestricted' | transloco }}
         </p>
 
         <div class="role-notice">
-          <span>Active Session Role: </span>
+          <span>{{ 'errors.activeRole' | transloco }} </span>
           <app-badge variant="role" [text]="authService.getRole() || 'GUEST'"></app-badge>
         </div>
 
         <div class="actions-row">
           <app-button variant="secondary" (clicked)="goToDashboard()">
-            Return to Dashboard
+            {{ 'nav.goToDashboard' | transloco }}
           </app-button>
           <app-button variant="primary" (clicked)="switchAccount()">
-            Sign In with Different Account
+            {{ 'auth.signInDifferent' | transloco }}
           </app-button>
         </div>
       </div>

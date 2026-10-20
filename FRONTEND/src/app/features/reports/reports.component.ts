@@ -6,7 +6,7 @@ import { CustomerPortfolio, FdMaturityReport, ReportApiService } from '../../cor
 // This page intentionally uses native tables so reports remain visible even when shared table styling changes.
 
 type ReportKind = 'summary' | 'interest' | 'maturity';
-type ReportDefinition = { kind: ReportKind; label: string; description: string; endpoint: string; };
+type ReportDefinition = { kind: ReportKind; labelKey: string; descriptionKey: string; endpoint: string; };
 
 @Component({
   selector: 'app-reports',
@@ -15,23 +15,23 @@ type ReportDefinition = { kind: ReportKind; label: string; description: string; 
     <main class="reports-page animate-fade-in">
       <section class="hero-card">
         <div>
-          <span class="eyebrow">ANALYTICS & REPORTS</span>
-          <h1>{{ isCustomer ? 'My fixed deposit reports' : 'Fixed deposit reporting centre' }}</h1>
-          <p>{{ isCustomer ? 'View your portfolio and download a detailed report for each fixed deposit.' : 'Review live operational data and export compliance-ready fixed deposit reports.' }}</p>
+          <span class="eyebrow">{{ 'reports.analytics' | transloco }}</span>
+          <h1>{{ (isCustomer ? 'reports.myReports' : 'reports.reportingCentre') | transloco }}</h1>
+          <p>{{ (isCustomer ? 'reports.customerIntro' : 'reports.staffIntro') | transloco }}</p>
         </div>
         <button class="btn btn-secondary" type="button" (click)="refresh()" [disabled]="loading">{{ loading ? 'Refreshing…' : 'Refresh data' }}</button>
       </section>
 
       <section *ngIf="error" class="alert-card" role="alert">
         <div><strong>We could not load one report.</strong><span>{{ error }}</span></div>
-        <button class="btn btn-secondary" type="button" (click)="refresh()">Try again</button>
+        <button class="btn btn-secondary" type="button" (click)="refresh()">{{ 'common.tryAgain' | transloco }}</button>
       </section>
 
       <ng-container *ngIf="isCustomer; else staffReports">
         <section class="metric-grid" *ngIf="portfolio">
-          <article class="metric-card"><span>FD accounts</span><strong>{{ portfolio.totalAccounts }}</strong></article>
-          <article class="metric-card"><span>Total principal</span><strong>{{ money(portfolio.totalPrincipal, portfolioCurrency) }}</strong></article>
-          <article class="metric-card"><span>Accrued interest</span><strong>{{ money(portfolio.totalInterestAccrued, portfolioCurrency) }}</strong></article>
+          <article class="metric-card"><span>{{ 'reports.fdAccounts' | transloco }}</span><strong>{{ portfolio.totalAccounts }}</strong></article>
+          <article class="metric-card"><span>{{ 'reports.totalPrincipal' | transloco }}</span><strong>{{ money(portfolio.totalPrincipal, portfolioCurrency) }}</strong></article>
+          <article class="metric-card"><span>{{ 'common.accruedInterest' | transloco }}</span><strong>{{ money(portfolio.totalInterestAccrued, portfolioCurrency) }}</strong></article>
         </section>
         <section class="report-panel">
           <div class="panel-heading"><div><span class="eyebrow">CUSTOMER PORTFOLIO</span><h2>Your fixed deposits</h2><p>Only your accounts are shown here.</p></div><span class="status" *ngIf="loading">Loading…</span></div>
@@ -42,7 +42,7 @@ type ReportDefinition = { kind: ReportKind; label: string; description: string; 
               <tbody>
                 <tr *ngFor="let account of portfolio.accounts">
                   <td>{{ account.accountNo }}</td><td>{{ account.productCode }}</td><td>{{ money(account.principal, account.currency) }}</td><td>{{ money(account.accruedInterest, account.currency) }}</td><td>{{ account.maturityDate | date:'mediumDate' }}</td><td><span class="pill">{{ account.status }}</span></td>
-                  <td><button class="link-button" type="button" (click)="loadMaturity(account.accountNo)">Open report</button></td>
+                  <td><button class="link-button" type="button" (click)="loadMaturity(account.accountNo)">{{ 'common.openReport' | transloco }}</button></td>
                 </tr>
                 <tr *ngIf="portfolio.accounts.length === 0"><td colspan="7" class="empty-cell">No fixed deposit accounts found.</td></tr>
               </tbody>
@@ -52,17 +52,17 @@ type ReportDefinition = { kind: ReportKind; label: string; description: string; 
       </ng-container>
 
       <ng-template #staffReports>
-        <section class="report-selector" aria-label="Available reports">
+        <section class="report-selector" [attr.aria-label]="'reports.available' | transloco">
           <button *ngFor="let report of reportDefinitions" type="button" class="report-tile" [class.active]="selected === report.kind" (click)="select(report.kind)">
-            <span>{{ report.label }}</span><small>{{ report.description }}</small>
+            <span>{{ report.labelKey | transloco }}</span><small>{{ report.descriptionKey | transloco }}</small>
           </button>
         </section>
         <section class="report-panel">
           <div class="panel-heading">
-            <div><span class="eyebrow">LIVE DATA</span><h2>{{ selectedDefinition.label }}</h2><p>{{ selectedDefinition.description }}</p></div>
+            <div><span class="eyebrow">{{ 'reports.liveData' | transloco }}</span><h2>{{ selectedDefinition.labelKey | transloco }}</h2><p>{{ selectedDefinition.descriptionKey | transloco }}</p></div>
             <div class="export-actions"><button class="btn btn-secondary" type="button" (click)="downloadCsv()" [disabled]="loading">Download CSV</button><button class="btn btn-primary" type="button" (click)="select(selected)" [disabled]="loading">{{ loading ? 'Loading…' : 'Reload' }}</button></div>
           </div>
-          <div *ngIf="loading" class="loading-state">Loading {{ selectedDefinition.label.toLowerCase() }}…</div>
+          <div *ngIf="loading" class="loading-state">{{ 'common.loading' | transloco }} {{ selectedDefinition.labelKey | transloco }}</div>
           <div *ngIf="!loading && data.length === 0" class="empty-state">There are no rows in this report yet.</div>
           <div class="table-scroll" *ngIf="!loading && data.length">
             <table><thead><tr><th *ngFor="let column of columns">{{ column }}</th></tr></thead><tbody><tr *ngFor="let row of data"><td *ngFor="let key of rowKeys">{{ render(row, key) }}</td></tr></tbody></table>
@@ -106,9 +106,9 @@ type ReportDefinition = { kind: ReportKind; label: string; description: string; 
 })
 export class ReportsComponent implements OnInit {
   readonly reportDefinitions: ReportDefinition[] = [
-    { kind: 'summary', label: 'FD account status', description: 'Active accounts, principal, and accrued interest by product.', endpoint: 'fd-summary' },
-    { kind: 'interest', label: 'Interest transaction history', description: 'Every posted interest transaction across fixed deposits.', endpoint: 'interest-transactions' },
-    { kind: 'maturity', label: 'Maturity summary', description: 'Accounts grouped by maturity date and accrued interest.', endpoint: 'maturity-summary' }
+    { kind: 'summary', labelKey: 'reports.summary', descriptionKey: 'reports.summaryDescription', endpoint: 'fd-summary' },
+    { kind: 'interest', labelKey: 'reports.interestHistory', descriptionKey: 'reports.interestDescription', endpoint: 'interest-transactions' },
+    { kind: 'maturity', labelKey: 'reports.maturitySummary', descriptionKey: 'reports.maturityDescription', endpoint: 'maturity-summary' }
   ];
   isCustomer = false; loading = false; detailLoading = false; error = ''; selected: ReportKind = 'summary';
   data: Record<string, unknown>[] = []; portfolio: CustomerPortfolio | null = null; maturityReport: FdMaturityReport | null = null; accountNumber = '';
