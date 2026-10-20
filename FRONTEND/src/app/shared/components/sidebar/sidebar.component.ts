@@ -377,12 +377,6 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN', 'STAFF']
     },
     {
-      label: 'Transactions', translationKey: 'sidebar.transactions',
-      route: '/fixed-deposit/transactions',
-      icon: 'exchange',
-      roles: ['BANK_OFFICER', 'ADMIN']
-    },
-    {
       label: 'Customer KYC & Accounts', translationKey: 'sidebar.customerKyc',
       route: '/customer/list',
       icon: 'users',

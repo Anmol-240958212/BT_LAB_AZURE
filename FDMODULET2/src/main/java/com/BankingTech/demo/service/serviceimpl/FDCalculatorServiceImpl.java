@@ -30,6 +30,10 @@ public class FDCalculatorServiceImpl
     private static final BigDecimal CATEGORY_CAP =
             BigDecimal.valueOf(2.0);
 
+    /** The displayed and calculated effective rate can never exceed this cap. */
+    private static final BigDecimal EFFECTIVE_RATE_CAP =
+            BigDecimal.valueOf(8.50);
+
 
     public FDCalculatorServiceImpl(
             SimpleInterestCalculator simpleInterestCalculator,
@@ -71,6 +75,10 @@ public class FDCalculatorServiceImpl
                                 4,
                                 RoundingMode.HALF_UP
                         );
+
+        // Category benefits are applied first, then the bank-wide effective-rate cap is enforced.
+        // A 10% or 20% entered base rate therefore projects at 8.50%, never at zero.
+        effectiveRate = effectiveRate.min(EFFECTIVE_RATE_CAP);
 
 
         InterestCalculator calculator;

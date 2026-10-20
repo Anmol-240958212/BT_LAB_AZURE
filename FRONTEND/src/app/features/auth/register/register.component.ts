@@ -20,6 +20,7 @@ import { TranslocoService } from '@jsverse/transloco';
         <app-input id="register-phone" [label]="'customer.mobileNumber' | transloco" type="tel" [placeholder]="'auth.enterPhone' | transloco" formControlName="phoneNumber" [required]="true" [error]="phoneError"></app-input>
         <app-input id="register-email" [label]="'common.email' | transloco" type="email" [placeholder]="'auth.enterEmail' | transloco" formControlName="email" [required]="true" [error]="emailError"></app-input>
         <app-input id="register-password" [label]="'auth.password' | transloco" type="password" [placeholder]="'auth.passwordHint' | transloco" formControlName="password" [required]="true" [error]="passwordError"></app-input>
+        <p class="password-requirements">Password must be 6–20 characters and include a letter, number, and special character.</p>
         <app-button type="submit" variant="primary" [loading]="loading" [disabled]="registerForm.invalid || loading" [block]="true">{{ loading ? ('auth.sendingOtp' | transloco) : ('auth.register' | transloco) }}</app-button>
       </form>
 
@@ -38,6 +39,7 @@ import { TranslocoService } from '@jsverse/transloco';
     .title { font-size: 16px; font-weight: 600; color: var(--color-text-primary); line-height: 1.2; }
     .subtitle { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; line-height: 1.3; }
     .register-form { display: flex; flex-direction: column; gap: 8px; }
+    .password-requirements { margin: -3px 0 2px; color: var(--color-text-muted); font-size: 11px; line-height: 1.35; }
     .auth-switch-link { margin-top: var(--space-5); text-align: center; font-size: var(--text-xs); color: var(--color-text-secondary); display: flex; justify-content: center; gap: var(--space-2); }
     .back-link { font-size: var(--text-xs); color: var(--color-accent); cursor: pointer; text-align: center; text-decoration: underline; margin-top: 4px; }
   `]

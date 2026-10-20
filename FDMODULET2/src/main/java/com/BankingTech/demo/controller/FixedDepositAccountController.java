@@ -98,6 +98,19 @@ public class FixedDepositAccountController {
                                 fixedDepositAccountService.getAccountsByStatus(status));
         }
 
+        @GetMapping("/all")
+        public ResponseEntity<List<FixedDepositAccountResponseDTO>> getAllAccounts(
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
+                var profile = authClient.profile(authorization);
+                String role = profile == null ? null : profile.role();
+                if (!"ADMIN".equalsIgnoreCase(role) && !"BANK_OFFICER".equalsIgnoreCase(role)
+                                && !"STAFF".equalsIgnoreCase(role)) {
+                        throw new org.springframework.web.server.ResponseStatusException(
+                                        org.springframework.http.HttpStatus.FORBIDDEN, "Officer or administrator access is required");
+                }
+                return ResponseEntity.ok(fixedDepositAccountService.getAllAccounts());
+        }
+
         @GetMapping("/customer/{customerId}/status/{status}")
         public ResponseEntity<List<FixedDepositAccountResponseDTO>> getCustomerAccountsByStatus(
                         @PathVariable String customerId,

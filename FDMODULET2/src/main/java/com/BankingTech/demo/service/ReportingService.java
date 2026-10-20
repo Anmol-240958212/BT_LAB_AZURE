@@ -72,18 +72,19 @@ public class ReportingService {
                 items.size(), sumPrincipal(items), sumAccrued(items), accountDtos);
     }
 
-    /** Builds a final maturity report without persisting Auth's customer reply. */
+    /** Builds a final maturity or premature-withdrawal settlement report without persisting Auth's customer reply. */
     public FdMaturityReportDto maturityReport(String accountNo) {
         FixedDepositAccountEntity account = accounts.findById(accountNo).orElseThrow(() ->
                 new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND, "FD account not found"));
         if (!"CLOSED".equalsIgnoreCase(account.getFdAccountStatus())) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
-                    "A maturity report is available only after the account is closed at maturity");
+                    "A settlement report is available only after the account is closed");
         }
         List<FDTransactionEntity> txs = transactions.findByFdTransactionFdAccountNoOrderByFdTransactionTxnDateAsc(accountNo);
-        FDTransactionEntity payout = txs.stream().filter(tx -> "MATURITY_PAYOUT".equalsIgnoreCase(tx.getFdTransactionTxnType()))
+        FDTransactionEntity payout = txs.stream().filter(tx -> "MATURITY_PAYOUT".equalsIgnoreCase(tx.getFdTransactionTxnType())
+                        || "WITHDRAWAL".equalsIgnoreCase(tx.getFdTransactionTxnType()))
                 .findFirst().orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
-                        "This closed account has no maturity payout; it may have been withdrawn prematurely"));
+                        "This closed account has no settlement transaction"));
         Long customerId;
         try { customerId = Long.valueOf(account.getFdAccountCustomerId()); }
         catch (NumberFormatException ex) { throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "FD account has an invalid customer reference"); }
@@ -92,15 +93,18 @@ public class ReportingService {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
                     "Customer report data does not match the FD account");
         }
-        BigDecimal principal = zero(account.getFdAccountPrincipal());
+        BigDecimal principal = txs.stream().filter(tx -> "DEPOSIT".equalsIgnoreCase(tx.getFdTransactionTxnType()))
+                .findFirst().map(tx -> zero(tx.getFdTransactionAmount())).orElseGet(() -> zero(account.getFdAccountPrincipal()));
         BigDecimal penalty = zero(payout.getFdTransactionPenaltyAmount());
         BigDecimal gross = zero(payout.getFdTransactionAmount()).add(penalty);
         BigDecimal interest = gross.subtract(principal).max(BigDecimal.ZERO);
         if (gross.compareTo(principal) < 0) {
             throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT,
-                    "Maturity payout is lower than the principal");
+                    "Settlement payout is lower than the original principal");
         }
-        return new FdMaturityReportDto("FD_MATURITY", java.time.LocalDateTime.now(), customer, account(account),
+        String reportType = "WITHDRAWAL".equalsIgnoreCase(payout.getFdTransactionTxnType())
+                ? "FD_PREMATURE_WITHDRAWAL" : "FD_MATURITY";
+        return new FdMaturityReportDto(reportType, java.time.LocalDateTime.now(), customer, account(account),
                 interestTransactions.findByFdInterestTransactionFdAccountNoOrderByFdInterestTransactionDateAsc(accountNo).stream()
                         .map(tx -> new FdMaturityReportDto.InterestTransaction(tx.getFdInterestTransactionId(),
                                 tx.getFdInterestTransactionInterestAmount(), tx.getFdInterestTransactionDate(),

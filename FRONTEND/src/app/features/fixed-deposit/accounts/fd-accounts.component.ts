@@ -537,7 +537,7 @@ export class FDAccountsComponent implements OnInit {
       this.loading = true;
     }
     const fetch$ = this.selectedStatus === 'ALL'
-      ? this.fdAccountApi.getAccountsByStatus('ACTIVE')
+      ? this.fdAccountApi.getAllAccounts()
       : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
     fetch$.pipe(

@@ -64,6 +64,7 @@ import { AuthService } from '../../../core/auth.service';
               placeholder="e.g. 001"
               formControlName="branchCode"
               [required]="true"
+              [error]="branchCodeError"
               hint="Exactly 3 digits required (e.g. 001, 501)"
             ></app-input>
           </div>
@@ -76,6 +77,7 @@ import { AuthService } from '../../../core/auth.service';
               placeholder="e.g. 100000"
               formControlName="principalAmount"
               [required]="true"
+              [error]="principalAmountError"
               hint="Minimum amount: 1,000"
             ></app-input>
 
@@ -121,34 +123,14 @@ import { AuthService } from '../../../core/auth.service';
             <p *ngIf="quoteLoading">{{ 'fd.loadingPricing' | transloco }}</p>
           <p *ngIf="quoteError" role="alert">{{ quoteError }}</p>
 
-          <div class="grid-3">
-            <div class="form-group">
-              <label class="form-label" for="fd-interest-type">{{ 'fd.interestType' | transloco }} *</label>
-              <select id="fd-interest-type" class="form-select" formControlName="interestType">
-                <option value="COMPOUND">{{ 'common.compound' | transloco }}</option>
-                <option value="SIMPLE">{{ 'common.simple' | transloco }}</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="fd-payout-type">{{ 'fd.payoutFrequency' | transloco }} *</label>
-              <select id="fd-payout-type" class="form-select" formControlName="interestPayoutType">
-                <option value="MATURITY">{{ 'common.atMaturity' | transloco }}</option>
-                <option value="ANNUAL">{{ 'fd.annualPayout' | transloco }}</option>
-                <option value="QUARTERLY">{{ 'fd.quarterlyPayout' | transloco }}</option>
-                <option value="MONTHLY">{{ 'fd.monthlyCredit' | transloco }}</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="fd-frequency">{{ 'fd.compoundingFrequency' | transloco }} *</label>
-              <select id="fd-frequency" class="form-select" formControlName="interestFrequency">
-                <option value="MONTHLY">Monthly</option>
-                <option value="QUARTERLY">Quarterly</option>
-                <option value="HALF_YEARLY">Half Yearly</option>
-                <option value="ANNUAL">Annual</option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label class="form-label" for="fd-payout-type">{{ 'fd.payoutFrequency' | transloco }} *</label>
+            <select id="fd-payout-type" class="form-select" formControlName="interestPayoutType">
+              <option value="MATURITY">{{ 'common.atMaturity' | transloco }}</option>
+              <option value="ANNUAL">{{ 'fd.annualPayout' | transloco }}</option>
+              <option value="QUARTERLY">{{ 'fd.quarterlyPayout' | transloco }}</option>
+              <option value="MONTHLY">{{ 'fd.monthlyCredit' | transloco }}</option>
+            </select>
           </div>
 
           <!-- L16 Checkbox: Create With Initial Transaction -->
@@ -290,7 +272,7 @@ export class FDCreateComponent implements OnInit, OnDestroy {
       customerId: [initialCust, Validators.required],
       productCode: ['', Validators.required],
       branchCode: [initialBranch, [Validators.required, Validators.pattern(/^\d{3}$/)]],
-      principalAmount: [q['principal'] ? Number(q['principal']) : 100000, [Validators.required, Validators.min(1000)]],
+      principalAmount: [q['principal'] ? Number(q['principal']) : 100000, [Validators.required, Validators.min(1000), Validators.max(1000000000)]],
       interestRate: [{ value: null, disabled: true }],
       termMonths: [q['term'] ? Number(q['term']) : 12, [Validators.required, Validators.min(3)]],
       interestType: [{ value: '', disabled: true }],
@@ -386,6 +368,19 @@ export class FDCreateComponent implements OnInit, OnDestroy {
       return `Tenure must be between ${minimumTerm} and ${product.termLimit.max} months.`;
     }
     return null;
+  }
+
+  get branchCodeError(): string | null {
+    const control = this.fdForm?.get('branchCode');
+    if (!control || !(control.dirty || control.touched) || control.valid) return null;
+    return 'Branch code must contain exactly 3 digits (for example, 001).';
+  }
+
+  get principalAmountError(): string | null {
+    const control = this.fdForm?.get('principalAmount');
+    if (!control || !(control.dirty || control.touched) || control.valid) return null;
+    const currency = this.selectedProduct?.currency === 'JPY' ? '¥' : '₹';
+    return 'Deposit amount must be between ' + currency + '1,000 and ' + currency + '1,000,000,000.';
   }
 
   private refreshQuote(): void {

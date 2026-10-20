@@ -2,6 +2,7 @@ package com.BankingTech.demo.dto.requestdto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,6 +21,7 @@ public class FDCalculationRequestDTO {
 
     @NotNull(message = "Base rate is required")
     @DecimalMin(value = "0.0", message = "Base rate cannot be negative")
+    @DecimalMax(value = "8.5", message = "Base rate cannot exceed 8.5%")
     private BigDecimal baseRate;
 
     private List<String> categories;

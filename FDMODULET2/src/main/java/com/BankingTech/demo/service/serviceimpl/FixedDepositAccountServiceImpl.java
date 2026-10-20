@@ -309,6 +309,13 @@ public class FixedDepositAccountServiceImpl
         }
 
         @Override
+        public List<FixedDepositAccountResponseDTO> getAllAccounts() {
+                return fixedDepositAccountRepository.findAll().stream()
+                                .map(this::convertToResponseDTO)
+                                .toList();
+        }
+
+        @Override
         @Transactional(readOnly = true)
         public List<FixedDepositAccountResponseDTO> getCustomerAccountsByStatus(
                         String customerId,

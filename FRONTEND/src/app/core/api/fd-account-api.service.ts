@@ -38,6 +38,10 @@ export class FDAccountApiService {
     return this.http.get<FixedDepositAccountResponse[]>(`${this.baseUrl}/status/${encodeURIComponent(status)}`);
   }
 
+  public getAllAccounts(): Observable<FixedDepositAccountResponse[]> {
+    return this.http.get<FixedDepositAccountResponse[]>(`${this.baseUrl}/all`);
+  }
+
   public getCustomerAccountsByStatus(customerId: string, status: string): Observable<FixedDepositAccountResponse[]> {
     return this.http.get<FixedDepositAccountResponse[]>(
       `${this.baseUrl}/customer/${encodeURIComponent(customerId)}/status/${encodeURIComponent(status)}`
