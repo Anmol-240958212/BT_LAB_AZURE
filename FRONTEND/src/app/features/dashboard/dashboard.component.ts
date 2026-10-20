@@ -34,11 +34,14 @@ import { TableColumn } from '../../shared/components/table/table.component';
 
         <!-- Metric Stat Cards Row -->
         <div class="grid-4 mt-6">
-          <div class="stat-card">
-            <span class="stat-label">TOTAL PORTFOLIO VALUE</span>
-            <span class="stat-value">{{ totalDepositValue | currencyInr }}</span>
-            <span class="stat-meta text-accent">Active Fixed Deposits</span>
-          </div>
+            <div class="stat-card">
+              <span class="stat-label">TOTAL PORTFOLIO VALUE</span>
+              <span class="stat-value">{{ totalDepositValue | currencyInr:true:'INR' }}</span>
+              <span class="stat-value currency-secondary" *ngFor="let total of otherPortfolioValues">
+                {{ total.value | currencyInr:true:total.currency }}
+              </span>
+              <span class="stat-meta text-accent">Active Fixed Deposits</span>
+            </div>
 
           <div class="stat-card">
             <span class="stat-label">ACTIVE ACCOUNTS</span>
@@ -46,11 +49,14 @@ import { TableColumn } from '../../shared/components/table/table.component';
             <span class="stat-meta text-secondary">Verified & Earning Interest</span>
           </div>
 
-          <div class="stat-card">
-            <span class="stat-label">ACCRUED INTEREST</span>
-            <span class="stat-value">{{ totalAccruedInterest | currencyInr }}</span>
-            <span class="stat-meta text-success">Compounded to Date</span>
-          </div>
+            <div class="stat-card">
+              <span class="stat-label">ACCRUED INTEREST</span>
+              <span class="stat-value">{{ totalAccruedInterest | currencyInr:true:'INR' }}</span>
+              <span class="stat-value currency-secondary" *ngFor="let total of otherAccruedInterestValues">
+                {{ total.value | currencyInr:true:total.currency }}
+              </span>
+              <span class="stat-meta text-success">Compounded to Date</span>
+            </div>
 
           <div class="stat-card">
             <span class="stat-label">MAX REGULATORY RATE</span>
@@ -302,6 +308,8 @@ export class DashboardComponent implements OnInit {
 
   recentAccounts: FixedDepositAccountResponse[] = [];
   userCustomerId: string | null = null;
+  otherPortfolioValues: Array<{ currency: string; value: number }> = [];
+  otherAccruedInterestValues: Array<{ currency: string; value: number }> = [];
 
   constructor(
     private readonly authService: AuthService,
@@ -400,31 +408,51 @@ export class DashboardComponent implements OnInit {
   }
 
   private filterAccountsForCustomer(): void {
+    const activeAccounts = this.allLoadedAccounts.filter(account =>
+      String(account.status || '').trim().toUpperCase() === 'ACTIVE'
+    );
+
     if (this.currentRole === 'CUSTOMER') {
       if (!this.isDemoUser()) {
         if (this.userCustomerId) {
           const id = this.userCustomerId.trim().toLowerCase();
-          this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
+          this.recentAccounts = activeAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
         } else {
           this.recentAccounts = [];
         }
       } else {
         if (this.userCustomerId) {
           const id = this.userCustomerId.trim().toLowerCase();
-          this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
+          this.recentAccounts = activeAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
         } else {
-          this.recentAccounts = this.allLoadedAccounts.filter(a => a.customerId && (a.customerId === '9' || a.customerId.includes('1001')));
+          this.recentAccounts = activeAccounts.filter(a => a.customerId && (a.customerId === '9' || a.customerId.includes('1001')));
         }
       }
     } else {
-      this.recentAccounts = [...this.allLoadedAccounts];
+      this.recentAccounts = activeAccounts;
     }
   }
 
   private recalculateStats(): void {
     this.activeAccountCount = this.recentAccounts.length;
-    this.totalDepositValue = this.recentAccounts.reduce((acc, curr) => acc + (Number(curr.principalAmount) || 0), 0);
-    this.totalAccruedInterest = this.recentAccounts.reduce((acc, curr) => acc + (Number(curr.accruedInterest) || 0), 0);
+    const totals = this.recentAccounts.reduce<Record<string, number>>((acc, account) => {
+      const currency = String(account.currency || 'INR').trim().toUpperCase();
+      acc[currency] = (acc[currency] || 0) + (Number(account.principalAmount) || 0);
+      return acc;
+    }, {});
+    this.totalDepositValue = totals['INR'] || 0;
+    this.otherPortfolioValues = Object.entries(totals)
+      .filter(([currency]) => currency !== 'INR')
+      .map(([currency, value]) => ({ currency, value }));
+    const accruedTotals = this.recentAccounts.reduce<Record<string, number>>((acc, account) => {
+      const currency = String(account.currency || 'INR').trim().toUpperCase();
+      acc[currency] = (acc[currency] || 0) + (Number(account.accruedInterest) || 0);
+      return acc;
+    }, {});
+    this.totalAccruedInterest = accruedTotals['INR'] || 0;
+    this.otherAccruedInterestValues = Object.entries(accruedTotals)
+      .filter(([currency]) => currency !== 'INR')
+      .map(([currency, value]) => ({ currency, value }));
     // HTTP subscriptions must notify Angular's zoneless change detection.
     this.cdr.markForCheck();
   }

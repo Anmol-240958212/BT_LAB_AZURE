@@ -71,7 +71,7 @@ export class RegisterComponent implements OnInit {
     this.loading = true;
     const { name, phoneNumber, email, password } = this.registerForm.value;
     this.authApi.register({ name, username: email, email, phoneNumber, password }).subscribe({
-      next: () => { this.loading = false; this.identifier = email || phoneNumber; this.toastService.info('OTP sent. Check your email/phone.', 'Verification');
+      next: () => { this.loading = false; this.identifier = email || phoneNumber; this.toastService.info('OTP sent. Check your email.', 'Verification');
         // Navigate to standalone verify-otp page with identifier
         this.router.navigate(['/verify-otp'], {
           queryParams: { email: email || '', phone: phoneNumber || '' },

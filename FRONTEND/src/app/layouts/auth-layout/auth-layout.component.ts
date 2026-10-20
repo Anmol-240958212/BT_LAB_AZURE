@@ -14,7 +14,7 @@ export interface BankingVideo {
   template: `
     <app-toast></app-toast>
 
-    <div class="auth-layout-container">
+    <div class="auth-layout-container" languageUi>
       <!-- Static VaultOne background shared by every authentication route -->
       <div class="video-background-layer" aria-hidden="true">
         <img src="/assets/login-bg.png" alt="" class="auth-background-image" />
@@ -377,6 +377,7 @@ export class AuthLayoutComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer,
     private cdr: ChangeDetectorRef
   ) {}
+
 
   ngOnInit(): void {
     this.buildSafeVideoUrl();

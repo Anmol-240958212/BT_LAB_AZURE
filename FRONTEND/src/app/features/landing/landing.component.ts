@@ -184,6 +184,7 @@ export class LandingComponent implements OnInit, OnDestroy {
     }
   }
 
+
   private updateActiveNavSection(): void {
     const sections = ['hero', 'features', 'calculator', 'rates', 'solutions'];
     const marker = window.scrollY + 140;

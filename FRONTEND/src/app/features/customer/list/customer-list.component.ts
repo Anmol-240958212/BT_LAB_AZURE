@@ -1,4 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { of } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { CustomerApiService } from '../../../core/api/customer-api.service';
 import { CustomerProfileResponse } from '../../../core/models/auth.models';
 import { TableColumn } from '../../../shared/components/table/table.component';
@@ -70,11 +72,37 @@ import { TableColumn } from '../../../shared/components/table/table.component';
               <span class="detail-label">Status</span>
               <app-badge [variant]="selectedCustomer.status === 'ACTIVE' ? 'active' : 'pending'" [text]="selectedCustomer.status"></app-badge>
             </div>
+            <div class="detail-item">
+              <span class="detail-label">Classification</span>
+              <span class="detail-val">{{ selectedCustomer.classificationValue || 'Not classified' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Gender</span>
+              <span class="detail-val">{{ selectedCustomer.gender || '—' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Identification</span>
+              <span class="detail-val">{{ selectedCustomer.identificationType || '—' }} · {{ selectedCustomer.maskedIdentificationNumber || 'Not provided' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Email</span>
+              <span class="detail-val">{{ selectedCustomer.maskedEmail || '—' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Mobile</span>
+              <span class="detail-val">{{ selectedCustomer.maskedMobileNumber || '—' }}</span>
+            </div>
+            <div class="detail-item full-width" *ngIf="selectedCustomer.addressLine1 || selectedCustomer.city || selectedCustomer.state">
+              <span class="detail-label">Registered Address</span>
+              <span class="detail-val">
+                {{ selectedCustomer.addressLine1 || '' }}{{ selectedCustomer.city ? ', ' + selectedCustomer.city : '' }}{{ selectedCustomer.state ? ', ' + selectedCustomer.state : '' }}{{ selectedCustomer.postalCode ? ' - ' + selectedCustomer.postalCode : '' }}
+              </span>
+            </div>
           </div>
 
           <div class="notice-box mb-4">
             <app-icon name="shield" [size]="16"></app-icon>
-            <span>Customer PII is masked in compliance with banking privacy and data protection standards.</span>
+            <span>Identification and contact details are masked. Operational KYC details are available to authorized staff.</span>
           </div>
         </div>
 
@@ -107,6 +135,9 @@ import { TableColumn } from '../../../shared/components/table/table.component';
       flex-direction: column;
       gap: 2px;
     }
+    .detail-item.full-width {
+      grid-column: 1 / -1;
+    }
     .detail-label {
       font-size: 10px;
       color: var(--color-text-muted);
@@ -126,32 +157,7 @@ export class CustomerListComponent implements OnInit {
   isModalOpen = false;
   selectedCustomer: CustomerProfileResponse | null = null;
 
-  allCustomers: CustomerProfileResponse[] = [
-    {
-      customerId: 1001,
-      fullName: 'Aarav Sharma',
-      status: 'ACTIVE',
-      message: 'Verified'
-    },
-    {
-      customerId: 1002,
-      fullName: 'Priya Venkatesh',
-      status: 'PENDING',
-      message: 'Pending verification'
-    },
-    {
-      customerId: 1003,
-      fullName: 'Rohan Deshmukh',
-      status: 'ACTIVE',
-      message: 'Verified'
-    },
-    {
-      customerId: 1004,
-      fullName: 'Ananya Rao',
-      status: 'ACTIVE',
-      message: 'Verified'
-    }
-  ];
+  allCustomers: CustomerProfileResponse[] = [];
 
   filteredCustomers: CustomerProfileResponse[] = [];
 
@@ -159,28 +165,40 @@ export class CustomerListComponent implements OnInit {
     { field: 'customerId', header: 'Customer ID', width: '140px' },
     { field: 'fullName', header: 'Customer Full Name' },
     { field: 'status', header: 'KYC Status', type: 'badge', align: 'center' },
-    { field: 'message', header: 'Verification Notes' }
+    { field: 'classificationValue', header: 'Classification' },
+    { field: 'maskedEmail', header: 'Email' },
+    { field: 'maskedMobileNumber', header: 'Mobile' }
   ];
 
-  constructor(private readonly customerApi: CustomerApiService) {}
+  constructor(
+    private readonly customerApi: CustomerApiService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    this.filteredCustomers = [...this.allCustomers];
     this.loadCustomers();
   }
 
   loadCustomers(): void {
     this.loading = true;
-    this.customerApi.getAllCustomers().subscribe({
+    this.customerApi.getAllCustomers().pipe(
+      // Do not leave the table overlay open when the auth service/API is slow.
+      timeout(10000),
+      catchError(() => of([] as CustomerProfileResponse[]))
+    ).subscribe({
       next: (data) => {
+        this.allCustomers = Array.isArray(data) ? data : [];
+        this.onSearch();
+      },
+      complete: () => {
         this.loading = false;
-        if (data && data.length > 0) {
-          this.allCustomers = data;
-          this.onSearch();
-        }
+        this.cdr.detectChanges();
       },
       error: () => {
         this.loading = false;
+        this.allCustomers = [];
+        this.onSearch();
+        this.cdr.detectChanges();
       }
     });
   }
@@ -192,7 +210,7 @@ export class CustomerListComponent implements OnInit {
       return;
     }
     this.filteredCustomers = this.allCustomers.filter(c =>
-      c.fullName.toLowerCase().includes(q) ||
+      (c.fullName || '').toLowerCase().includes(q) ||
       String(c.customerId).includes(q)
     );
   }

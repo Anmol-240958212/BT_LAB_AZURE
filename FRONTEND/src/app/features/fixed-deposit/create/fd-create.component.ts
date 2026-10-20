@@ -96,6 +96,7 @@ import { AuthService } from '../../../core/auth.service';
               placeholder="e.g. 12"
               formControlName="termMonths"
               [required]="true"
+              [error]="termRangeError"
               min="3"
               (focus)="showDurationDates = true"
               (click)="showDurationDates = true"
@@ -371,6 +372,20 @@ export class FDCreateComponent implements OnInit, OnDestroy {
     const lastDayOfMaturityMonth = new Date(maturity.getFullYear(), maturity.getMonth() + 1, 0).getDate();
     maturity.setDate(Math.min(dayOfMonth, lastDayOfMaturityMonth));
     return { start, maturity };
+  }
+
+  get termRangeError(): string | null {
+    const product = this.selectedProduct;
+    const value = this.fdForm?.get('termMonths')?.value;
+    if (!product || value === null || value === undefined || value === '') return null;
+
+    const termMonths = Number(value);
+    const minimumTerm = Math.max(3, product.termLimit.min);
+    if (!Number.isInteger(termMonths)) return 'Enter whole months only.';
+    if (termMonths < minimumTerm || termMonths > product.termLimit.max) {
+      return `Tenure must be between ${minimumTerm} and ${product.termLimit.max} months.`;
+    }
+    return null;
   }
 
   private refreshQuote(): void {

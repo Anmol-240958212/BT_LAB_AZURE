@@ -8,5 +8,5 @@ public interface NotificationService {
      * @param recipient Email address or phone number of the recipient
      * @param otpCode The OTP code to send
      */
-    void sendOtpNotification(String recipient, String otpCode);
+    void sendOtpNotification(String recipient, String otpCode, OtpPurpose purpose);
 }

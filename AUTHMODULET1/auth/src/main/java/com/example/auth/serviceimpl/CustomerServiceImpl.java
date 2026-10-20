@@ -10,6 +10,7 @@ import com.example.auth.service.CustomerService;
 import com.example.auth.service.KycEventPublisherService;
 import com.example.auth.util.AuditData;
 import com.example.auth.util.AuditUtil;
+import com.example.auth.util.MaskingUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -70,6 +71,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public CustomerProfileResponseDto submitKycProfile(CustomerProfileRequestDto request, String username) {
+        validateIndianMobileNumber(request.getMobileNumber());
         
         AuthUsr authUsr = authUsrRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found"));
@@ -87,8 +89,12 @@ public class CustomerServiceImpl implements CustomerService {
         // 1. Update CustDtl
         customer.setDateOfBirth(request.getDateOfBirth());
         customer.setGender(request.getGender());
-        customer.setPreferredLanguage(request.getPreferredLanguage());
-        customer.setCountryOfOrigin(request.getCountryOfOrigin());
+        // These are mandatory KYC attributes. Keep safe defaults for older
+        // clients that do not yet send the newly added fields.
+        customer.setPreferredLanguage(hasText(request.getPreferredLanguage())
+                ? request.getPreferredLanguage().trim() : "English");
+        customer.setCountryOfOrigin(hasText(request.getCountryOfOrigin())
+                ? request.getCountryOfOrigin().trim() : "India");
         
         if (request.getDateOfBirth() != null) {
             int age = Period.between(request.getDateOfBirth(), LocalDate.now()).getYears();
@@ -251,13 +257,53 @@ public class CustomerServiceImpl implements CustomerService {
             throw new org.springframework.security.access.AccessDeniedException("Access Denied: You do not have permission to access all customers");
         }
 
-        return custDtlRepository.findAll().stream().map(customer -> {
+        // Read from authenticated customer accounts so newly verified and
+        // KYC-pending registrations are included, while staff/admin records
+        // are excluded from the customer repository.
+        return authUsrRepository.findAll().stream()
+                .filter(user -> user.getRole() != null
+                        && "CUSTOMER".equals(user.getRole().getRoleCode()))
+                .filter(user -> user.getCustomer() != null)
+                .map(user -> {
+            CustDtl customer = user.getCustomer();
             CustomerProfileResponseDto dto = new CustomerProfileResponseDto();
+            dto.setMessage("Customer record");
             dto.setCustomerId(customer.getCustomerIdentifier());
             dto.setFullName(customer.getFullName());
+            dto.setGender(customer.getGender());
+            if (customer.getCustomerType() != null) {
+                dto.setCustomerType(customer.getCustomerType().getTypeCode());
+            }
             if (customer.getCustomerStatus() != null) {
                 dto.setStatus(customer.getCustomerStatus().getStatusCode());
             }
+            if (customer.getClassification() != null) {
+                dto.setClassificationType(customer.getClassification().getClassificationType());
+                dto.setClassificationValue(customer.getClassification().getClassificationTypeValue());
+            }
+
+            dto.setMaskedEmail(MaskingUtil.maskEmail(user.getEmail()));
+            dto.setMaskedMobileNumber(MaskingUtil.maskMobileNumber(user.getPhoneNumber()));
+
+            custIdfnRepository.findByCustomer(customer).stream().findFirst().ifPresent(idfn -> {
+                if (idfn.getIdentificationType() != null) {
+                    dto.setIdentificationType(idfn.getIdentificationType().getIdentificationType());
+                }
+                dto.setMaskedIdentificationNumber(
+                        MaskingUtil.maskIdentificationNumber(idfn.getIdentificationItem()));
+            });
+
+            custAddrCmpntRepository.findByCustomer(customer).forEach(address -> {
+                if (address.getAddressType() == null) return;
+                switch (address.getAddressType().getAddressType()) {
+                    case "ADDRESS_LINE_1" -> dto.setAddressLine1(address.getAddressTypeValue());
+                    case "CITY" -> dto.setCity(address.getAddressTypeValue());
+                    case "STATE" -> dto.setState(address.getAddressTypeValue());
+                    case "COUNTRY" -> dto.setCountry(address.getAddressTypeValue());
+                    case "POSTAL_CODE" -> dto.setPostalCode(address.getAddressTypeValue());
+                    default -> { }
+                }
+            });
             return dto;
         }).collect(java.util.stream.Collectors.toList());
     }
@@ -476,6 +522,32 @@ public class CustomerServiceImpl implements CustomerService {
             sb.append(last.trim());
         }
         return sb.toString();
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    /**
+     * KYC accepts an optional mobile number, but when supplied it must be an
+     * Indian 10-digit mobile number beginning with 6, 7, 8, or 9. The UI
+     * formats numbers as +91 XXX XXX XXXX, so separators and the country code
+     * are ignored for validation.
+     */
+    private void validateIndianMobileNumber(String mobileNumber) {
+        if (mobileNumber == null || mobileNumber.isBlank()) {
+            return;
+        }
+
+        String digits = mobileNumber.replaceAll("\\D", "");
+        if (digits.length() == 12 && digits.startsWith("91")) {
+            digits = digits.substring(2);
+        }
+
+        if (!digits.matches("[6-9]\\d{9}")) {
+            throw new IllegalArgumentException(
+                    "Mobile number must be a valid 10-digit Indian number starting with 6, 7, 8, or 9");
+        }
     }
 }
 

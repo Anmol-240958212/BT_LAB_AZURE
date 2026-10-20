@@ -18,11 +18,11 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
         <span *ngIf="required" class="required-star">*</span>
       </label>
 
-      <div class="input-wrapper">
+      <div class="input-wrapper" [class.password-input]="type === 'password'">
         <input
           [id]="id"
           [name]="name || id"
-          [type]="type"
+          [type]="type === 'password' && showPassword ? 'text' : type"
           [placeholder]="placeholder"
           [disabled]="disabled"
           [readOnly]="readonly"
@@ -35,6 +35,16 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
           (blur)="onBlur()"
           (focus)="onFocus()"
         />
+        <button
+          *ngIf="type === 'password'"
+          type="button"
+          class="password-toggle"
+          [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+          [attr.title]="showPassword ? 'Hide password' : 'Show password'"
+          (click)="togglePasswordVisibility($event)"
+        >
+          <app-icon [name]="showPassword ? 'eye-off' : 'eye'" [size]="16"></app-icon>
+        </button>
       </div>
 
       <div *ngIf="error" class="form-error" [id]="id + '-error'" role="alert">
@@ -59,6 +69,32 @@ import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
       position: relative;
       width: 100%;
     }
+    .password-input .form-input {
+      padding-right: 42px;
+    }
+    .password-toggle {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--color-text-muted);
+      cursor: pointer;
+      border-radius: var(--radius-button);
+    }
+    .password-toggle:hover,
+    .password-toggle:focus-visible {
+      color: var(--color-text-primary);
+      background: var(--color-bg-hover);
+      outline: none;
+    }
   `]
 })
 export class AppInputComponent implements ControlValueAccessor {
@@ -77,6 +113,8 @@ export class AppInputComponent implements ControlValueAccessor {
   @Input() hint: string | null = null;
 
   @Input() value: string | number = '';
+
+  showPassword = false;
 
   onChange: (val: any) => void = () => {};
   onTouched: () => void = () => {};
@@ -110,4 +148,10 @@ export class AppInputComponent implements ControlValueAccessor {
   }
 
   onFocus(): void {}
+
+  togglePasswordVisibility(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.showPassword = !this.showPassword;
+  }
 }

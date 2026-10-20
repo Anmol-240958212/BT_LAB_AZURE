@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../core/auth.service';
+import { UserApiService } from '../../../core/api/user-api.service';
 import { AuthState } from '../../../core/models/auth.models';
 
 @Component({
@@ -55,6 +56,7 @@ import { AuthState } from '../../../core/models/auth.models';
             Register
           </a>
         </ng-template>
+
       </div>
     </header>
   `,
@@ -124,16 +126,32 @@ import { AuthState } from '../../../core/models/auth.models';
 })
 export class AppTopbarComponent implements OnInit, OnDestroy {
   authState: AuthState | null = null;
+  private profileLoadedFor = '';
   private sub?: Subscription;
 
   constructor(
     private readonly authService: AuthService,
+    private readonly userApi: UserApiService,
     private readonly router: Router
   ) {}
 
   ngOnInit(): void {
     this.sub = this.authService.authState$.subscribe(state => {
       this.authState = state;
+      if (state?.isAuthenticated && state.username && this.profileLoadedFor !== state.username) {
+        this.profileLoadedFor = state.username;
+        this.userApi.getMe().subscribe({
+          next: user => {
+            const profileName = user.fullName || [user.firstName, user.lastName]
+              .filter(Boolean)
+              .join(' ');
+            this.authService.setDisplayName(profileName);
+          },
+          error: () => {}
+        });
+      } else if (!state?.isAuthenticated) {
+        this.profileLoadedFor = '';
+      }
     });
   }
 
@@ -149,4 +167,5 @@ export class AppTopbarComponent implements OnInit, OnDestroy {
   get displayName(): string {
     return this.authState?.displayName || (this.authState?.username ? this.authService.getDisplayName(this.authState.username) : 'User');
   }
+
 }

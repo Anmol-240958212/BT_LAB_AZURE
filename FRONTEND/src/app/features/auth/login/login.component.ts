@@ -256,9 +256,17 @@ export class LoginComponent implements OnInit {
         this.loading = false;
         this.authService.setSession(response);
         const role = this.authService.getRole();
-        const displayName = this.authService.getDisplayName(username);
-        this.toastService.success(`Welcome back, ${displayName}!`, 'Authentication Successful');
-        this.navigateAfterLogin(role);
+        this.userApi.getMe().pipe(
+          take(1),
+          catchError(() => of(null))
+        ).subscribe(profile => {
+          const displayName = profile?.fullName
+            || [profile?.firstName, profile?.lastName].filter(Boolean).join(' ')
+            || this.authService.getDisplayName(username);
+          this.authService.setDisplayName(displayName);
+          this.toastService.success(`Welcome back, ${displayName}!`, 'Authentication Successful');
+          this.navigateAfterLogin(role);
+        });
       },
       error: (err: any) => {
         this.loading = false;

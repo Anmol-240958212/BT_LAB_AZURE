@@ -46,6 +46,7 @@ import { ToastService } from '../../../shared/services/toast.service';
               type="number"
               placeholder="e.g. 100000"
               [(ngModel)]="principal"
+              (ngModelChange)="calculate()"
               name="principal"
               [required]="true"
               [hint]="currency === 'JPY' ? 'Minimum deposit: ¥ 1,000' : 'Minimum deposit: ₹ 1,000'"
@@ -53,7 +54,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 
             <div class="form-group">
               <label class="form-label" for="calc-currency">Currency *</label>
-              <select id="calc-currency" class="form-select" [(ngModel)]="currency" name="currency">
+              <select id="calc-currency" class="form-select" [(ngModel)]="currency" (ngModelChange)="calculate()" name="currency">
                 <option value="INR">INR — Indian Rupee</option>
                 <option value="JPY">JPY — Japanese Yen</option>
               </select>
@@ -67,13 +68,14 @@ import { ToastService } from '../../../shared/services/toast.service';
                 type="number"
                 placeholder="e.g. 12"
                 [(ngModel)]="termValue"
+                (ngModelChange)="calculate()"
                 name="termValue"
                 [required]="true"
               ></app-input>
 
               <div class="form-group">
                 <label class="form-label" for="calc-term-unit">Term Unit *</label>
-                <select id="calc-term-unit" class="form-select" [(ngModel)]="termUnit" name="termUnit">
+                <select id="calc-term-unit" class="form-select" [(ngModel)]="termUnit" (ngModelChange)="calculate()" name="termUnit">
                   <option value="MONTHS">Months</option>
                   <option value="DAYS">Days</option>
                   <option value="YEARS">Years</option>
@@ -88,6 +90,7 @@ import { ToastService } from '../../../shared/services/toast.service';
               type="number"
               placeholder="e.g. 7.10"
               [(ngModel)]="baseRate"
+              (ngModelChange)="calculate()"
               name="baseRate"
               [required]="true"
               hint="Card base interest rate before category add-ons"
@@ -96,7 +99,7 @@ import { ToastService } from '../../../shared/services/toast.service';
             <!-- Interest Accrual Mechanism -->
             <div class="form-group">
               <label class="form-label" for="calc-interest-type">Interest Accrual Rule *</label>
-              <select id="calc-interest-type" class="form-select" [(ngModel)]="interestType" name="interestType">
+              <select id="calc-interest-type" class="form-select" [(ngModel)]="interestType" (ngModelChange)="calculate()" name="interestType">
                 <option value="COMPOUND">Compound Interest</option>
                 <option value="SIMPLE">Simple Interest (Direct Linear Accrual)</option>
               </select>
@@ -104,7 +107,7 @@ import { ToastService } from '../../../shared/services/toast.service';
 
             <div class="form-group">
               <label class="form-label" for="calc-interest-frequency">Compounding Frequency *</label>
-              <select id="calc-interest-frequency" class="form-select" [(ngModel)]="interestFrequency" name="interestFrequency" [disabled]="interestType === 'SIMPLE'">
+              <select id="calc-interest-frequency" class="form-select" [(ngModel)]="interestFrequency" (ngModelChange)="calculate()" name="interestFrequency" [disabled]="interestType === 'SIMPLE'">
                 <option value="DAILY">Daily</option>
                 <option value="MONTHLY">Monthly</option>
                 <option value="QUARTERLY">Quarterly</option>
@@ -119,15 +122,15 @@ import { ToastService } from '../../../shared/services/toast.service';
               <span class="category-header-title">Special Category Add-ons:</span>
               <div class="checkbox-group">
                 <label class="checkbox-item">
-                  <input type="checkbox" [(ngModel)]="seniorCitizen" name="seniorCitizen" />
+                  <input type="checkbox" [(ngModel)]="seniorCitizen" (ngModelChange)="calculate()" name="seniorCitizen" />
                   <span>Senior Citizen (+0.50%)</span>
                 </label>
                 <label class="checkbox-item">
-                  <input type="checkbox" [(ngModel)]="bankEmployee" name="bankEmployee" />
+                  <input type="checkbox" [(ngModel)]="bankEmployee" (ngModelChange)="calculate()" name="bankEmployee" />
                   <span>Bank Employee / Staff (+1.00%)</span>
                 </label>
                 <label class="checkbox-item">
-                  <input type="checkbox" [(ngModel)]="premiumCustomer" name="premiumCustomer" />
+                  <input type="checkbox" [(ngModel)]="premiumCustomer" (ngModelChange)="calculate()" name="premiumCustomer" />
                   <span>Premium Wealth Customer (+0.25%)</span>
                 </label>
               </div>
@@ -190,13 +193,15 @@ import { ToastService } from '../../../shared/services/toast.service';
           <div class="comparison-matrix mt-6">
             <span class="matrix-title">Comparison Preview: Simple vs Compound</span>
             <div class="grid-2 mt-2">
-              <div class="matrix-card">
-                <span class="matrix-label">Simple Interest Yield</span>
+              <div class="matrix-card" [class.highlight-card]="interestType === 'SIMPLE'">
+                <span class="matrix-label">Simple Interest (Linear)</span>
                 <span class="matrix-val">{{ simpleYield | currencyInr:true:currency }}</span>
+                <span class="matrix-sub">Interest: +{{ simpleInterestEarned | currencyInr:true:currency }}</span>
               </div>
-              <div class="matrix-card highlight-card">
-                <span class="matrix-label">Compound Interest Yield</span>
+              <div class="matrix-card" [class.highlight-card]="interestType === 'COMPOUND'">
+                <span class="matrix-label">Compound ({{ interestFrequency | lowercase }})</span>
                 <span class="matrix-val text-accent">{{ compoundYield | currencyInr:true:currency }}</span>
+                <span class="matrix-sub text-success">Interest: +{{ compoundInterestEarned | currencyInr:true:currency }}</span>
               </div>
             </div>
           </div>
@@ -345,6 +350,11 @@ import { ToastService } from '../../../shared/services/toast.service';
       font-size: var(--text-sm);
       font-weight: 600;
     }
+    .matrix-sub {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+      margin-top: 2px;
+    }
   `]
 })
 export class FDCalculatorComponent implements OnInit {
@@ -364,6 +374,14 @@ export class FDCalculatorComponent implements OnInit {
   result: FDCalculationResponse | null = null;
   simpleYield = 0;
   compoundYield = 0;
+
+  get simpleInterestEarned(): number {
+    return Math.max(0, Math.round((this.simpleYield - (Number(this.principal) || 0)) * 100) / 100);
+  }
+
+  get compoundInterestEarned(): number {
+    return Math.max(0, Math.round((this.compoundYield - (Number(this.principal) || 0)) * 100) / 100);
+  }
 
   readonly MAX_ALLOWED_RATE = 8.5; // Mandate L11
 
@@ -427,8 +445,15 @@ export class FDCalculatorComponent implements OnInit {
     this.simpleYield = numPrincipal + simpleInterest;
 
     // Compound Interest: A = P × (1 + r/n)^(n×t), with n chosen by the customer.
+    // In banking, if the tenure is shorter than one compounding cycle, interest accrues as simple linear interest
     const periods = this.compoundingPeriodsPerYear;
-    const compoundAmount = Math.round((numPrincipal * Math.pow(1 + rate / periods, periods * years)) * 100) / 100;
+    const periodsInTerm = periods * years;
+    let compoundAmount: number;
+    if (periodsInTerm < 1 && this.interestType === 'COMPOUND') {
+      compoundAmount = this.simpleYield;
+    } else {
+      compoundAmount = Math.round((numPrincipal * Math.pow(1 + rate / periods, periodsInTerm)) * 100) / 100;
+    }
     this.compoundYield = compoundAmount;
 
     // Immediate local calculation ensures responsive feedback with zero UI freeze
@@ -474,7 +499,12 @@ export class FDCalculatorComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         if (res && res.maturityAmount) {
-          this.result = res;
+          // If the user specified DAYS, keep the exact day-based local calculation to prevent backend whole-month rounding distortion
+          if (this.termUnit === 'DAYS') {
+            this.result = localResult;
+          } else {
+            this.result = res;
+          }
         } else {
           this.result = localResult;
         }

@@ -21,6 +21,7 @@ import com.example.auth.repository.CustStsMstrRepository;
 import com.example.auth.repository.CustTypMstrRepository;
 import com.example.auth.security.JwtService;
 import com.example.auth.service.AuthService;
+import com.example.auth.service.OtpPurpose;
 import com.example.auth.service.OtpService;
 import com.example.auth.util.AuditData;
 import com.example.auth.util.AuditUtil;
@@ -168,7 +169,7 @@ public class AuthServiceImpl implements AuthService {
                 pendingRegistrations.put(identifier, pendingRegistration);
 
                 // Generate OTP
-                otpService.generateAndSendOtp(identifier);
+                otpService.generateAndSendOtp(identifier, OtpPurpose.REGISTRATION);
         }
 
         @Override
@@ -310,6 +311,7 @@ public class AuthServiceImpl implements AuthService {
                 authUsr.setPasswordHash(
                                 passwordEncoder.encode(
                                                 pendingRegistration.getPassword()));
+                authUsr.setPasswordChangedAt(LocalDateTime.now());
 
                 // Assign CUSTOMER role
                 authUsr.setRole(customerRole);
@@ -570,7 +572,7 @@ public class AuthServiceImpl implements AuthService {
                         throw new IllegalArgumentException("No email address is registered for this account");
                 }
 
-                otpService.generateAndSendOtp(email.trim().toLowerCase());
+                otpService.generateAndSendOtp(email.trim().toLowerCase(), OtpPurpose.PASSWORD_RESET);
         }
 
         @Override
@@ -609,6 +611,7 @@ public class AuthServiceImpl implements AuthService {
                         throw new IllegalArgumentException("Invalid or expired OTP");
 
                 authUsr.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+                authUsr.setPasswordChangedAt(LocalDateTime.now());
 
                 authUsrRepository.save(authUsr);
         }

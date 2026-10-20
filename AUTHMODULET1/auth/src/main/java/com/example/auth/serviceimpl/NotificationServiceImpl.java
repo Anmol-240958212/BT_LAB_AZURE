@@ -3,6 +3,7 @@ package com.example.auth.serviceimpl;
 import com.example.auth.entity.NotificationLogEntity;
 import com.example.auth.repository.NotificationRepository;
 import com.example.auth.service.NotificationService;
+import com.example.auth.service.OtpPurpose;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -29,14 +30,20 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void sendOtpNotification(String recipient, String otpCode) {
+    public void sendOtpNotification(String recipient, String otpCode, OtpPurpose purpose) {
+        boolean registration = purpose == OtpPurpose.REGISTRATION;
+        String subject = registration ? "Verify your VaultOne account" : "Your password reset OTP";
+        String body = registration
+                ? "Your VaultOne account verification OTP is: " + otpCode
+                : "Your password reset OTP is: " + otpCode;
+
         // Create notification log entity
         NotificationLogEntity notificationLog = new NotificationLogEntity(
                 "OTP",
                 "EMAIL",
                 recipient,
                 "PENDING",
-                "Your OTP is: " + otpCode,
+                body,
                 null  // customerId — not available during registration
         );
         notificationRepository.save(notificationLog);
@@ -47,8 +54,8 @@ public class NotificationServiceImpl implements NotificationService {
             message.setFrom(sender);
         }
         message.setTo(recipient);
-        message.setSubject("Your password reset OTP");
-        message.setText("Your password reset OTP is: " + otpCode
+        message.setSubject(subject);
+        message.setText(body
                 + "\n\nThis OTP is valid for 5 minutes and can be used only once.");
 
         try {

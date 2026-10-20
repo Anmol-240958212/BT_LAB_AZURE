@@ -241,6 +241,18 @@ import { Component, Input } from '@angular/core';
         <line x1="21" y1="21" x2="16.65" y2="16.65" />
       </ng-container>
 
+      <!-- Eye / Password Visibility -->
+      <ng-container *ngSwitchCase="'eye'">
+        <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </ng-container>
+
+      <ng-container *ngSwitchCase="'eye-off'">
+        <path d="m3 3 18 18" />
+        <path d="M10.6 6.2A10.6 10.6 0 0 1 12 6c6.5 0 10 6 10 6a18.5 18.5 0 0 1-3.2 3.7" />
+        <path d="M6.2 6.2C3.5 8 2 12 2 12s3.5 6 10 6c1.1 0 2.1-.2 3-.5" />
+      </ng-container>
+
       <!-- Bell -->
       <ng-container *ngSwitchCase="'bell'">
         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />

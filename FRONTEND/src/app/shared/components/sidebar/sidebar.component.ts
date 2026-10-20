@@ -19,11 +19,13 @@ export interface NavItem {
       <!-- App Brand in Sidebar -->
       <div class="sidebar-brand">
         <div class="brand-logo-box">
-          <img src="/logo.png" alt="vaultOne Logo" class="brand-logo-img" />
+          <img src="/logo.png" alt="VaultOne Logo" class="brand-logo-img" />
         </div>
         <div class="brand-info">
-          <span class="app-title">vaultOne</span>
-          <span class="app-dept">Enterprise Portal</span>
+          <span class="app-title">VaultOne</span>
+          <span class="app-dept">
+            {{ currentRole === 'CUSTOMER' ? 'Customer Banking Portal' : 'Admin Portal' }}
+          </span>
         </div>
       </div>
 

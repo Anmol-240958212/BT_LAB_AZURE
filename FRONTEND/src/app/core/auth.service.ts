@@ -45,6 +45,17 @@ export class AuthService {
     });
   }
 
+  /** Updates the human-readable name after the authenticated profile loads. */
+  public setDisplayName(displayName: string | null | undefined): void {
+    const name = displayName?.trim();
+    if (!name) return;
+
+    this.authStateSubject.next({
+      ...this.authStateSubject.value,
+      displayName: name
+    });
+  }
+
   constructor() {
     this.restoreSessionFromStorage();
   }

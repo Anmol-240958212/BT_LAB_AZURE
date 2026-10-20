@@ -239,17 +239,29 @@
 }
 
 .nav-link-sign-in {
-  color: #e2e8f0;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #f1f5f9;
+  font-size: 13px;
   font-weight: 500;
   text-decoration: none;
   cursor: pointer;
-  padding: 6px 12px;
-  transition: color 150ms ease;
+  backdrop-filter: blur(8px);
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .nav-link-sign-in:hover {
   color: #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(74, 222, 128, 0.5);
+  box-shadow: 0 0 14px rgba(74, 222, 128, 0.2);
+  transform: translateY(-1px);
 }
 
 /* "Open an account ↗" Pill Button */
@@ -1525,12 +1537,22 @@
 .metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 36px 28px;
+  gap: 24px;
 }
 
 .metric-card {
   display: flex;
   flex-direction: column;
+  padding: 24px 22px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(8px);
+  transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
 }
 
 .metric-number {
@@ -2810,8 +2832,60 @@
   border-bottom-color: rgba(0, 230, 147, .2);
 }
 
+:host-context([data-theme="light"]) .nav-link-sign-in {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+:host-context([data-theme="light"]) .nav-link-sign-in:hover {
+  background: rgba(74, 222, 128, 0.18);
+  border-color: #4ade80;
+  color: #4ade80;
+  box-shadow: 0 0 14px rgba(74, 222, 128, 0.25);
+}
+
 :host-context([data-theme="light"]) .hero-section {
   background-color: #f1f5f3;
+}
+
+:host-context([data-theme="light"]) .hero-tagline-badge {
+  background: #e0f2e7;
+  border-color: #b8e0ca;
+  color: #1f663c;
+}
+
+:host-context([data-theme="light"]) .badge-dot {
+  background-color: #1f663c;
+  box-shadow: 0 0 8px rgba(31, 102, 60, 0.4);
+}
+
+:host-context([data-theme="light"]) .btn-hero-primary {
+  background-color: #255f48;
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(37, 95, 72, 0.35);
+}
+
+:host-context([data-theme="light"]) .btn-hero-primary:hover {
+  background-color: #1b4836;
+}
+
+:host-context([data-theme="light"]) .btn-hero-secondary {
+  background-color: #ffffff;
+  border: 1px solid #c9d7d0;
+  color: #12201a;
+  box-shadow: 0 2px 10px rgba(18, 32, 26, 0.08);
+}
+
+:host-context([data-theme="light"]) .btn-hero-secondary:hover {
+  background-color: #e4ece7;
+  border-color: #255f48;
+  color: #12201a;
+}
+
+:host-context([data-theme="light"]) .btn-hero-secondary app-icon,
+:host-context([data-theme="light"]) .btn-hero-secondary span {
+  color: #12201a;
 }
 
 :host-context([data-theme="light"]) .hero-grid-bg {
@@ -2854,13 +2928,30 @@
 
 :host-context([data-theme="light"]) .feature-card-light,
 :host-context([data-theme="light"]) .feature-card-subtle,
-:host-context([data-theme="light"]) .metric-card,
 :host-context([data-theme="light"]) .calc-box-card,
 :host-context([data-theme="light"]) .rates-table-wrapper,
 :host-context([data-theme="light"]) .arch-card {
   background-color: #ffffff;
   border-color: #c9d7d0;
+  border-radius: 20px;
   box-shadow: 0 8px 24px rgba(18, 32, 26, .07);
+}
+
+:host-context([data-theme="light"]) .metric-card {
+  background-color: #ffffff;
+  border: 1px solid #c9d7d0;
+  border-radius: 20px;
+  padding: 24px 22px;
+  box-shadow: 0 8px 24px rgba(18, 32, 26, .07);
+}
+
+:host-context([data-theme="light"]) .metric-card:hover {
+  border-color: #255f48;
+  box-shadow: 0 12px 32px rgba(18, 32, 26, .12);
+}
+
+:host-context([data-theme="light"]) .metric-number {
+  color: #12201a;
 }
 
 :host-context([data-theme="light"]) .feature-card-title,

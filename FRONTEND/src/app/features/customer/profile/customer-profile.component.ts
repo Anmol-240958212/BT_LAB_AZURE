@@ -89,20 +89,6 @@ function mobileValidator(control: AbstractControl): ValidationErrors | null {
             </div>
           </div>
 
-          <!-- Header Actions: Kafka FD Sync -->
-          <div class="user-header-actions">
-            <app-button
-              *ngIf="isKycActive"
-              variant="secondary"
-              size="sm"
-              [disabled]="syncingKafka"
-              (clicked)="syncKafka()"
-              title="Sync profile data"
-            >
-              <app-icon name="refresh-cw" [size]="12"></app-icon>
-              <span>{{ syncingKafka ? 'Syncing...' : 'Sync' }}</span>
-            </app-button>
-          </div>
         </div>
 
         <!-- Contact & Account Metadata Strip -->
@@ -188,6 +174,16 @@ function mobileValidator(control: AbstractControl): ValidationErrors | null {
                 <div class="kyc-field-item">
                   <span class="field-label">GENDER</span>
                   <span class="field-val">{{ (kycForm.get('gender')?.value || currentUser?.gender) | titlecase }}</span>
+                </div>
+
+                <div class="kyc-field-item">
+                  <span class="field-label">PREFERRED LANGUAGE</span>
+                  <span class="field-val">{{ kycForm.get('preferredLanguage')?.value || currentUser?.preferredLanguage || '—' }}</span>
+                </div>
+
+                <div class="kyc-field-item">
+                  <span class="field-label">COUNTRY OF ORIGIN</span>
+                  <span class="field-val">{{ kycForm.get('countryOfOrigin')?.value || currentUser?.countryOfOrigin || '—' }}</span>
                 </div>
 
                 <div class="kyc-field-item">
@@ -347,6 +343,21 @@ function mobileValidator(control: AbstractControl): ValidationErrors | null {
                 ></app-input>
               </div>
 
+              <div class="grid-2">
+                <app-input
+                  id="kyc-preferred-language"
+                  label="Preferred Language"
+                  formControlName="preferredLanguage"
+                  [required]="true"
+                ></app-input>
+                <app-input
+                  id="kyc-country-of-origin"
+                  label="Country of Origin"
+                  formControlName="countryOfOrigin"
+                  [required]="true"
+                ></app-input>
+              </div>
+
               <app-input
                 id="kyc-address-1"
                 label="Address Line 1"
@@ -396,6 +407,7 @@ function mobileValidator(control: AbstractControl): ValidationErrors | null {
                   id="kyc-phone"
                   label="Mobile Phone"
                   placeholder="+91 79829 23284"
+                  hint="Indian mobile number only: +91 and 10 digits starting with 6-9"
                   formControlName="mobileNumber"
                   [error]="mobileNumberError"
                   (input)="onMobileInput($event)"
@@ -804,7 +816,6 @@ export class CustomerProfileComponent implements OnInit {
   savingKyc = false;
   openingAccount = false;
   loadingAccounts = false;
-  syncingKafka = false;
 
   readonly stateList: StateInfo[] = INDIAN_STATES;
   availableCities: { name: string; pin: string }[] = [];
@@ -933,6 +944,8 @@ export class CustomerProfileComponent implements OnInit {
       lastName: ['', Validators.required],
       dateOfBirth: ['', Validators.required],
       gender: ['MALE', Validators.required],
+      preferredLanguage: ['English', Validators.required],
+      countryOfOrigin: ['India', Validators.required],
       identificationType: ['AADHAAR', Validators.required],
       identificationNumber: ['', [idValidator(this)]],
       addressLine1: ['', Validators.required],
@@ -1079,14 +1092,17 @@ export class CustomerProfileComponent implements OnInit {
     }
     if (user.dateOfBirth) updates['dateOfBirth'] = user.dateOfBirth;
     if (user.gender) updates['gender'] = user.gender;
+    if (user.preferredLanguage) updates['preferredLanguage'] = user.preferredLanguage;
+    if (user.countryOfOrigin) updates['countryOfOrigin'] = user.countryOfOrigin;
 
     // Identification
     const idType = (user.identificationType as IdentificationType) || 'AADHAAR';
     updates['identificationType'] = idType;
-    if (user.identificationNumber) {
-      const rule = ID_RULES[idType] || ID_RULES['AADHAAR'];
-      updates['identificationNumber'] = rule.format(user.identificationNumber);
-    }
+    // The API intentionally returns only a masked identification number. Never
+    // copy that value into the edit form, because it is not a valid replacement
+    // for the original document number. The customer must enter the full value
+    // again when updating KYC.
+    updates['identificationNumber'] = '';
 
     if (user.addressLine1) updates['addressLine1'] = user.addressLine1;
 
@@ -1202,24 +1218,4 @@ export class CustomerProfileComponent implements OnInit {
     });
   }
 
-  syncKafka(): void {
-    if (this.syncingKafka) return;
-    this.syncingKafka = true;
-    this.cdr.detectChanges();
-    this.customerApi.syncCustomer().pipe(
-      finalize(() => {
-        this.syncingKafka = false;
-        this.cdr.detectChanges();
-      })
-    ).subscribe({
-      next: (res) => {
-        this.toastService.success(res?.message || 'Customer profile successfully published to Kafka topic for FD sync.', 'Kafka Event Dispatched');
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        this.toastService.error(err.error?.message || err.message || 'Failed to dispatch customer snapshot to Kafka', 'Sync Failed');
-        this.cdr.detectChanges();
-      }
-    });
-  }
 }

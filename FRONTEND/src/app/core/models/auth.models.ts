@@ -110,6 +110,19 @@ export interface CustomerProfileResponse {
   status: string;
   customerId: number;
   fullName: string;
+  gender?: string;
+  customerType?: string;
+  classificationType?: string;
+  classificationValue?: string;
+  identificationType?: string;
+  maskedIdentificationNumber?: string;
+  maskedEmail?: string;
+  maskedMobileNumber?: string;
+  addressLine1?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postalCode?: string;
 }
 
 export interface OpenAccountRequest {

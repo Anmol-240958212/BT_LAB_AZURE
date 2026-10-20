@@ -416,7 +416,10 @@ export class FDAccountsComponent implements OnInit {
         this.allAccounts = [];
         this.filteredAccounts = [];
         this.loading = true;
-        this.userApi.getMe().subscribe({
+        this.userApi.getMe().pipe(
+          timeout(10000),
+          catchError(() => of(null))
+        ).subscribe({
           next: (profile) => {
             if (profile && profile.customerId) {
               this.userCustomerId = String(profile.customerId);
@@ -488,7 +491,10 @@ export class FDAccountsComponent implements OnInit {
       // Real customer account
       if (!this.userCustomerId) {
         this.loading = true;
-        this.userApi.getMe().subscribe({
+        this.userApi.getMe().pipe(
+          timeout(10000),
+          catchError(() => of(null))
+        ).subscribe({
           next: (profile) => {
             if (profile && profile.customerId) {
               this.userCustomerId = String(profile.customerId);
@@ -651,6 +657,7 @@ export class FDAccountsComponent implements OnInit {
         this.processingWithdrawal = false;
         this.withdrawalResult = res;
         this.selectedAccount!.status = 'CLOSED';
+        this.isWithdrawalModalOpen = false;
         this.toastService.success(res.message || 'Fixed deposit closed prematurely.', 'Liquidation Complete');
         this.applyFilters();
       },

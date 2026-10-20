@@ -2,6 +2,7 @@ package com.example.auth.serviceimpl;
 
 import com.example.auth.service.OtpService;
 import com.example.auth.service.NotificationService;
+import com.example.auth.service.OtpPurpose;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +29,7 @@ public class OtpServiceImpl implements OtpService {
     }
 
     @Override
-    public void generateAndSendOtp(String identifier) {
+    public void generateAndSendOtp(String identifier, OtpPurpose purpose) {
 
         String otp = String.format("%06d", random.nextInt(1_000_000));
         //basically what it means is- %d means formatting of an integer
@@ -43,7 +44,7 @@ public class OtpServiceImpl implements OtpService {
 
         otpStore.put(identifier, otpData);
         // Send OTP via NotificationService
-        notificationService.sendOtpNotification(identifier, otp);
+        notificationService.sendOtpNotification(identifier, otp, purpose);
     }
 
     @Override
