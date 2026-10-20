@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-/** A detailed report for a completed FD maturity settlement. */
+/** A detailed report for a completed FD maturity or premature-withdrawal settlement. */
 @RestController
 @RequestMapping("/api/fd/reports")
 public class FdMaturityReportController {
@@ -40,17 +40,19 @@ public class FdMaturityReportController {
         }
         FdMaturityReportDto report = reports.maturityReport(fdAccountNo);
         String normalized = format == null ? "json" : format.trim().toLowerCase(java.util.Locale.ROOT);
-        if ("pdf".equals(normalized)) return attachment(fdAccountNo, "pdf", MediaType.APPLICATION_PDF, exports.pdf(report));
+        String prefix = "FD_PREMATURE_WITHDRAWAL".equals(report.reportType())
+                ? "fd-premature-withdrawal-report-" : "fd-maturity-report-";
+        if ("pdf".equals(normalized)) return attachment(prefix, fdAccountNo, "pdf", MediaType.APPLICATION_PDF, exports.pdf(report));
         if ("xlsx".equals(normalized) || "excel".equals(normalized)) {
-            return attachment(fdAccountNo, "xlsx", MediaType.parseMediaType(
+            return attachment(prefix, fdAccountNo, "xlsx", MediaType.parseMediaType(
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"), exports.excel(report));
         }
         if (!"json".equals(normalized)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Supported formats are json, pdf, and xlsx");
         return ResponseEntity.ok(report);
     }
 
-    private ResponseEntity<byte[]> attachment(String accountNo, String extension, MediaType mediaType, byte[] body) {
-        String filename = "fd-maturity-report-" + accountNo + "." + extension;
+    private ResponseEntity<byte[]> attachment(String prefix, String accountNo, String extension, MediaType mediaType, byte[] body) {
+        String filename = prefix + accountNo + "." + extension;
         return ResponseEntity.ok().contentType(mediaType).contentLength(body.length)
                 .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename(filename).build().toString()).body(body);
     }

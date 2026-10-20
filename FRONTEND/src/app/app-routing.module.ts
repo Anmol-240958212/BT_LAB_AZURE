@@ -79,7 +79,6 @@ const routes: Routes = [
       { path: 'fd/calculator', redirectTo: 'fixed-deposit/calculator', pathMatch: 'full' },
       { path: 'fd/accounts', redirectTo: 'fixed-deposit/accounts', pathMatch: 'full' },
       { path: 'fd/accounts/create', redirectTo: 'fixed-deposit/create', pathMatch: 'full' },
-      { path: 'fd/transactions', redirectTo: 'fixed-deposit/transactions', pathMatch: 'full' },
       { path: 'fd/withdraw', redirectTo: 'fixed-deposit/accounts', pathMatch: 'full' },
       { path: 'batch/interest', redirectTo: 'admin/batch', pathMatch: 'full' },
       { path: 'batch/maturity', redirectTo: 'admin/batch', pathMatch: 'full' },

@@ -21,6 +21,8 @@ public interface FixedDepositAccountService {
         List<FixedDepositAccountResponseDTO> getAccountsByStatus(
                         String status);
 
+        List<FixedDepositAccountResponseDTO> getAllAccounts();
+
         List<FixedDepositAccountResponseDTO> getCustomerAccountsByStatus(
                         String customerId,
                         String status);

@@ -7,6 +7,7 @@ import { CustomerPortfolio, FdMaturityReport, ReportApiService } from '../../cor
 
 type ReportKind = 'summary' | 'interest' | 'maturity';
 type ReportDefinition = { kind: ReportKind; labelKey: string; descriptionKey: string; endpoint: string; };
+type CurrencyTotal = { currency: string; value: number; };
 
 @Component({
   selector: 'app-reports',
@@ -30,15 +31,15 @@ type ReportDefinition = { kind: ReportKind; labelKey: string; descriptionKey: st
       <ng-container *ngIf="isCustomer; else staffReports">
         <section class="metric-grid" *ngIf="portfolio">
           <article class="metric-card"><span>{{ 'reports.fdAccounts' | transloco }}</span><strong>{{ portfolio.totalAccounts }}</strong></article>
-          <article class="metric-card"><span>{{ 'reports.totalPrincipal' | transloco }}</span><strong>{{ money(portfolio.totalPrincipal, portfolioCurrency) }}</strong></article>
-          <article class="metric-card"><span>{{ 'common.accruedInterest' | transloco }}</span><strong>{{ money(portfolio.totalInterestAccrued, portfolioCurrency) }}</strong></article>
+          <article class="metric-card"><span>{{ 'reports.totalPrincipal' | transloco }}</span><strong *ngFor="let total of portfolioPrincipalTotals">{{ money(total.value, total.currency) }}</strong></article>
+          <article class="metric-card"><span>{{ 'common.accruedInterest' | transloco }}</span><strong *ngFor="let total of portfolioInterestTotals">{{ money(total.value, total.currency) }}</strong></article>
         </section>
         <section class="report-panel">
           <div class="panel-heading"><div><span class="eyebrow">CUSTOMER PORTFOLIO</span><h2>Your fixed deposits</h2><p>Only your accounts are shown here.</p></div><span class="status" *ngIf="loading">Loading…</span></div>
           <div *ngIf="!loading && !portfolio" class="empty-state">Your portfolio could not be loaded yet. Use <strong>Refresh data</strong> to try again.</div>
           <div class="table-scroll" *ngIf="portfolio">
             <table>
-              <thead><tr><th>Account</th><th>Product</th><th>Principal</th><th>Interest</th><th>Maturity</th><th>Status</th><th>Detailed report</th></tr></thead>
+              <thead><tr><th>Account</th><th>Product</th><th>Principal</th><th>Interest Accrued</th><th>Maturity</th><th>Status</th><th>Detailed report</th></tr></thead>
               <tbody>
                 <tr *ngFor="let account of portfolio.accounts">
                   <td>{{ account.accountNo }}</td><td>{{ account.productCode }}</td><td>{{ money(account.principal, account.currency) }}</td><td>{{ money(account.accruedInterest, account.currency) }}</td><td>{{ account.maturityDate | date:'mediumDate' }}</td><td><span class="pill">{{ account.status }}</span></td>
@@ -57,6 +58,9 @@ type ReportDefinition = { kind: ReportKind; labelKey: string; descriptionKey: st
             <span>{{ report.labelKey | transloco }}</span><small>{{ report.descriptionKey | transloco }}</small>
           </button>
         </section>
+        <section class="metric-grid" *ngIf="reportPrincipalTotals.length">
+          <article class="metric-card"><span>{{ 'reports.totalPrincipal' | transloco }}</span><strong *ngFor="let total of reportPrincipalTotals">{{ money(total.value, total.currency) }}</strong></article>
+        </section>
         <section class="report-panel">
           <div class="panel-heading">
             <div><span class="eyebrow">{{ 'reports.liveData' | transloco }}</span><h2>{{ selectedDefinition.labelKey | transloco }}</h2><p>{{ selectedDefinition.descriptionKey | transloco }}</p></div>
@@ -71,13 +75,13 @@ type ReportDefinition = { kind: ReportKind; labelKey: string; descriptionKey: st
       </ng-template>
 
       <section class="report-panel detailed-generator" *ngIf="!isCustomer">
-        <div class="panel-heading"><div><span class="eyebrow">DETAILED ACCOUNT REPORT</span><h2>Generate FD maturity report</h2><p>Enter an FD account number to see its maturity, interest, transaction, and notification history.</p></div></div>
+        <div class="panel-heading"><div><span class="eyebrow">DETAILED ACCOUNT REPORT</span><h2>Generate closed-FD settlement report</h2><p>Enter a closed FD account number to see its maturity or premature-withdrawal settlement, interest, transactions, and notifications.</p></div></div>
         <div class="generator-actions"><input class="form-input" [(ngModel)]="accountNumber" placeholder="Example: 0010000394" aria-label="FD account number"><button class="btn btn-primary" type="button" (click)="loadMaturity(accountNumber)" [disabled]="detailLoading">{{ detailLoading ? 'Generating…' : 'Generate report' }}</button></div>
       </section>
 
       <section class="report-panel detailed-report" *ngIf="maturityReport">
         <div class="panel-heading">
-          <div><span class="eyebrow">FD MATURITY REPORT</span><h2>{{ maturityReport.fdAccount.accountNo }}</h2><p>Generated {{ maturityReport.reportGeneratedAt | date:'medium' }} · {{ maturityReport.fdAccount.productCode }} · {{ maturityReport.fdAccount.status }}</p></div>
+          <div><span class="eyebrow">{{ isPrematureWithdrawal ? 'PREMATURE WITHDRAWAL REPORT' : 'FD MATURITY REPORT' }}</span><h2>{{ maturityReport.fdAccount.accountNo }}</h2><p>Generated {{ maturityReport.reportGeneratedAt | date:'medium' }} · {{ maturityReport.fdAccount.productCode }} · {{ maturityReport.fdAccount.status }}</p></div>
           <div class="export-actions"><button class="btn btn-secondary" type="button" (click)="downloadMaturity('xlsx')">Download Excel</button><button class="btn btn-primary" type="button" (click)="downloadMaturity('pdf')">Download PDF</button></div>
         </div>
         <div class="metric-grid compact">
@@ -122,7 +126,10 @@ export class ReportsComponent implements OnInit {
   get selectedDefinition(): ReportDefinition { return this.reportDefinitions.find(report => report.kind === this.selected) || this.reportDefinitions[0]; }
   get rowKeys(): string[] { return this.data.length ? Object.keys(this.data[0]) : []; }
   get columns(): string[] { return this.rowKeys.map(key => key.replace(/([A-Z])/g, ' $1').replace(/^./, value => value.toUpperCase())); }
-  get portfolioCurrency(): string { return this.portfolio?.accounts[0]?.currency || 'JPY'; }
+  get portfolioPrincipalTotals(): CurrencyTotal[] { return this.sumByCurrency(this.portfolio?.accounts || [], 'principal'); }
+  get portfolioInterestTotals(): CurrencyTotal[] { return this.sumByCurrency(this.portfolio?.accounts || [], 'accruedInterest'); }
+  get reportPrincipalTotals(): CurrencyTotal[] { return this.sumByCurrency(this.data, 'totalPrincipal'); }
+  get isPrematureWithdrawal(): boolean { return this.maturityReport?.reportType === 'FD_PREMATURE_WITHDRAWAL'; }
   refresh(): void { this.isCustomer ? this.loadPortfolio() : this.select(this.selected); }
   select(kind: ReportKind): void {
     this.selected = kind; this.error = ''; this.loading = true;
@@ -145,7 +152,8 @@ export class ReportsComponent implements OnInit {
   downloadMaturity(format: 'pdf' | 'xlsx'): void {
     if (!this.maturityReport) return;
     const accountNo = this.maturityReport.fdAccount.accountNo;
-    this.reports.maturityReportDownload(accountNo, format).pipe(timeout(30000)).subscribe({ next: blob => this.save(blob, `fd-maturity-report-${accountNo}.${format}`), error: error => this.fail(error) });
+    const prefix = this.isPrematureWithdrawal ? 'fd-premature-withdrawal-report' : 'fd-maturity-report';
+    this.reports.maturityReportDownload(accountNo, format).pipe(timeout(30000)).subscribe({ next: blob => this.save(blob, `${prefix}-${accountNo}.${format}`), error: error => this.fail(error) });
   }
   render(row: Record<string, unknown>, key: string): string {
     const value = row[key];
@@ -155,6 +163,15 @@ export class ReportsComponent implements OnInit {
     return String(value);
   }
   money(value: number | null | undefined, currency = 'JPY'): string { return new Intl.NumberFormat(currency === 'JPY' ? 'ja-JP' : 'en-IN', { style: 'currency', currency, maximumFractionDigits: currency === 'JPY' ? 0 : 2 }).format(Number(value || 0)); }
+  private sumByCurrency(rows: unknown[], amountKey: string): CurrencyTotal[] {
+    const totals = rows.reduce((result: Record<string, number>, value) => {
+      const row = value as Record<string, unknown>;
+      const currency = String(row['currency'] || 'INR').toUpperCase();
+      result[currency] = (result[currency] || 0) + (Number(row[amountKey]) || 0);
+      return result;
+    }, {});
+    return Object.entries(totals).sort(([a], [b]) => a.localeCompare(b)).map(([currency, value]) => ({ currency, value }));
+  }
   private loadPortfolio(): void {
     this.error = ''; this.loading = true;
     this.reports.portfolio().pipe(timeout(15000), finalize(() => { this.loading = false; this.updateView(); })).subscribe({

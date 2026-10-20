@@ -29,7 +29,10 @@ public class MaturityReportExportService {
             document.open();
             Font title = new Font(Font.HELVETICA, 17, Font.BOLD);
             Font heading = new Font(Font.HELVETICA, 11, Font.BOLD);
-            document.add(new Paragraph("Fixed Deposit Maturity Report", title));
+            boolean premature = "FD_PREMATURE_WITHDRAWAL".equals(report.reportType());
+            String reportLabel = premature ? "Fixed Deposit Premature Withdrawal Report" : "Fixed Deposit Maturity Report";
+            String settlementLabel = premature ? "Premature withdrawal settlement" : "Maturity settlement";
+            document.add(new Paragraph(reportLabel, title));
             document.add(new Paragraph("Account " + report.fdAccount().accountNo() + " | Generated " + DATE_TIME.format(report.reportGeneratedAt())));
             document.add(new Paragraph(" "));
             section(document, "Customer and account", heading);
@@ -39,7 +42,7 @@ public class MaturityReportExportService {
                     value(report.fdAccount().maturityDate())}});
             document.add(new Paragraph("Customer status: " + value(report.customer().customerStatus()) + " | KYC: " + value(report.customer().kycStatus())));
             document.add(new Paragraph(" "));
-            section(document, "Maturity settlement", heading);
+            section(document, settlementLabel, heading);
             table(document, new String[]{"Gross payout", "Principal", "Interest", "Penalty", "Net payout", "Processed"}, new String[][]{{
                     money(report.maturity().grossPayout(), report.fdAccount().currency()), money(report.maturity().principalComponent(), report.fdAccount().currency()),
                     money(report.maturity().interestComponent(), report.fdAccount().currency()), money(report.maturity().penaltyAmount(), report.fdAccount().currency()),
@@ -65,8 +68,10 @@ public class MaturityReportExportService {
     public byte[] excel(FdMaturityReportDto report) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(); ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             CellStyle header = header(workbook); CellStyle money = money(workbook); String currency = report.fdAccount().currency();
-            Sheet summary = workbook.createSheet("Maturity report");
-            row(summary, 0, "Fixed Deposit Maturity Report", report.fdAccount().accountNo());
+            boolean premature = "FD_PREMATURE_WITHDRAWAL".equals(report.reportType());
+            String reportLabel = premature ? "Fixed Deposit Premature Withdrawal Report" : "Fixed Deposit Maturity Report";
+            Sheet summary = workbook.createSheet(premature ? "Withdrawal report" : "Maturity report");
+            row(summary, 0, reportLabel, report.fdAccount().accountNo());
             row(summary, 2, "Customer", report.customer().fullName()); row(summary, 3, "Customer status", report.customer().customerStatus());
             row(summary, 4, "Product", report.fdAccount().productCode()); row(summary, 5, "Currency", currency);
             row(summary, 6, "Opening date", report.fdAccount().openedAt()); row(summary, 7, "Maturity date", report.fdAccount().maturityDate());

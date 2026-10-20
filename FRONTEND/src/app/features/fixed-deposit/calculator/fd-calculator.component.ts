@@ -1,11 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
-import { Router } from '@angular/router';
 import { of } from 'rxjs';
 import { timeout, catchError, finalize } from 'rxjs/operators';
 import { FDCalculatorApiService } from '../../../core/api/fd-calculator-api.service';
 import { FDCalculationRequest, FDCalculationResponse } from '../../../core/models/fd.models';
-import { AuthService } from '../../../core/auth.service';
-import { ToastService } from '../../../shared/services/toast.service';
 
 @Component({
   selector: 'app-fd-calculator',
@@ -38,7 +35,7 @@ import { ToastService } from '../../../shared/services/toast.service';
       <div class="grid-2 mb-6">
         <!-- Input Parameters Card -->
         <app-card [title]="'fd.depositParameters' | transloco" [subtitle]="'fd.parametersSubtitle' | transloco">
-          <form (ngSubmit)="calculate()" class="calc-form">
+          <form (ngSubmit)="calculate(true)" class="calc-form" novalidate>
             <!-- Principal Amount -->
             <app-input
               id="calc-principal"
@@ -46,11 +43,15 @@ import { ToastService } from '../../../shared/services/toast.service';
               type="number"
               placeholder="e.g. 100000"
               [(ngModel)]="principal"
-              (ngModelChange)="calculate()"
+              (ngModelChange)="onInputChanged()"
               name="principal"
               [required]="true"
               [hint]="currency === 'JPY' ? 'Minimum deposit: ¥ 1,000' : 'Minimum deposit: ₹ 1,000'"
             ></app-input>
+            <div *ngIf="principalError" class="input-caution" role="alert">
+              <app-icon name="alert-triangle" [size]="14"></app-icon>
+              <span>{{ principalError }}</span>
+            </div>
 
             <div class="form-group">
               <label class="form-label" for="calc-currency">{{ 'common.currency' | transloco }} *</label>
@@ -68,10 +69,14 @@ import { ToastService } from '../../../shared/services/toast.service';
                 type="number"
                 placeholder="e.g. 12"
                 [(ngModel)]="termValue"
-                (ngModelChange)="calculate()"
+                (ngModelChange)="onInputChanged()"
                 name="termValue"
                 [required]="true"
               ></app-input>
+              <div *ngIf="termError" class="input-caution" role="alert">
+                <app-icon name="alert-triangle" [size]="14"></app-icon>
+                <span>{{ termError }}</span>
+              </div>
 
               <div class="form-group">
                 <label class="form-label" for="calc-term-unit">{{ 'fd.termUnit' | transloco }} *</label>
@@ -90,11 +95,15 @@ import { ToastService } from '../../../shared/services/toast.service';
               type="number"
               placeholder="e.g. 7.10"
               [(ngModel)]="baseRate"
-              (ngModelChange)="calculate()"
+              (ngModelChange)="onInputChanged()"
               name="baseRate"
               [required]="true"
               hint="Card base interest rate before category add-ons"
             ></app-input>
+            <div *ngIf="rateError" class="input-caution" role="alert">
+              <app-icon name="alert-triangle" [size]="14"></app-icon>
+              <span>{{ rateError }}</span>
+            </div>
 
             <!-- Interest Accrual Mechanism -->
             <div class="form-group">
@@ -141,10 +150,9 @@ import { ToastService } from '../../../shared/services/toast.service';
                 type="submit"
                 variant="primary"
                 [loading]="calculating"
-                [disabled]="principal <= 0 || termValue <= 0"
+                [disabled]="calculating"
                 [block]="true"
                 id="btn-run-calculation"
-                (clicked)="calculate()"
               >
                 {{ calculating ? 'Simulating Yield...' : 'Calculate Maturity Amount' }}
               </app-button>
@@ -206,15 +214,6 @@ import { ToastService } from '../../../shared/services/toast.service';
             </div>
           </div>
 
-          <div *ngIf="authService.isLoggedIn()" class="mt-6">
-            <app-button
-              variant="secondary"
-              [block]="true"
-              (clicked)="openFdWithParams()"
-            >
-              Open FD Account With These Terms →
-            </app-button>
-          </div>
         </app-card>
       </div>
     </div>
@@ -230,6 +229,15 @@ import { ToastService } from '../../../shared/services/toast.service';
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
+    }
+    .input-caution {
+      display: flex;
+      align-items: flex-start;
+      gap: 6px;
+      margin-top: calc(var(--space-3) * -1);
+      color: var(--color-warning);
+      font-size: 11px;
+      line-height: 1.35;
     }
     .category-section {
       background-color: var(--color-bg-elevated);
@@ -371,6 +379,7 @@ export class FDCalculatorComponent implements OnInit {
   premiumCustomer = false;
 
   calculating = false;
+  validationAttempted = false;
   result: FDCalculationResponse | null = null;
   simpleYield = 0;
   compoundYield = 0;
@@ -384,12 +393,11 @@ export class FDCalculatorComponent implements OnInit {
   }
 
   readonly MAX_ALLOWED_RATE = 8.5; // Mandate L11
+  readonly MAX_BASE_RATE = 8.5;
+  readonly MAX_PRINCIPAL = 1000000000;
 
   constructor(
     private readonly calcApi: FDCalculatorApiService,
-    public readonly authService: AuthService,
-    private readonly toastService: ToastService,
-    private readonly router: Router,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
@@ -427,12 +435,41 @@ export class FDCalculatorComponent implements OnInit {
     return rawRate > this.MAX_ALLOWED_RATE;
   }
 
-  calculate(): void {
+  get principalError(): string | null {
+    return this.validationAttempted ? this.validatePrincipal() : null;
+  }
+
+  get termError(): string | null {
+    return this.validationAttempted ? this.validateTerm() : null;
+  }
+
+  get rateError(): string | null {
+    return this.validationAttempted ? this.validateRate() : null;
+  }
+
+  get validationMessage(): string | null {
+    return this.validationAttempted ? this.validateInputs() : null;
+  }
+
+  onInputChanged(): void {
+    this.validationAttempted = true;
+    this.calculate();
+  }
+
+  calculate(showValidation = false): void {
+    if (showValidation) this.validationAttempted = true;
+
+    const validationError = this.validateInputs();
+    if (validationError) {
+      this.calculating = false;
+      this.cdr.detectChanges();
+      return;
+    }
+
+    this.validationAttempted = false;
     const numPrincipal = Number(this.principal) || 0;
     const numTerm = Number(this.termValue) || 0;
     const numBaseRate = Number(this.baseRate) || 0;
-
-    if (numPrincipal <= 0 || numTerm <= 0) return;
 
     this.calculating = true;
 
@@ -498,14 +535,21 @@ export class FDCalculatorComponent implements OnInit {
       })
     ).subscribe({
       next: (res) => {
-        if (res && res.maturityAmount) {
+        const responseRate = Number(res?.effectiveRate);
+        const responseExceedsCap = Number.isFinite(responseRate) && responseRate > this.MAX_ALLOWED_RATE;
+
+        if (res && res.maturityAmount && !responseExceedsCap) {
           // If the user specified DAYS, keep the exact day-based local calculation to prevent backend whole-month rounding distortion
           if (this.termUnit === 'DAYS') {
             this.result = localResult;
           } else {
-            this.result = res;
+            this.result = {
+              ...res,
+              effectiveRate: Math.min(responseRate || this.effectiveCalculatedRate, this.MAX_ALLOWED_RATE)
+            };
           }
         } else {
+          // Reject an uncapped result returned by an older backend process.
           this.result = localResult;
         }
         this.cdr.detectChanges();
@@ -513,14 +557,38 @@ export class FDCalculatorComponent implements OnInit {
     });
   }
 
-  openFdWithParams(): void {
-    this.router.navigate(['/fixed-deposit/create'], {
-      queryParams: {
-        principal: this.principal,
-        term: this.termValue,
-        rate: this.effectiveCalculatedRate,
-        interestType: this.interestType
-      }
-    });
+  private validateInputs(): string | null {
+    return this.validatePrincipal() || this.validateTerm() || this.validateRate();
   }
+
+  private validatePrincipal(): string | null {
+    const value = Number(this.principal);
+    const currencySymbol = this.currency === 'JPY' ? '¥' : '₹';
+    if (!Number.isFinite(value) || value < 1000 || value > this.MAX_PRINCIPAL) {
+      return 'Deposit amount must be between ' + currencySymbol + '1,000 and ' + currencySymbol + '1,000,000,000.';
+    }
+    if (this.currency === 'JPY' && !Number.isInteger(value)) return 'Japanese Yen deposits must be entered as a whole number.';
+    return null;
+  }
+
+  private validateTerm(): string | null {
+    const value = Number(this.termValue);
+    if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
+      const maximum = this.termUnit === 'DAYS' ? 3650 : this.termUnit === 'MONTHS' ? 120 : 10;
+      return 'Term must be between 1 and ' + maximum + ' ' + this.termUnit.toLowerCase() + '.';
+    }
+
+    const maximum = this.termUnit === 'DAYS' ? 3650 : this.termUnit === 'MONTHS' ? 120 : 10;
+    if (value > maximum) return 'Term must be between 1 and ' + maximum + ' ' + this.termUnit.toLowerCase() + '.';
+    return null;
+  }
+
+  private validateRate(): string | null {
+    const value = Number(this.baseRate);
+    if (!Number.isFinite(value) || value < 0 || value > this.MAX_BASE_RATE) {
+      return 'Base interest rate must be between 0% and ' + this.MAX_BASE_RATE.toFixed(2) + '% p.a.';
+    }
+    return null;
+  }
+
 }
