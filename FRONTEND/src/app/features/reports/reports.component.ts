@@ -64,7 +64,7 @@ type CurrencyTotal = { currency: string; value: number; };
         <section class="report-panel">
           <div class="panel-heading">
             <div><span class="eyebrow">{{ 'reports.liveData' | transloco }}</span><h2>{{ selectedDefinition.labelKey | transloco }}</h2><p>{{ selectedDefinition.descriptionKey | transloco }}</p></div>
-            <div class="export-actions"><button class="btn btn-secondary" type="button" (click)="downloadCsv()" [disabled]="loading">Download CSV</button><button class="btn btn-primary" type="button" (click)="select(selected)" [disabled]="loading">{{ loading ? 'Loading…' : 'Reload' }}</button></div>
+            <div class="export-actions"><button class="btn btn-secondary" type="button" (click)="downloadCsv()" [disabled]="loading">Download CSV</button><button class="btn btn-primary" type="button" (click)="downloadPdf()" [disabled]="loading">Download PDF</button></div>
           </div>
           <div *ngIf="loading" class="loading-state">{{ 'common.loading' | transloco }} {{ selectedDefinition.labelKey | transloco }}</div>
           <div *ngIf="!loading && data.length === 0" class="empty-state">There are no rows in this report yet.</div>
@@ -149,6 +149,7 @@ export class ReportsComponent implements OnInit {
     });
   }
   downloadCsv(): void { this.download(this.selectedDefinition.endpoint, 'csv'); }
+  downloadPdf(): void { this.download(this.selectedDefinition.endpoint, 'pdf'); }
   downloadMaturity(format: 'pdf' | 'xlsx'): void {
     if (!this.maturityReport) return;
     const accountNo = this.maturityReport.fdAccount.accountNo;
@@ -179,7 +180,7 @@ export class ReportsComponent implements OnInit {
       error: error => this.fail(error)
     });
   }
-  private download(path: string, extension: string): void { this.reports.download(path).pipe(timeout(30000)).subscribe({ next: blob => this.save(blob, `${path}.${extension}`), error: error => this.fail(error) }); }
+  private download(path: string, extension: 'csv' | 'pdf'): void { this.reports.download(path, extension).pipe(timeout(30000)).subscribe({ next: blob => this.save(blob, `${path}.${extension}`), error: error => this.fail(error) }); }
   private save(blob: Blob, filename: string): void { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url); }
   private fail(error: any): void { this.error = error?.error?.detail || error?.error?.message || error?.message || 'Unable to load the report. Please try again.'; this.updateView(); }
   private updateView(): void { this.changeDetector.detectChanges(); }

@@ -17,5 +17,5 @@ export class ReportApiService {
   portfolio(): Observable<CustomerPortfolio> { return this.http.get<CustomerPortfolio>(`${this.baseUrl}/customer-portfolio`); }
   maturityReport(accountNo: string): Observable<FdMaturityReport> { return this.http.get<FdMaturityReport>(`/api/fd/reports/maturity/${encodeURIComponent(accountNo)}`); }
   maturityReportDownload(accountNo: string, format: 'pdf' | 'xlsx'): Observable<Blob> { return this.http.get(`/api/fd/reports/maturity/${encodeURIComponent(accountNo)}?format=${format}`, { responseType: 'blob' }); }
-  download(path: string): Observable<Blob> { return this.http.get(`${this.baseUrl}/${path}?format=csv`, { responseType: 'blob' }); }
+  download(path: string, format: 'csv' | 'pdf' = 'csv'): Observable<Blob> { return this.http.get(`${this.baseUrl}/${path}?format=${format}`, { responseType: 'blob' }); }
 }
