@@ -1,242 +1,169 @@
-import { Component, OnInit } from '@angular/core';
-import { TableColumn } from '../../shared/components/table/table.component';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
+import { finalize, Observable, timeout } from 'rxjs';
+import { AuthService } from '../../core/auth.service';
+import { CustomerPortfolio, FdMaturityReport, ReportApiService } from '../../core/api/report-api.service';
+
+// This page intentionally uses native tables so reports remain visible even when shared table styling changes.
+
+type ReportKind = 'summary' | 'interest' | 'maturity';
+type ReportDefinition = { kind: ReportKind; label: string; description: string; endpoint: string; };
 
 @Component({
   selector: 'app-reports',
   standalone: false,
   template: `
-    <div class="reports-page animate-fade-in">
-      <div class="card mb-6">
-        <div class="flex-between">
-          <div>
-            <span class="section-tag">MANAGEMENT INFORMATION SYSTEM</span>
-            <h1 class="card-title mt-1">Portfolio Analytics & Regulatory Reports</h1>
-            <p class="card-subtitle">
-              Aggregated maturity schedules, deposit tenure concentration, and liability summaries.
-            </p>
-          </div>
-          <app-badge variant="role" text="Officer / Executive Intelligence"></app-badge>
+    <main class="reports-page animate-fade-in">
+      <section class="hero-card">
+        <div>
+          <span class="eyebrow">ANALYTICS & REPORTS</span>
+          <h1>{{ isCustomer ? 'My fixed deposit reports' : 'Fixed deposit reporting centre' }}</h1>
+          <p>{{ isCustomer ? 'View your portfolio and download a detailed report for each fixed deposit.' : 'Review live operational data and export compliance-ready fixed deposit reports.' }}</p>
         </div>
+        <button class="btn btn-secondary" type="button" (click)="refresh()" [disabled]="loading">{{ loading ? 'Refreshing…' : 'Refresh data' }}</button>
+      </section>
 
-        <div class="grid-4 mt-6">
-          <div class="stat-card">
-            <span class="stat-label">AGGREGATE PRINCIPAL</span>
-            <span class="stat-val font-semibold">{{ totalPrincipal | currencyInr }}</span>
-            <span class="stat-meta text-accent">5 Deposit Accounts</span>
+      <section *ngIf="error" class="alert-card" role="alert">
+        <div><strong>We could not load one report.</strong><span>{{ error }}</span></div>
+        <button class="btn btn-secondary" type="button" (click)="refresh()">Try again</button>
+      </section>
+
+      <ng-container *ngIf="isCustomer; else staffReports">
+        <section class="metric-grid" *ngIf="portfolio">
+          <article class="metric-card"><span>FD accounts</span><strong>{{ portfolio.totalAccounts }}</strong></article>
+          <article class="metric-card"><span>Total principal</span><strong>{{ money(portfolio.totalPrincipal, portfolioCurrency) }}</strong></article>
+          <article class="metric-card"><span>Accrued interest</span><strong>{{ money(portfolio.totalInterestAccrued, portfolioCurrency) }}</strong></article>
+        </section>
+        <section class="report-panel">
+          <div class="panel-heading"><div><span class="eyebrow">CUSTOMER PORTFOLIO</span><h2>Your fixed deposits</h2><p>Only your accounts are shown here.</p></div><span class="status" *ngIf="loading">Loading…</span></div>
+          <div *ngIf="!loading && !portfolio" class="empty-state">Your portfolio could not be loaded yet. Use <strong>Refresh data</strong> to try again.</div>
+          <div class="table-scroll" *ngIf="portfolio">
+            <table>
+              <thead><tr><th>Account</th><th>Product</th><th>Principal</th><th>Interest</th><th>Maturity</th><th>Status</th><th>Detailed report</th></tr></thead>
+              <tbody>
+                <tr *ngFor="let account of portfolio.accounts">
+                  <td>{{ account.accountNo }}</td><td>{{ account.productCode }}</td><td>{{ money(account.principal, account.currency) }}</td><td>{{ money(account.accruedInterest, account.currency) }}</td><td>{{ account.maturityDate | date:'mediumDate' }}</td><td><span class="pill">{{ account.status }}</span></td>
+                  <td><button class="link-button" type="button" (click)="loadMaturity(account.accountNo)">Open report</button></td>
+                </tr>
+                <tr *ngIf="portfolio.accounts.length === 0"><td colspan="7" class="empty-cell">No fixed deposit accounts found.</td></tr>
+              </tbody>
+            </table>
           </div>
-          <div class="stat-card">
-            <span class="stat-label">WEIGHTED AVERAGE RATE</span>
-            <span class="stat-val font-semibold">7.42% p.a.</span>
-            <span class="stat-meta text-secondary">Asset Cost Basis</span>
+        </section>
+      </ng-container>
+
+      <ng-template #staffReports>
+        <section class="report-selector" aria-label="Available reports">
+          <button *ngFor="let report of reportDefinitions" type="button" class="report-tile" [class.active]="selected === report.kind" (click)="select(report.kind)">
+            <span>{{ report.label }}</span><small>{{ report.description }}</small>
+          </button>
+        </section>
+        <section class="report-panel">
+          <div class="panel-heading">
+            <div><span class="eyebrow">LIVE DATA</span><h2>{{ selectedDefinition.label }}</h2><p>{{ selectedDefinition.description }}</p></div>
+            <div class="export-actions"><button class="btn btn-secondary" type="button" (click)="downloadCsv()" [disabled]="loading">Download CSV</button><button class="btn btn-primary" type="button" (click)="select(selected)" [disabled]="loading">{{ loading ? 'Loading…' : 'Reload' }}</button></div>
           </div>
-          <div class="stat-card">
-            <span class="stat-label">SCHEDULED 30-DAY MATURITY</span>
-            <span class="stat-val font-semibold">{{ 300000 | currencyInr }}</span>
-            <span class="stat-meta text-warning">Requires Liquidity</span>
+          <div *ngIf="loading" class="loading-state">Loading {{ selectedDefinition.label.toLowerCase() }}…</div>
+          <div *ngIf="!loading && data.length === 0" class="empty-state">There are no rows in this report yet.</div>
+          <div class="table-scroll" *ngIf="!loading && data.length">
+            <table><thead><tr><th *ngFor="let column of columns">{{ column }}</th></tr></thead><tbody><tr *ngFor="let row of data"><td *ngFor="let key of rowKeys">{{ render(row, key) }}</td></tr></tbody></table>
           </div>
-          <div class="stat-card">
-            <span class="stat-label">ESTIMATED ACCRUED LIABILITY</span>
-            <span class="stat-val font-semibold">{{ 89450 | currencyInr }}</span>
-            <span class="stat-meta text-success">Accrual Reserve</span>
-          </div>
+        </section>
+      </ng-template>
+
+      <section class="report-panel detailed-generator" *ngIf="!isCustomer">
+        <div class="panel-heading"><div><span class="eyebrow">DETAILED ACCOUNT REPORT</span><h2>Generate FD maturity report</h2><p>Enter an FD account number to see its maturity, interest, transaction, and notification history.</p></div></div>
+        <div class="generator-actions"><input class="form-input" [(ngModel)]="accountNumber" placeholder="Example: 0010000394" aria-label="FD account number"><button class="btn btn-primary" type="button" (click)="loadMaturity(accountNumber)" [disabled]="detailLoading">{{ detailLoading ? 'Generating…' : 'Generate report' }}</button></div>
+      </section>
+
+      <section class="report-panel detailed-report" *ngIf="maturityReport">
+        <div class="panel-heading">
+          <div><span class="eyebrow">FD MATURITY REPORT</span><h2>{{ maturityReport.fdAccount.accountNo }}</h2><p>Generated {{ maturityReport.reportGeneratedAt | date:'medium' }} · {{ maturityReport.fdAccount.productCode }} · {{ maturityReport.fdAccount.status }}</p></div>
+          <div class="export-actions"><button class="btn btn-secondary" type="button" (click)="downloadMaturity('xlsx')">Download Excel</button><button class="btn btn-primary" type="button" (click)="downloadMaturity('pdf')">Download PDF</button></div>
         </div>
-      </div>
-
-      <div class="grid-2 mb-6">
-        <!-- Maturity Schedule Breakdown -->
-        <app-card
-          title="Tenure Maturity Bucket Schedule"
-          subtitle="Distribution of liabilities across chronological time windows"
-        >
-          <div class="bucket-list">
-            <div *ngFor="let b of maturityBuckets" class="bucket-item">
-              <div class="flex-between mb-1">
-                <span class="bucket-name">{{ b.bucket }}</span>
-                <span class="bucket-amount font-semibold">{{ b.amount | currencyInr }} ({{ b.pct }}%)</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill" [style.width.%]="b.pct"></div>
-              </div>
-            </div>
-          </div>
-        </app-card>
-
-        <!-- Category & Product Distribution -->
-        <app-card
-          title="Customer Segment Concentration"
-          subtitle="Deposit volume categorized by special customer classifications"
-        >
-          <div class="bucket-list">
-            <div *ngFor="let c of categoryDistribution" class="bucket-item">
-              <div class="flex-between mb-1">
-                <div class="flex-row">
-                  <app-badge [variant]="c.badge" [text]="c.category"></app-badge>
-                  <span class="bucket-name">{{ c.accounts }} accounts</span>
-                </div>
-                <span class="bucket-amount font-semibold">{{ c.amount | currencyInr }}</span>
-              </div>
-              <div class="progress-bar-bg">
-                <div class="progress-bar-fill accent-fill" [style.width.%]="c.pct"></div>
-              </div>
-            </div>
-          </div>
-        </app-card>
-      </div>
-
-      <!-- Regulatory Summary Table -->
-      <app-card
-        title="Fixed Deposit Portfolio Ledger Registry"
-        subtitle="Full audit trail for compliance inspection"
-      >
-        <app-table
-          [columns]="columns"
-          [data]="reportLedger"
-          [pageSize]="5"
-        ></app-table>
-      </app-card>
-    </div>
+        <div class="metric-grid compact">
+          <article class="metric-card"><span>Principal</span><strong>{{ money(maturityReport.maturity.principalComponent, maturityReport.fdAccount.currency) }}</strong></article>
+          <article class="metric-card"><span>Interest</span><strong>{{ money(maturityReport.maturity.interestComponent, maturityReport.fdAccount.currency) }}</strong></article>
+          <article class="metric-card"><span>Net payout</span><strong>{{ money(maturityReport.maturity.netPayout, maturityReport.fdAccount.currency) }}</strong></article>
+        </div>
+        <div class="details-grid"><div><span>Customer</span><strong>{{ maturityReport.customer.fullName }}</strong></div><div><span>KYC status</span><strong>{{ maturityReport.customer.kycStatus || '—' }}</strong></div><div><span>Interest postings</span><strong>{{ maturityReport.interestTransactions.length }}</strong></div><div><span>Transactions</span><strong>{{ maturityReport.transactions.length }}</strong></div></div>
+        <h3>Interest postings</h3><div class="table-scroll"><table><thead><tr><th>ID</th><th>Amount</th><th>Posted at</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of maturityReport.interestTransactions"><td>{{ item.id }}</td><td>{{ money(item.amount, maturityReport.fdAccount.currency) }}</td><td>{{ item.postedAt | date:'medium' }}</td><td>{{ item.status }}</td></tr><tr *ngIf="!maturityReport.interestTransactions.length"><td colspan="4" class="empty-cell">No interest postings.</td></tr></tbody></table></div>
+        <h3>Transactions</h3><div class="table-scroll"><table><thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Date</th><th>Remarks</th></tr></thead><tbody><tr *ngFor="let item of maturityReport.transactions"><td>{{ item.id }}</td><td>{{ item.type }}</td><td>{{ money(item.amount, maturityReport.fdAccount.currency) }}</td><td>{{ item.occurredAt | date:'medium' }}</td><td>{{ item.remarks || '—' }}</td></tr><tr *ngIf="!maturityReport.transactions.length"><td colspan="5" class="empty-cell">No transactions.</td></tr></tbody></table></div>
+      </section>
+    </main>
   `,
   styles: [`
-    .section-tag {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.08em;
-      color: var(--color-text-muted);
-    }
-    .stat-card {
-      background-color: var(--color-bg-elevated);
-      border: 1px solid var(--color-border-subtle);
-      border-radius: var(--radius-card);
-      padding: var(--space-4);
-      display: flex;
-      flex-direction: column;
-      gap: 3px;
-    }
-    .stat-label {
-      font-size: 10px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      color: var(--color-text-muted);
-    }
-    .stat-val {
-      font-size: var(--text-md);
-      color: var(--color-text-primary);
-    }
-    .stat-meta {
-      font-size: var(--text-xs);
-    }
-    .font-semibold {
-      font-weight: 600;
-    }
-    .bucket-list {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-4);
-    }
-    .bucket-item {
-      display: flex;
-      flex-direction: column;
-    }
-    .bucket-name {
-      font-size: var(--text-xs);
-      color: var(--color-text-secondary);
-    }
-    .bucket-amount {
-      font-size: var(--text-xs);
-      color: var(--color-text-primary);
-    }
-    .progress-bar-bg {
-      height: 6px;
-      background-color: var(--color-bg-elevated);
-      border-radius: 3px;
-      overflow: hidden;
-      border: 1px solid var(--color-border-subtle);
-    }
-    .progress-bar-fill {
-      height: 100%;
-      background-color: var(--color-accent);
-      border-radius: 3px;
-      transition: width 300ms ease;
-    }
-    .accent-fill {
-      background-color: #4a7c5e;
-    }
+    .reports-page { max-width:1280px; margin:0 auto; padding:24px; display:grid; gap:20px; }
+    .hero-card,.report-panel,.alert-card { background:var(--color-bg-elevated); border:1px solid var(--color-border-subtle); border-radius:14px; padding:24px; }
+    .hero-card,.panel-heading,.alert-card,.generator-actions,.export-actions { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+    .hero-card h1,.panel-heading h2 { margin:4px 0 6px; color:var(--color-text-primary); }.hero-card p,.panel-heading p { margin:0; color:var(--color-text-secondary); }
+    .eyebrow { color:var(--color-accent); font-size:11px; letter-spacing:.12em; font-weight:700; }.alert-card { border-color:var(--color-danger,#b42318); color:var(--color-text-primary); }.alert-card span { display:block; margin-top:4px; color:var(--color-text-secondary); }
+    .metric-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }.metric-card { background:var(--color-bg-base); border:1px solid var(--color-border-subtle); border-radius:12px; padding:18px; display:grid; gap:8px; }.metric-card span,.details-grid span { color:var(--color-text-muted); font-size:12px; text-transform:uppercase; letter-spacing:.06em; }.metric-card strong { color:var(--color-text-primary); font-size:22px; }
+    .report-selector { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }.report-tile { text-align:left; background:var(--color-bg-elevated); border:1px solid var(--color-border-subtle); border-radius:12px; padding:18px; color:var(--color-text-primary); cursor:pointer; display:grid; gap:8px; }.report-tile span { font-weight:700; }.report-tile small { color:var(--color-text-secondary); }.report-tile.active { border-color:var(--color-accent); box-shadow:inset 0 0 0 1px var(--color-accent); }
+    .table-scroll { overflow:auto; margin-top:18px; } table { width:100%; border-collapse:collapse; min-width:720px; } th,td { padding:13px 12px; border-bottom:1px solid var(--color-border-subtle); text-align:left; white-space:nowrap; } th { color:var(--color-text-muted); font-size:11px; text-transform:uppercase; letter-spacing:.05em; } td { color:var(--color-text-primary); font-size:13px; }.empty-cell { text-align:center; color:var(--color-text-secondary); }.empty-state,.loading-state { margin-top:18px; border:1px dashed var(--color-border-subtle); padding:20px; border-radius:10px; color:var(--color-text-secondary); }
+    .status,.pill { display:inline-block; border:1px solid var(--color-border-subtle); border-radius:999px; padding:4px 9px; font-size:11px; color:var(--color-text-secondary); }.link-button { background:none; border:0; padding:0; color:var(--color-accent); cursor:pointer; font:inherit; font-weight:600; }.form-input { min-width:270px; max-width:420px; flex:1; padding:10px 12px; border:1px solid var(--color-border-subtle); border-radius:8px; background:var(--color-bg-base); color:var(--color-text-primary); }.detailed-report h3 { margin:26px 0 0; color:var(--color-text-primary); font-size:16px; }.details-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px; }.details-grid div { display:grid; gap:6px; }.details-grid strong { color:var(--color-text-primary); }
+    @media (max-width:760px) { .reports-page { padding:16px; }.metric-grid,.report-selector,.details-grid { grid-template-columns:1fr; }.hero-card,.panel-heading { align-items:flex-start; }.export-actions { width:100%; }.export-actions .btn { flex:1; }.form-input { min-width:100%; } }
   `]
 })
 export class ReportsComponent implements OnInit {
-  totalPrincipal = 2175000;
-
-  maturityBuckets = [
-    { bucket: '1 to 3 Months (Immediate)', amount: 125000, pct: 6 },
-    { bucket: '3 to 6 Months', amount: 300000, pct: 14 },
-    { bucket: '6 to 12 Months', amount: 1000000, pct: 46 },
-    { bucket: '1 to 3 Years (Medium Term)', amount: 750000, pct: 34 }
+  readonly reportDefinitions: ReportDefinition[] = [
+    { kind: 'summary', label: 'FD account status', description: 'Active accounts, principal, and accrued interest by product.', endpoint: 'fd-summary' },
+    { kind: 'interest', label: 'Interest transaction history', description: 'Every posted interest transaction across fixed deposits.', endpoint: 'interest-transactions' },
+    { kind: 'maturity', label: 'Maturity summary', description: 'Accounts grouped by maturity date and accrued interest.', endpoint: 'maturity-summary' }
   ];
+  isCustomer = false; loading = false; detailLoading = false; error = ''; selected: ReportKind = 'summary';
+  data: Record<string, unknown>[] = []; portfolio: CustomerPortfolio | null = null; maturityReport: FdMaturityReport | null = null; accountNumber = '';
 
-  categoryDistribution = [
-    { category: 'STANDARD', accounts: 2, amount: 1300000, pct: 60, badge: 'role' as const },
-    { category: 'SENIOR CITIZEN', accounts: 1, amount: 500000, pct: 23, badge: 'active' as const },
-    { category: 'CUMULATIVE GROWTH', accounts: 1, amount: 250000, pct: 11, badge: 'pending' as const },
-    { category: 'QUARTERLY PAYOUT', accounts: 1, amount: 125000, pct: 6, badge: 'role' as const }
-  ];
-
-  readonly columns: TableColumn[] = [
-    { field: 'accountNo', header: 'FD Account', type: 'mask-account' },
-    { field: 'customerId', header: 'Customer ID', width: '130px' },
-    { field: 'principal', header: 'Principal', type: 'currency', align: 'right' },
-    { field: 'rate', header: 'Rate (%)', align: 'center' },
-    { field: 'interestAccrued', header: 'Accrued Interest', type: 'currency', align: 'right' },
-    { field: 'maturityDate', header: 'Maturity Date', type: 'date' },
-    { field: 'status', header: 'Status', type: 'badge', align: 'center' }
-  ];
-
-  reportLedger = [
-    {
-      accountNo: 'FD-100293847',
-      customerId: 'CUST-1001',
-      principal: 250000,
-      rate: 7.25,
-      interestAccrued: 18125,
-      maturityDate: '2028-01-10',
-      status: 'ACTIVE'
-    },
-    {
-      accountNo: 'FD-100492817',
-      customerId: 'CUST-1002',
-      principal: 500000,
-      rate: 8.00,
-      interestAccrued: 40000,
-      maturityDate: '2029-02-01',
-      status: 'ACTIVE'
-    },
-    {
-      accountNo: 'FD-100583920',
-      customerId: 'CUST-1003',
-      principal: 1000000,
-      rate: 7.50,
-      interestAccrued: 75000,
-      maturityDate: '2027-03-05',
-      status: 'ACTIVE'
-    },
-    {
-      accountNo: 'FD-100612984',
-      customerId: 'CUST-1004',
-      principal: 125000,
-      rate: 6.80,
-      interestAccrued: 4250,
-      maturityDate: '2026-09-12',
-      status: 'PENDING'
-    },
-    {
-      accountNo: 'FD-100782910',
-      customerId: 'CUST-1001',
-      principal: 300000,
-      rate: 7.10,
-      interestAccrued: 21300,
-      maturityDate: '2026-01-05',
-      status: 'CLOSED'
-    }
-  ];
-
-  ngOnInit(): void {}
+  constructor(
+    private readonly reports: ReportApiService,
+    private readonly auth: AuthService,
+    private readonly changeDetector: ChangeDetectorRef
+  ) {}
+  ngOnInit(): void { this.isCustomer = this.auth.getRole() === 'CUSTOMER'; this.refresh(); }
+  get selectedDefinition(): ReportDefinition { return this.reportDefinitions.find(report => report.kind === this.selected) || this.reportDefinitions[0]; }
+  get rowKeys(): string[] { return this.data.length ? Object.keys(this.data[0]) : []; }
+  get columns(): string[] { return this.rowKeys.map(key => key.replace(/([A-Z])/g, ' $1').replace(/^./, value => value.toUpperCase())); }
+  get portfolioCurrency(): string { return this.portfolio?.accounts[0]?.currency || 'JPY'; }
+  refresh(): void { this.isCustomer ? this.loadPortfolio() : this.select(this.selected); }
+  select(kind: ReportKind): void {
+    this.selected = kind; this.error = ''; this.loading = true;
+    const request: Observable<unknown[]> = kind === 'interest' ? this.reports.interestHistory() : kind === 'maturity' ? this.reports.maturitySummary() : this.reports.fdSummary();
+    request.pipe(timeout(15000), finalize(() => { this.loading = false; this.updateView(); })).subscribe({
+      next: rows => { this.data = (rows || []) as Record<string, unknown>[]; this.updateView(); },
+      error: error => this.fail(error)
+    });
+  }
+  loadMaturity(accountNo: string): void {
+    const normalized = accountNo.trim();
+    if (!normalized) { this.error = 'Enter an FD account number to generate its detailed report.'; return; }
+    this.error = ''; this.detailLoading = true;
+    this.reports.maturityReport(normalized).pipe(timeout(15000), finalize(() => { this.detailLoading = false; this.updateView(); })).subscribe({
+      next: report => { this.maturityReport = report; this.accountNumber = report.fdAccount.accountNo; this.updateView(); },
+      error: error => this.fail(error)
+    });
+  }
+  downloadCsv(): void { this.download(this.selectedDefinition.endpoint, 'csv'); }
+  downloadMaturity(format: 'pdf' | 'xlsx'): void {
+    if (!this.maturityReport) return;
+    const accountNo = this.maturityReport.fdAccount.accountNo;
+    this.reports.maturityReportDownload(accountNo, format).pipe(timeout(30000)).subscribe({ next: blob => this.save(blob, `fd-maturity-report-${accountNo}.${format}`), error: error => this.fail(error) });
+  }
+  render(row: Record<string, unknown>, key: string): string {
+    const value = row[key];
+    if (value === null || value === undefined || value === '') return '—';
+    if (/(principal|interest|amount|payout)/i.test(key) && typeof value === 'number') return this.money(value, String(row['currency'] || 'JPY'));
+    if (/(date|at)$/i.test(key)) { const date = new Date(String(value)); return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString(); }
+    return String(value);
+  }
+  money(value: number | null | undefined, currency = 'JPY'): string { return new Intl.NumberFormat(currency === 'JPY' ? 'ja-JP' : 'en-IN', { style: 'currency', currency, maximumFractionDigits: currency === 'JPY' ? 0 : 2 }).format(Number(value || 0)); }
+  private loadPortfolio(): void {
+    this.error = ''; this.loading = true;
+    this.reports.portfolio().pipe(timeout(15000), finalize(() => { this.loading = false; this.updateView(); })).subscribe({
+      next: portfolio => { this.portfolio = portfolio; this.updateView(); },
+      error: error => this.fail(error)
+    });
+  }
+  private download(path: string, extension: string): void { this.reports.download(path).pipe(timeout(30000)).subscribe({ next: blob => this.save(blob, `${path}.${extension}`), error: error => this.fail(error) }); }
+  private save(blob: Blob, filename: string): void { const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url); }
+  private fail(error: any): void { this.error = error?.error?.detail || error?.error?.message || error?.message || 'Unable to load the report. Please try again.'; this.updateView(); }
+  private updateView(): void { this.changeDetector.detectChanges(); }
 }

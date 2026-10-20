@@ -66,11 +66,15 @@ public class NotificationLogEntity extends AuditEntity {
 
     // Durable payload for Kafka publishing and mail retries after maturity commits.
     private java.math.BigDecimal maturityAmount;
+    @Column(name = "penalty_amount", precision = 19, scale = 2)
+    private java.math.BigDecimal penaltyAmount;
     private java.time.LocalDate maturityDate;
     private LocalDateTime nextAttemptAt;
 
     public java.math.BigDecimal getMaturityAmount() { return maturityAmount; }
     public void setMaturityAmount(java.math.BigDecimal value) { maturityAmount = value; }
+    public java.math.BigDecimal getPenaltyAmount() { return penaltyAmount; }
+    public void setPenaltyAmount(java.math.BigDecimal value) { penaltyAmount = value; }
     public java.time.LocalDate getMaturityDate() { return maturityDate; }
     public void setMaturityDate(java.time.LocalDate value) { maturityDate = value; }
     public LocalDateTime getNextAttemptAt() { return nextAttemptAt; }

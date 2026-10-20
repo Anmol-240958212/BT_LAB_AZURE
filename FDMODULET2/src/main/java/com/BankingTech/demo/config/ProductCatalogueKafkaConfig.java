@@ -31,6 +31,11 @@ public class ProductCatalogueKafkaConfig {
         return factory(brokers, "fd-auth-replies-" + UUID.randomUUID(), "latest");
     }
     @Bean
+    ConcurrentKafkaListenerContainerFactory<String, String> fdCustomerReportRepliesFactory(
+            @Value("${spring.kafka.bootstrap-servers:localhost:9092}") String brokers) {
+        return factory(brokers, "fd-customer-report-replies-" + UUID.randomUUID(), "latest");
+    }
+    @Bean
     ConcurrentKafkaListenerContainerFactory<String, String> fdQuoteRepliesFactory(
             @Value("${spring.kafka.bootstrap-servers:localhost:9092}") String brokers) {
         // Every FD instance receives replies and only completes its own correlation IDs.

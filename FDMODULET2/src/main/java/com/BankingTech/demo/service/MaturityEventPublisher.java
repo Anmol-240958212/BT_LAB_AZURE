@@ -36,7 +36,9 @@ public class MaturityEventPublisher {
             try {
                 var event = new FdMaturityEventDto(id, log.getNotificationLogCustomerId(),
                         log.getNotificationLogFdAccountNo(), log.getMaturityAmount(), log.getMaturityDate());
-                kafka.send("fd-maturity-events", event.fdAccountNo(), event).get(10, TimeUnit.SECONDS);
+                String topic = "PREMATURE_WITHDRAWAL_NOTICE".equals(log.getNotificationLogNotificationType())
+                        ? "fd-premature-withdrawal-events" : "fd-maturity-events";
+                kafka.send(topic, event.fdAccountNo(), event).get(10, TimeUnit.SECONDS);
                 // Do not overwrite SENT/FAILED if the consumer ran before this acknowledgement.
                 logs.markPublished(id);
             } catch (Exception failure) {

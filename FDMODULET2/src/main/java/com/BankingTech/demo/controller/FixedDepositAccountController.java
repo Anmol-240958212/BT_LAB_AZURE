@@ -3,6 +3,8 @@ package com.BankingTech.demo.controller;
 import com.BankingTech.demo.dto.requestdto.FixedDepositAccountRequestDTO;
 import com.BankingTech.demo.dto.responsedto.FixedDepositAccountResponseDTO;
 import com.BankingTech.demo.dto.responsedto.FDAccountCreationResponseDTO;
+import com.BankingTech.demo.dto.requestdto.FDAccountDateAdjustmentRequestDTO;
+import com.BankingTech.demo.service.FdAuthKafkaClient;
 import com.BankingTech.demo.service.FixedDepositAccountService;
 import com.BankingTech.demo.service.FdCreationAuthorization;
 
@@ -20,11 +22,35 @@ public class FixedDepositAccountController {
 
         private final FixedDepositAccountService fixedDepositAccountService;
         private final FdCreationAuthorization creationAuthorization;
+        private final FdAuthKafkaClient authClient;
 
+        @org.springframework.beans.factory.annotation.Autowired
         public FixedDepositAccountController(
-                        FixedDepositAccountService fixedDepositAccountService, FdCreationAuthorization creationAuthorization) {
+                        FixedDepositAccountService fixedDepositAccountService, FdCreationAuthorization creationAuthorization,
+                        FdAuthKafkaClient authClient) {
                 this.fixedDepositAccountService = fixedDepositAccountService;
                 this.creationAuthorization = creationAuthorization;
+                this.authClient = authClient;
+        }
+
+        /** Retained for existing unit tests of the creation endpoints. */
+        public FixedDepositAccountController(FixedDepositAccountService fixedDepositAccountService,
+                        FdCreationAuthorization creationAuthorization) {
+                this(fixedDepositAccountService, creationAuthorization, null);
+        }
+
+        @PutMapping("/{fdAccountNo}/dates")
+        public ResponseEntity<FixedDepositAccountResponseDTO> adjustDates(
+                        @PathVariable String fdAccountNo,
+                        @Valid @RequestBody FDAccountDateAdjustmentRequestDTO request,
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
+                var profile = authClient.profile(authorization);
+                if (!"ADMIN".equalsIgnoreCase(profile.role())) {
+                        throw new org.springframework.web.server.ResponseStatusException(
+                                        org.springframework.http.HttpStatus.FORBIDDEN, "Only administrators can adjust FD dates");
+                }
+                return ResponseEntity.ok(fixedDepositAccountService.adjustAccountDates(
+                                fdAccountNo, request.openingDate(), request.maturityDate()));
         }
 
         @PostMapping("/create")

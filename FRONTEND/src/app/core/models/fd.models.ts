@@ -74,6 +74,8 @@ export interface FDWithdrawalResponse {
   penaltyApplied: number;
 }
 
+export interface FDAccountDateAdjustmentRequest { openingDate: string; maturityDate: string; }
+
 export interface FDTransactionRequest {
   fdAccountNo: string;
   txnType: 'DEPOSIT' | 'WITHDRAWAL' | 'INTEREST' | 'PENALTY' | string;

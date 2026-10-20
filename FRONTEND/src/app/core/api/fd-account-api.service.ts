@@ -5,6 +5,7 @@ import {
   FDAccountCreationResponse,
   FDWithdrawalRequest,
   FDWithdrawalResponse,
+  FDAccountDateAdjustmentRequest,
   FixedDepositAccountRequest,
   FixedDepositAccountResponse
 } from '../models/fd.models';
@@ -45,6 +46,10 @@ export class FDAccountApiService {
 
   public withdrawFD(request: FDWithdrawalRequest): Observable<FDWithdrawalResponse> {
     return this.http.post<FDWithdrawalResponse>(`${this.baseUrl}/withdraw`, request);
+  }
+
+  public adjustDates(fdAccountNo: string, request: FDAccountDateAdjustmentRequest): Observable<FixedDepositAccountResponse> {
+    return this.http.put<FixedDepositAccountResponse>(`${this.baseUrl}/${encodeURIComponent(fdAccountNo)}/dates`, request);
   }
 
   public getAccountNotifications(fdAccountNo: string): Observable<any[]> {

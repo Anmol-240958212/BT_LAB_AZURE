@@ -139,6 +139,13 @@ import { UserApiService } from '../../../core/api/user-api.service';
             <span class="detail-label">Status:</span>
             <app-badge [variant]="selectedAccount.status === 'ACTIVE' ? 'active' : 'closed'" [text]="selectedAccount.status"></app-badge>
           </div>
+          <div *ngIf="isAdmin" class="admin-date-editor">
+            <strong>Administrator date correction</strong>
+            <p>Term remains {{ selectedAccount.termMonths }} months. The maturity date must match the selected opening date plus this term.</p>
+            <label>Opening date <input type="date" class="form-input" [(ngModel)]="adjustedOpeningDate" (change)="syncAdjustedMaturity()" /></label>
+            <label>Maturity date <input type="date" class="form-input" [(ngModel)]="adjustedMaturityDate" /></label>
+            <app-button variant="primary" [loading]="savingDates" (clicked)="saveDates()">Save dates</app-button>
+          </div>
 
           <!-- Kafka Maturity Notification Delivery Status -->
           <div *ngIf="accountNotifications && accountNotifications.length > 0" class="mt-4 pt-4" style="border-top: 1px solid var(--color-border-subtle); grid-column: 1 / -1;">
@@ -298,6 +305,9 @@ import { UserApiService } from '../../../core/api/user-api.service';
       justify-content: space-between;
       font-size: var(--text-sm);
     }
+    .admin-date-editor { grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:var(--space-3); padding:var(--space-3); border:1px solid var(--color-border-subtle); border-radius:var(--radius-card); }
+    .admin-date-editor p { width:100%; margin:0; color:var(--color-text-secondary); font-size:var(--text-xs); }
+    .admin-date-editor label { display:flex; flex-direction:column; gap:4px; font-size:var(--text-xs); }
   `]
 })
 export class FDAccountsComponent implements OnInit {
@@ -315,6 +325,9 @@ export class FDAccountsComponent implements OnInit {
   withdrawalDate = new Date().toISOString().substring(0, 10);
   processingWithdrawal = false;
   withdrawalResult: FDWithdrawalResponse | null = null;
+  adjustedOpeningDate = '';
+  adjustedMaturityDate = '';
+  savingDates = false;
 
   readonly mockAccounts: FixedDepositAccountResponse[] = [
     {
@@ -453,6 +466,7 @@ export class FDAccountsComponent implements OnInit {
     const role = this.authService.getRole();
     return role === 'BANK_OFFICER' || role === 'ADMIN';
   }
+  get isAdmin(): boolean { return this.authService.getRole() === 'ADMIN'; }
 
   loadAccounts(isManualRefresh = false): void {
     const role = this.authService.getRole();
@@ -625,6 +639,8 @@ export class FDAccountsComponent implements OnInit {
     this.isDetailModalOpen = true;
     this.accountNotifications = [];
     this.loadingNotifications = true;
+    this.adjustedOpeningDate = (account.openedAt || '').substring(0, 10);
+    this.adjustedMaturityDate = account.maturityDate || '';
     this.fdAccountApi.getAccountNotifications(account.fdAccountNo).subscribe({
       next: (logs) => {
         this.loadingNotifications = false;
@@ -634,6 +650,22 @@ export class FDAccountsComponent implements OnInit {
         this.loadingNotifications = false;
         this.accountNotifications = [];
       }
+    });
+  }
+
+  syncAdjustedMaturity(): void {
+    if (!this.selectedAccount || !this.adjustedOpeningDate) return;
+    const start = new Date(`${this.adjustedOpeningDate}T00:00:00`);
+    start.setMonth(start.getMonth() + this.selectedAccount.termMonths);
+    this.adjustedMaturityDate = start.toISOString().substring(0, 10);
+  }
+
+  saveDates(): void {
+    if (!this.selectedAccount || !this.adjustedOpeningDate || !this.adjustedMaturityDate || this.savingDates) return;
+    this.savingDates = true;
+    this.fdAccountApi.adjustDates(this.selectedAccount.fdAccountNo, { openingDate: this.adjustedOpeningDate, maturityDate: this.adjustedMaturityDate }).subscribe({
+      next: account => { this.savingDates = false; this.selectedAccount = account; const index = this.allAccounts.findIndex(a => a.fdAccountNo === account.fdAccountNo); if (index >= 0) this.allAccounts[index] = account; this.toastService.success('Opening and maturity dates updated.', 'Dates Saved'); this.applyFilters(); },
+      error: err => { this.savingDates = false; this.toastService.error(err.error?.detail || 'Dates could not be updated.', 'Date Update Failed'); }
     });
   }
 

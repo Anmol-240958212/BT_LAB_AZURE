@@ -17,8 +17,12 @@ public interface FDInterestTransactionRepository
 
         List<FDInterestTransactionEntity> findByFdInterestTransactionFdAccountNoOrderByFdInterestTransactionDateDesc(
                         String fdInterestTransactionFdAccountNo);
+        List<FDInterestTransactionEntity> findByFdInterestTransactionFdAccountNoOrderByFdInterestTransactionDateAsc(
+                        String fdInterestTransactionFdAccountNo);
 
         boolean existsByFdInterestTransactionFdAccountNoAndFdInterestTransactionDate(
                         String fdInterestTransactionFdAccountNo,
                         LocalDateTime fdInterestTransactionDate);
+
+        long deleteByFdInterestTransactionFdAccountNo(String fdAccountNo);
 }

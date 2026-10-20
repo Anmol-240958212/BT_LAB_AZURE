@@ -24,7 +24,8 @@ public class MaturityKafkaConfig {
     public KafkaAdmin.NewTopics bankingTopics() {
         return new KafkaAdmin.NewTopics(
                 TopicBuilder.name("customer-kyc-events").partitions(1).replicas(1).build(),
-                TopicBuilder.name("fd-maturity-events").partitions(1).replicas(1).build());
+                TopicBuilder.name("fd-maturity-events").partitions(1).replicas(1).build(),
+                TopicBuilder.name("fd-premature-withdrawal-events").partitions(1).replicas(1).build());
     }
 
     @Bean

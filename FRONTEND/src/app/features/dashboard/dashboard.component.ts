@@ -117,9 +117,9 @@ import { TableColumn } from '../../shared/components/table/table.component';
           <app-button
             *ngIf="currentRole === 'CUSTOMER'"
             variant="ghost"
-            (clicked)="navigate('/fixed-deposit/accounts')"
+            (clicked)="navigate('/reports')"
           >
-            <app-icon name="coins" [size]="15"></app-icon>
+            <app-icon name="bar-chart" [size]="15"></app-icon>
             <span>My Deposit Portfolio</span>
           </app-button>
 
