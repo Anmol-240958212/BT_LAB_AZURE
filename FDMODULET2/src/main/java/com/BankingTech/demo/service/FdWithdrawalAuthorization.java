@@ -26,7 +26,8 @@ public class FdWithdrawalAuthorization {
         if (profile == null || profile.role() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account role is unavailable");
         }
-        if ("ADMIN".equals(profile.role()) || "BANK_OFFICER".equals(profile.role())) return;
+        if ("ADMIN".equals(profile.role()) || "BANK_OFFICER".equals(profile.role())
+                || "STAFF".equals(profile.role())) return;
         if (!"CUSTOMER".equals(profile.role()) || profile.customerId() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "A customer profile is required");
         }

@@ -8,6 +8,7 @@ import com.example.auth.dto.RegisterRequestDto;
 import com.example.auth.dto.ResetPasswordRequestDto;
 import com.example.auth.dto.UserResponseDto;
 import com.example.auth.dto.UserUpdateRequestDto;
+import java.util.List;
 
 public interface AuthService {
 
@@ -33,6 +34,8 @@ public interface AuthService {
     UserResponseDto updateUserProfile(String username, UserUpdateRequestDto request);
 
     EmployeeResponseDto createEmployee(String callerUsername, CreateEmployeeRequestDto request);
+
+    List<EmployeeResponseDto> listEmployees(String callerUsername);
 
     boolean checkUsernameExists(String username);
 }

@@ -79,7 +79,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
           </app-button>
 
           <app-button
-            *ngIf="currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
+            *ngIf="currentRole === 'STAFF' || currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
             variant="secondary"
             (clicked)="navigate('/fixed-deposit/create')"
           >
@@ -88,7 +88,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
           </app-button>
 
           <app-button
-            *ngIf="currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
+            *ngIf="currentRole === 'STAFF' || currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
             variant="secondary"
             (clicked)="navigate('/customer/list')"
           >
@@ -124,7 +124,7 @@ import { TableColumn } from '../../shared/components/table/table.component';
           </app-button>
 
           <app-button
-            *ngIf="currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
+            *ngIf="currentRole === 'STAFF' || currentRole === 'BANK_OFFICER' || currentRole === 'ADMIN'"
             variant="ghost"
             (clicked)="navigate('/reports')"
           >

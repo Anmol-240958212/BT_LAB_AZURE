@@ -344,7 +344,7 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       label: 'Products & Pricing', translationKey: 'sidebar.products',
       route: '/products',
       icon: 'coins',
-      roles: ['BANK_OFFICER', 'ADMIN']
+      roles: ['STAFF', 'BANK_OFFICER', 'ADMIN']
     },
     {
       label: 'Dashboard', translationKey: 'nav.dashboard',
@@ -362,13 +362,13 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       label: 'FD Accounts (All)', translationKey: 'sidebar.allAccounts',
       route: '/fixed-deposit/accounts',
       icon: 'clipboard',
-      roles: ['BANK_OFFICER', 'ADMIN']
+      roles: ['STAFF', 'BANK_OFFICER', 'ADMIN']
     },
     {
       label: 'Create FD Account', translationKey: 'sidebar.createAccount',
       route: '/fixed-deposit/create',
       icon: 'plus',
-      roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN']
+      roles: ['CUSTOMER', 'STAFF', 'BANK_OFFICER', 'ADMIN']
     },
     {
       label: 'FD Calculator', translationKey: 'nav.calculator',
@@ -380,13 +380,13 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       label: 'Transactions', translationKey: 'sidebar.transactions',
       route: '/fixed-deposit/transactions',
       icon: 'exchange',
-      roles: ['BANK_OFFICER', 'ADMIN']
+      roles: ['STAFF', 'BANK_OFFICER', 'ADMIN']
     },
     {
       label: 'Customer KYC & Accounts', translationKey: 'sidebar.customerKyc',
       route: '/customer/list',
       icon: 'users',
-      roles: ['BANK_OFFICER', 'ADMIN']
+      roles: ['STAFF', 'BANK_OFFICER', 'ADMIN']
     },
     {
       label: 'My KYC Profile', translationKey: 'sidebar.myKyc',
@@ -410,7 +410,7 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       label: 'Analytics & Reports', translationKey: 'sidebar.reports',
       route: '/reports',
       icon: 'bar-chart',
-      roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN']
+      roles: ['CUSTOMER', 'STAFF', 'BANK_OFFICER', 'ADMIN']
     }
   ];
 

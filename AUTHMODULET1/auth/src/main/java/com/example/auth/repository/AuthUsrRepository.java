@@ -5,6 +5,8 @@ import com.example.auth.entity.AuthUsr;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
+import java.util.Collection;
+import java.util.List;
 
 public interface AuthUsrRepository extends JpaRepository<AuthUsr, Long> {
     Optional<AuthUsr> findByCustomerCustomerIdentifier(Long customerId);
@@ -20,4 +22,6 @@ public interface AuthUsrRepository extends JpaRepository<AuthUsr, Long> {
     boolean existsByUsername(String username);
 
 	Optional<AuthUsr> findByUsername(String username);
+
+	List<AuthUsr> findByRoleRoleCodeIn(Collection<String> roleCodes);
 }

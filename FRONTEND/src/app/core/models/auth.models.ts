@@ -145,6 +145,7 @@ export interface CreateEmployeeRequest {
   password: string;
   email: string;
   phoneNumber?: string;
+  roleCode: 'STAFF';
 }
 
 export interface EmployeeResponse {

@@ -58,14 +58,14 @@ class FdCreationAuthorizationTest {
     @Test void rejectsPendingKycMissingProfileAndUnsupportedRole() {
         for (String response : new String[]{
                 "{\"role\":\"CUSTOMER\",\"customerId\":17,\"customerStatus\":\"KYC_PENDING\"}",
-                "{\"role\":\"CUSTOMER\"}", "{\"role\":\"STAFF\"}"}) {
+                "{\"role\":\"CUSTOMER\"}"}) {
             profile = response;
             assertEquals(403, assertThrows(ResponseStatusException.class,
                     () -> authorization.authorize("Bearer valid", request("17"))).getStatusCode().value());
         }
     }
     @Test void staffCanStillSelectCustomer() {
-        for (String role : new String[]{"ADMIN", "BANK_OFFICER"}) {
+        for (String role : new String[]{"ADMIN", "BANK_OFFICER", "STAFF"}) {
             profile = "{\"role\":\"" + role + "\"}";
             authorization.authorize("Bearer valid", request("18"));
         }

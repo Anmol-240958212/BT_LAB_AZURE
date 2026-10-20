@@ -1,6 +1,7 @@
 package com.BankingTech.demo.controller;
 
 import com.BankingTech.demo.service.InterestCalculationService;
+import com.BankingTech.demo.service.FdRoleAuthorization;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,15 +12,21 @@ import java.time.LocalDate;
 public class FDInterestBatchController {
 
     private final InterestCalculationService interestCalculationService;
+    private final FdRoleAuthorization roleAuthorization;
 
     public FDInterestBatchController(
-            InterestCalculationService interestCalculationService) {
+            InterestCalculationService interestCalculationService,
+            FdRoleAuthorization roleAuthorization) {
         this.interestCalculationService = interestCalculationService;
+        this.roleAuthorization = roleAuthorization;
     }
 
     @PostMapping
     public String runInterestBatch(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate businessDate) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate businessDate,
+            @RequestHeader(value = "Authorization", required = false) String authorization) {
+
+        roleAuthorization.requireAdmin(authorization);
 
         LocalDate effectiveDate = businessDate != null
                 ? businessDate

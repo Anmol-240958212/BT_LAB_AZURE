@@ -316,11 +316,7 @@ export class AuthService {
       if (rawRole.startsWith('ROLE_')) {
         rawRole = rawRole.substring(5);
       }
-      if (rawRole === 'STAFF') {
-        rawRole = 'BANK_OFFICER';
-      }
-
-      const normalizedRole: UserRole = (['CUSTOMER', 'BANK_OFFICER', 'ADMIN'].includes(rawRole)
+      const normalizedRole: UserRole = (['CUSTOMER', 'BANK_OFFICER', 'ADMIN', 'STAFF'].includes(rawRole)
         ? rawRole
         : 'CUSTOMER') as UserRole;
 

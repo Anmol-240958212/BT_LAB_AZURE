@@ -65,13 +65,13 @@ const routes: Routes = [
       {
         path: 'reports',
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN'] },
+        data: { roles: ['CUSTOMER', 'STAFF', 'BANK_OFFICER', 'ADMIN'] },
         loadChildren: () => import('./features/reports/reports.module').then(m => m.ReportsModule)
       },
       {
         path: 'products',
         canActivate: [AuthGuard, RoleGuard],
-        data: { roles: ['BANK_OFFICER', 'ADMIN'] },
+        data: { roles: ['STAFF', 'BANK_OFFICER', 'ADMIN'] },
         loadChildren: () => import('./features/products/products.module').then(m => m.ProductsModule)
       },
 

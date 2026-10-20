@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 @RestController
 @RequestMapping("/customer")
@@ -81,6 +82,7 @@ public class CustomerController {
     }
 
     @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'HEAD_ADMIN')")
     @Operation(summary = "Get all customers",
                description = "Retrieves a list of all customers (requires admin privileges).",
                security = @SecurityRequirement(name = "bearerAuth"))

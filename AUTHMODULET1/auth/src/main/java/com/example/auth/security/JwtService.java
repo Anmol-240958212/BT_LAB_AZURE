@@ -52,6 +52,15 @@ public class JwtService {
                 .getSubject();
     }
 
+    public String extractRole(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
+    }
+
     public void invalidateToken(String token) {
         if (token != null && !token.isBlank()) {
             blacklistedTokens.add(token.trim());

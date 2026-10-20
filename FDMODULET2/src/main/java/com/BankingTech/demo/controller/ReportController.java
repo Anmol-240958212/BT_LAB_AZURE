@@ -50,7 +50,8 @@ public class ReportController {
 
     private void officer(String authorization) {
         String role = auth.profile(authorization).role();
-        if (!"ADMIN".equalsIgnoreCase(role) && !"BANK_OFFICER".equalsIgnoreCase(role)) forbidden();
+        if (!"ADMIN".equalsIgnoreCase(role) && !"BANK_OFFICER".equalsIgnoreCase(role)
+                && !"STAFF".equalsIgnoreCase(role)) forbidden();
     }
     private void forbidden() { throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to access this report"); }
     private <T> ResponseEntity<?> respond(String format, String filename, List<T> data, Function<T, String> mapper, String header) {

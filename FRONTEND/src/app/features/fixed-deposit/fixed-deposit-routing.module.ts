@@ -8,19 +8,22 @@ import { RoleGuard } from '../../core/role.guard';
 import { AuthGuard } from '../../core/auth.guard';
 
 const routes: Routes = [
-  { path: 'calculator', component: FDCalculatorComponent },
+  {
+    path: 'calculator', component: FDCalculatorComponent, canActivate: [AuthGuard, RoleGuard],
+    data: { roles: ['CUSTOMER', 'STAFF', 'BANK_OFFICER', 'ADMIN'] }
+  },
   { path: 'accounts', component: FDAccountsComponent, canActivate: [AuthGuard] },
   {
     path: 'create',
     component: FDCreateComponent,
     canActivate: [AuthGuard, RoleGuard],
-    data: { roles: ['CUSTOMER', 'BANK_OFFICER', 'ADMIN'] }
+    data: { roles: ['CUSTOMER', 'STAFF', 'BANK_OFFICER', 'ADMIN'] }
   },
   {
     path: 'transactions',
     component: FDTransactionsComponent,
     canActivate: [RoleGuard],
-    data: { roles: ['BANK_OFFICER', 'ADMIN'] }
+    data: { roles: ['STAFF', 'BANK_OFFICER', 'ADMIN'] }
   }
 ];
 

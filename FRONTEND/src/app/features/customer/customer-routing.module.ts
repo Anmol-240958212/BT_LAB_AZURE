@@ -14,13 +14,13 @@ const routes: Routes = [
     path: 'all',
     component: CustomerListComponent,
     canActivate: [RoleGuard],
-    data: { roles: ['BANK_OFFICER', 'ADMIN'] }
+    data: { roles: ['STAFF', 'BANK_OFFICER', 'ADMIN'] }
   },
   {
     path: 'list',
     component: CustomerListComponent,
     canActivate: [RoleGuard],
-    data: { roles: ['BANK_OFFICER', 'ADMIN'] }
+    data: { roles: ['STAFF', 'BANK_OFFICER', 'ADMIN'] }
   }
 ];
 

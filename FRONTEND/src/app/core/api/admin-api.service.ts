@@ -14,4 +14,8 @@ export class AdminApiService {
   public createEmployee(request: CreateEmployeeRequest): Observable<EmployeeResponse> {
     return this.http.post<EmployeeResponse>(`${this.baseUrl}/employees`, request);
   }
+
+  public listEmployees(): Observable<EmployeeResponse[]> {
+    return this.http.get<EmployeeResponse[]>(`${this.baseUrl}/employees`);
+  }
 }

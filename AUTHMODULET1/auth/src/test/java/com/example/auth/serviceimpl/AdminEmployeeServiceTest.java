@@ -4,8 +4,13 @@ import com.example.auth.dto.CreateEmployeeRequestDto;
 import com.example.auth.dto.EmployeeResponseDto;
 import com.example.auth.entity.AuthRole;
 import com.example.auth.entity.AuthUsr;
+import com.example.auth.entity.CustStsMstr;
+import com.example.auth.entity.CustTypMstr;
 import com.example.auth.repository.AuthRoleRepository;
 import com.example.auth.repository.AuthUsrRepository;
+import com.example.auth.repository.CustDtlRepository;
+import com.example.auth.repository.CustStsMstrRepository;
+import com.example.auth.repository.CustTypMstrRepository;
 import com.example.auth.security.JwtService;
 import com.example.auth.service.LoginAuditService;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +41,15 @@ class AdminEmployeeServiceTest {
     private AuthRoleRepository authRoleRepository;
 
     @Mock
+    private CustDtlRepository custDtlRepository;
+
+    @Mock
+    private CustTypMstrRepository custTypMstrRepository;
+
+    @Mock
+    private CustStsMstrRepository custStsMstrRepository;
+
+    @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
@@ -55,6 +69,7 @@ class AdminEmployeeServiceTest {
     private AuthUsr staffUser;
     private AuthUsr customerUser;
     private AuthRole adminRole;
+    private AuthRole staffRole;
     private final String hashedPassword = BCrypt.hashpw("temp", BCrypt.gensalt());
 
     @BeforeEach
@@ -95,10 +110,24 @@ class AdminEmployeeServiceTest {
         AuthRole staffRole = new AuthRole();
         staffRole.setRoleId(3L);
         staffRole.setRoleCode("STAFF");
+        this.staffRole = staffRole;
+        staffUser.setRole(staffRole);
+
+        AuthRole customerRole = new AuthRole();
+        customerRole.setRoleId(5L);
+        customerRole.setRoleCode("CUSTOMER");
+        customerUser.setRole(customerRole);
 
         when(authRoleRepository.findByRoleCode(eq("HEAD_ADMIN"))).thenReturn(Optional.of(headAdminRole));
         when(authRoleRepository.findByRoleCode(eq("ADMIN"))).thenReturn(Optional.of(adminRole));
         when(authRoleRepository.findByRoleCode(eq("STAFF"))).thenReturn(Optional.of(staffRole));
+        CustTypMstr individual = new CustTypMstr();
+        individual.setTypeCode("INDIVIDUAL");
+        CustStsMstr active = new CustStsMstr();
+        active.setStatusCode("ACTIVE");
+        when(custTypMstrRepository.findByTypeCode("INDIVIDUAL")).thenReturn(Optional.of(individual));
+        when(custStsMstrRepository.findByStatusCode("ACTIVE")).thenReturn(Optional.of(active));
+        when(custDtlRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(passwordEncoder.encode(anyString())).thenReturn(hashedPassword);
         when(auditUtil.createAudit(anyString())).thenReturn(new com.example.auth.util.AuditData());
         when(authUsrRepository.save(any(AuthUsr.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -112,6 +141,7 @@ class AdminEmployeeServiceTest {
         request.setEmail("jdoe@bank.local");
         request.setPhoneNumber("+1234567890");
         request.setPassword("P@ssw0rd!2025");
+        request.setRoleCode("STAFF");
 
         when(authUsrRepository.findByUsername("headadmin")).thenReturn(Optional.of(headAdminUser));
         when(authUsrRepository.existsByUsername("jdoe")).thenReturn(false);
@@ -124,7 +154,7 @@ class AdminEmployeeServiceTest {
         created.setEmail("jdoe@bank.local");
         created.setPhoneNumber("+1234567890");
         created.setPasswordHash(hashedPassword);
-        created.setRole(adminRole);
+        created.setRole(staffRole);
         created.setFailedLoginAttempts((short) 0);
         when(authUsrRepository.save(any(AuthUsr.class))).thenReturn(created);
 
@@ -134,29 +164,36 @@ class AdminEmployeeServiceTest {
         assertEquals("jdoe", response.getUsername());
         assertEquals("jdoe@bank.local", response.getEmail());
         assertEquals("+1234567890", response.getPhoneNumber());
-        assertEquals("ADMIN", response.getRole());
+        assertEquals("STAFF", response.getRole());
         assertEquals(Long.valueOf(10L), response.getUserId());
 
-        // The request has no role field; the ADMIN role was chosen server-side.
-        assertNotNull(request);
+        assertEquals("STAFF", request.getRoleCode());
 
         // Verify password was hashed with BCrypt
         verify(passwordEncoder).encode("P@ssw0rd!2025");
     }
 
     @Test
-    void testCreateEmployee_AdminCaller_Forbidden() {
+    void testCreateEmployee_AdminCaller_Success() {
         CreateEmployeeRequestDto request = new CreateEmployeeRequestDto();
         request.setUsername("jdoe");
+        request.setEmail("jdoe@bank.local");
         request.setPassword("P@ssw0rd!2025");
+        request.setRoleCode("STAFF");
 
         when(authUsrRepository.findByUsername("admin")).thenReturn(Optional.of(adminUser));
+        when(authUsrRepository.existsByUsername("jdoe")).thenReturn(false);
+        when(authUsrRepository.existsByEmail(null)).thenReturn(false);
+        when(authUsrRepository.existsByPhoneNumber(null)).thenReturn(false);
+        when(authUsrRepository.save(any(AuthUsr.class))).thenAnswer(invocation -> {
+            AuthUsr employee = invocation.getArgument(0);
+            employee.setUserId(10L);
+            return employee;
+        });
 
-        AccessDeniedException ex = assertThrows(
-                AccessDeniedException.class,
-                () -> authService.createEmployee("admin", request));
+        EmployeeResponseDto response = authService.createEmployee("admin", request);
 
-        assertEquals("Only HEAD_ADMIN users may create employees", ex.getMessage());
+        assertEquals("STAFF", response.getRole());
     }
 
     @Test
@@ -213,6 +250,7 @@ class AdminEmployeeServiceTest {
     void testCreateEmployee_DuplicateUsername_Failure() {
         CreateEmployeeRequestDto request = new CreateEmployeeRequestDto();
         request.setUsername("existing");
+        request.setEmail("existing@bank.local");
         request.setPassword("P@ssw0rd!2025");
 
         when(authUsrRepository.findByUsername("headadmin")).thenReturn(Optional.of(headAdminUser));
@@ -260,6 +298,7 @@ class AdminEmployeeServiceTest {
         // Simulate head admin creating an employee, then logging in as that employee
         CreateEmployeeRequestDto request = new CreateEmployeeRequestDto();
         request.setUsername("jdoe");
+        request.setEmail("jdoe@bank.local");
         request.setPassword("P@ssw0rd!2025");
 
         when(authUsrRepository.findByUsername("headadmin")).thenReturn(Optional.of(headAdminUser));

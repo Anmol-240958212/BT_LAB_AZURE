@@ -128,7 +128,7 @@ public class ProductController {
     }
 
     @GetMapping("/report/summary")
-    @PreAuthorize("hasAnyRole('BANK_OFFICER', 'ADMIN')")
+    @PreAuthorize("hasAnyRole('STAFF', 'BANK_OFFICER', 'ADMIN')")
     @Operation(summary = "Operational product summary report", description = "Aggregated count by type, active/inactive totals, and rate statistics (Lab L21).")
     public ProductSummaryReportDto getSummaryReport() {
         return productService.getSummaryReport();

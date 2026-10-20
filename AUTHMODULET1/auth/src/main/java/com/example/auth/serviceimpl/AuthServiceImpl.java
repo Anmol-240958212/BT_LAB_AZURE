@@ -33,7 +33,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.security.Identity;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -424,9 +428,15 @@ public class AuthServiceImpl implements AuthService {
                         throw new IllegalArgumentException("Password is required");
                 }
 
-                AuthUsr authUsr = authUsrRepository
-                                .findByUsername(request.getUsername().trim())
-                                .orElse(null);
+                String loginIdentifier = request.getUsername().trim();
+                String normalizedIdentifier = loginIdentifier.toLowerCase(Locale.ROOT);
+                AuthUsr authUsr = Optional.ofNullable(authUsrRepository.findByUsername(normalizedIdentifier))
+                                .orElse(Optional.empty())
+                                .orElseGet(() -> Optional.ofNullable(authUsrRepository.findByEmail(normalizedIdentifier))
+                                                .orElse(Optional.empty())
+                                                .orElseGet(() -> Optional.ofNullable(authUsrRepository.findByPhoneNumber(loginIdentifier))
+                                                                .orElse(Optional.empty())
+                                                                .orElse(null)));
 
                 // Check account lock first.
                 if (authUsr != null && isAccountLocked(authUsr)) {
@@ -812,33 +822,13 @@ public class AuthServiceImpl implements AuthService {
                 return getUserProfile(username);
         }
 
-        /**
-         * Creates a new employee account. Only a logged-in HEAD_ADMIN may call this.
-         * The role is assigned server-side as ADMIN - callers cannot supply a role.
-         */
+        /** Creates a persisted bank staff account using the existing STAFF role. */
         @Override
         @Transactional
         public EmployeeResponseDto createEmployee(String callerUsername,
                 CreateEmployeeRequestDto request) {
 
-                // Authorization is enforced by this method: the caller's role in the DB
-                // must be HEAD_ADMIN. The client cannot influence the assigned role.
-                AuthUsr caller = authUsrRepository.findByUsername(callerUsername)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Authenticated caller not found"));
-
-                AuthRole headAdminRole = authRoleRepository.findByRoleCode("HEAD_ADMIN")
-                                .orElseThrow(() -> new IllegalStateException(
-                                                "HEAD_ADMIN role not configured"));
-
-                // Only HEAD_ADMIN may create employees; assigned role is STAFF
-                if (caller.getRole() == null
-                                || !caller.getRole().getRoleCode().equals("HEAD_ADMIN")
-                                || !caller.getRole().getRoleId().equals(headAdminRole.getRoleId())) {
-
-                        throw new org.springframework.security.access.AccessDeniedException(
-                                        "Only HEAD_ADMIN users may create employees");
-                }
+                ensureEmployeeAdmin(callerUsername);
 
                 if (request.getUsername() == null
                                 || request.getUsername().isBlank()) {
@@ -852,7 +842,12 @@ public class AuthServiceImpl implements AuthService {
                         throw new IllegalArgumentException("Password is required");
                 }
 
-                String username = request.getUsername().trim().toLowerCase();
+                String username = request.getUsername().trim().toLowerCase(Locale.ROOT);
+
+                if ((request.getEmail() == null || request.getEmail().isBlank())
+                                && (request.getPhoneNumber() == null || request.getPhoneNumber().isBlank())) {
+                        throw new IllegalArgumentException("Email or phone number is required");
+                }
 
                 if (existsUsernameOrEmailOrPhone(username, request.getEmail(),
                                 request.getPhoneNumber())) {
@@ -860,22 +855,53 @@ public class AuthServiceImpl implements AuthService {
                         throw new IllegalArgumentException("Username, email, or phone already exists");
                 }
 
-                AuthRole staffRole = authRoleRepository.findByRoleCode("STAFF")
-                                .orElseThrow(() -> new IllegalStateException(
-                                                "STAFF role not found"));
+                String roleCode = request.getRoleCode() == null || request.getRoleCode().isBlank()
+                                ? "STAFF"
+                                : request.getRoleCode().trim().toUpperCase(Locale.ROOT);
+
+                if (!"STAFF".equals(roleCode)) {
+                        throw new IllegalArgumentException("Employee role must be STAFF");
+                }
+
+                AuthRole employeeRole = authRoleRepository.findByRoleCode("STAFF")
+                                .orElseThrow(() -> new IllegalStateException("STAFF role not found"));
 
                 AuditData audit = auditUtil.createAudit("ADMIN_CREATE_EMPLOYEE");
 
+                // Every authenticated account must have a customer identifier because
+                // auth_usr.CSTID_IDFR is the shared identity link used by downstream services.
+                CustDtl staffCustomer = new CustDtl();
+                staffCustomer.setCustomerType(custTypMstrRepository.findByTypeCode("INDIVIDUAL")
+                                .orElseThrow(() -> new IllegalStateException("INDIVIDUAL customer type not found")));
+                staffCustomer.setCustomerStatus(custStsMstrRepository.findByStatusCode("ACTIVE")
+                                .orElseThrow(() -> new IllegalStateException("ACTIVE customer status not found")));
+                staffCustomer.setFullName(username);
+                staffCustomer.setPreferredLanguage("EN");
+                staffCustomer.setCountryOfOrigin("IN");
+                staffCustomer.setEffectiveDate(audit.getEffectiveDate());
+                staffCustomer.setCrudValue(audit.getCrudValue());
+                staffCustomer.setUserId(audit.getUserId());
+                staffCustomer.setWorkstationId(audit.getWorkstationId());
+                staffCustomer.setProgramId(audit.getProgramId());
+                staffCustomer.setHostTimestamp(audit.getHostTimestamp());
+                staffCustomer.setLocalTimestamp(audit.getLocalTimestamp());
+                staffCustomer.setAcceptanceTimestamp(audit.getAcceptanceTimestamp());
+                staffCustomer.setAcceptanceTimestampUtcOffset(audit.getAcceptanceTimestampUtcOffset());
+                staffCustomer.setUuid(audit.getUuid());
+                staffCustomer = custDtlRepository.save(staffCustomer);
+
                 AuthUsr employee = new AuthUsr();
+                employee.setCustomer(staffCustomer);
                 employee.setUsername(username);
                 if (request.getEmail() != null && !request.getEmail().isBlank()) {
-                        employee.setEmail(request.getEmail().trim().toLowerCase());
+                        employee.setEmail(request.getEmail().trim().toLowerCase(Locale.ROOT));
                 }
                 if (request.getPhoneNumber() != null && !request.getPhoneNumber().isBlank()) {
                         employee.setPhoneNumber(request.getPhoneNumber().trim());
                 }
                 employee.setPasswordHash(passwordEncoder.encode(request.getPassword()));
-                employee.setRole(staffRole);
+                employee.setPasswordChangedAt(LocalDateTime.now());
+                employee.setRole(employeeRole);
                 employee.setFailedLoginAttempts((short) 0);
 
                 employee.setEffectiveDate(audit.getEffectiveDate());
@@ -898,6 +924,39 @@ public class AuthServiceImpl implements AuthService {
                 response.setPhoneNumber(employee.getPhoneNumber());
                 response.setRole(employee.getRole().getRoleCode());
 
+                return response;
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<EmployeeResponseDto> listEmployees(String callerUsername) {
+                ensureEmployeeAdmin(callerUsername);
+                return authUsrRepository.findByRoleRoleCodeIn(List.of("STAFF"))
+                                .stream()
+                                .map(this::toEmployeeResponse)
+                                .toList();
+        }
+
+        private void ensureEmployeeAdmin(String callerUsername) {
+                AuthUsr caller = authUsrRepository.findByUsername(callerUsername)
+                                .orElseThrow(() -> new IllegalArgumentException(
+                                                "Authenticated caller not found"));
+
+                String callerRole = caller.getRole() == null ? null : caller.getRole().getRoleCode();
+                if (!Set.of("ADMIN", "HEAD_ADMIN").contains(callerRole)) {
+                        throw new org.springframework.security.access.AccessDeniedException(
+                                        "Only ADMIN users may manage employees");
+                }
+        }
+
+
+        private EmployeeResponseDto toEmployeeResponse(AuthUsr employee) {
+                EmployeeResponseDto response = new EmployeeResponseDto();
+                response.setUserId(employee.getUserId());
+                response.setUsername(employee.getUsername());
+                response.setEmail(employee.getEmail());
+                response.setPhoneNumber(employee.getPhoneNumber());
+                response.setRole(employee.getRole() == null ? null : employee.getRole().getRoleCode());
                 return response;
         }
 

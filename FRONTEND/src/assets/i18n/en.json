@@ -114,6 +114,7 @@
     "enterFullName": "Enter full name",
     "enterPhone": "Enter phone",
     "password": "Password",
+    "usernameOrEmail": "Username or Email",
     "confirmPassword": "Confirm Password",
     "verificationCode": "Verification Code",
     "verifyOtp": "Verify OTP",

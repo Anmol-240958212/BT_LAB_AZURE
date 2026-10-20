@@ -464,7 +464,7 @@ export class FDAccountsComponent implements OnInit {
 
   get canCreate(): boolean {
     const role = this.authService.getRole();
-    return role === 'BANK_OFFICER' || role === 'ADMIN';
+    return role === 'STAFF' || role === 'BANK_OFFICER' || role === 'ADMIN';
   }
   get isAdmin(): boolean { return this.authService.getRole() === 'ADMIN'; }
 

@@ -6,6 +6,7 @@ public class CreateEmployeeRequestDto {
     private String email;
     private String phoneNumber;
     private String password;
+    private String roleCode = "STAFF";
 
     public String getUsername() {
         return username;
@@ -37,5 +38,13 @@ public class CreateEmployeeRequestDto {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getRoleCode() {
+        return roleCode;
+    }
+
+    public void setRoleCode(String roleCode) {
+        this.roleCode = roleCode;
     }
 }

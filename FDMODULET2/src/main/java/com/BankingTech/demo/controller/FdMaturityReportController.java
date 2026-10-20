@@ -33,6 +33,7 @@ public class FdMaturityReportController {
             @org.springframework.web.bind.annotation.RequestParam(defaultValue = "json") String format) {
         var profile = auth.profile(authorization);
         if (!"ADMIN".equalsIgnoreCase(profile.role()) && !"BANK_OFFICER".equalsIgnoreCase(profile.role())
+                && !"STAFF".equalsIgnoreCase(profile.role())
                 && (!"CUSTOMER".equalsIgnoreCase(profile.role()) || profile.customerId() == null
                 || !String.valueOf(profile.customerId()).equals(reports.accountCustomerId(fdAccountNo)))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to access this FD report");

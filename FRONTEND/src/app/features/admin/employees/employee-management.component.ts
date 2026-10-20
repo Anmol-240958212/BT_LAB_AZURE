@@ -115,29 +115,7 @@ export class EmployeeManagementComponent implements OnInit {
     { field: 'role', header: 'Role', type: 'badge' }
   ];
 
-  staffList: EmployeeResponse[] = [
-    {
-      userId: 1,
-      username: 'officer_sharma',
-      email: 'sharma@vaultone.com',
-      phoneNumber: '+91 9876543210',
-      role: 'BANK_OFFICER'
-    },
-    {
-      userId: 2,
-      username: 'officer_priya',
-      email: 'priya.v@vaultone.com',
-      phoneNumber: '+91 9123456789',
-      role: 'BANK_OFFICER'
-    },
-    {
-      userId: 3,
-      username: 'admin_master',
-      email: 'admin@vaultone.com',
-      phoneNumber: '+91 9988776655',
-      role: 'ADMIN'
-    }
-  ];
+  staffList: EmployeeResponse[] = [];
 
   constructor(
     private readonly fb: FormBuilder,
@@ -150,7 +128,20 @@ export class EmployeeManagementComponent implements OnInit {
       username: ['', [Validators.required, Validators.minLength(3)]],
       email: ['', [Validators.required, Validators.email]],
       phoneNumber: [''],
-      password: ['', [Validators.required, Validators.minLength(6)]]
+      password: ['', [Validators.required, Validators.minLength(6)]],
+      roleCode: ['STAFF', Validators.required]
+    });
+
+    this.loadEmployees();
+  }
+
+  private loadEmployees(): void {
+    this.adminApi.listEmployees().subscribe({
+      next: employees => this.staffList = employees,
+      error: err => this.toastService.error(
+        err?.error?.message || 'Unable to load employee accounts from the server.',
+        'Employee Load Failed'
+      )
     });
   }
 
@@ -163,21 +154,14 @@ export class EmployeeManagementComponent implements OnInit {
         this.submitting = false;
         this.toastService.success(`Staff member ${res.username} provisioned successfully.`, 'Account Created');
         this.staffList = [res, ...this.staffList];
-        this.staffForm.reset();
+        this.staffForm.reset({ roleCode: 'STAFF' });
       },
       error: (err) => {
         this.submitting = false;
-        // Simulation fallback for demonstration
-        const mock: EmployeeResponse = {
-          userId: this.staffList.length + 1,
-          username: this.staffForm.value.username,
-          email: this.staffForm.value.email,
-          phoneNumber: this.staffForm.value.phoneNumber || '+91 9000000000',
-          role: 'STAFF'
-        };
-        this.toastService.success(`Staff member ${mock.username} provisioned successfully.`, 'Account Created');
-        this.staffList = [mock, ...this.staffList];
-        this.staffForm.reset();
+        this.toastService.error(
+          err?.error?.message || 'Employee account could not be created. No local record was added.',
+          'Account Creation Failed'
+        );
       }
     });
   }

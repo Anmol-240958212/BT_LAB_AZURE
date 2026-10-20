@@ -30,8 +30,8 @@ function generateDemoJwt(username: string, role: UserRole): string {
         <!-- Email Field -->
         <app-input
           id="login-email"
-          [label]="'common.email' | transloco"
-          type="email"
+          [label]="'auth.usernameOrEmail' | transloco"
+          type="text"
           [placeholder]="'auth.enterEmail' | transloco"
           formControlName="username"
           [required]="true"
@@ -339,7 +339,7 @@ export class LoginComponent implements OnInit {
       return '/dashboard';
     }
 
-    if (role === 'BANK_OFFICER') {
+    if (role === 'BANK_OFFICER' || role === 'STAFF') {
       if (raw.startsWith('/admin') || raw.startsWith('/customer/profile')) {
         return '/dashboard';
       }

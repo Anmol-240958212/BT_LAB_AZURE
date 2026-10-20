@@ -70,4 +70,5 @@ public class AuthRole {
     public void setRoleId(Long roleId) {
         this.roleId = roleId;
     }
+
 }

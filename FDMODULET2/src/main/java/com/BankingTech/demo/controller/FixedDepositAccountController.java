@@ -7,6 +7,7 @@ import com.BankingTech.demo.dto.requestdto.FDAccountDateAdjustmentRequestDTO;
 import com.BankingTech.demo.service.FdAuthKafkaClient;
 import com.BankingTech.demo.service.FixedDepositAccountService;
 import com.BankingTech.demo.service.FdCreationAuthorization;
+import com.BankingTech.demo.service.FdRoleAuthorization;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,20 +24,22 @@ public class FixedDepositAccountController {
         private final FixedDepositAccountService fixedDepositAccountService;
         private final FdCreationAuthorization creationAuthorization;
         private final FdAuthKafkaClient authClient;
+        private final FdRoleAuthorization roleAuthorization;
 
         @org.springframework.beans.factory.annotation.Autowired
         public FixedDepositAccountController(
                         FixedDepositAccountService fixedDepositAccountService, FdCreationAuthorization creationAuthorization,
-                        FdAuthKafkaClient authClient) {
+                        FdAuthKafkaClient authClient, FdRoleAuthorization roleAuthorization) {
                 this.fixedDepositAccountService = fixedDepositAccountService;
                 this.creationAuthorization = creationAuthorization;
                 this.authClient = authClient;
+                this.roleAuthorization = roleAuthorization;
         }
 
         /** Retained for existing unit tests of the creation endpoints. */
         public FixedDepositAccountController(FixedDepositAccountService fixedDepositAccountService,
                         FdCreationAuthorization creationAuthorization) {
-                this(fixedDepositAccountService, creationAuthorization, null);
+                this(fixedDepositAccountService, creationAuthorization, null, null);
         }
 
         @PutMapping("/{fdAccountNo}/dates")
@@ -76,24 +79,30 @@ public class FixedDepositAccountController {
 
         @GetMapping("/{fdAccountNo}")
         public ResponseEntity<FixedDepositAccountResponseDTO> getAccount(
-                        @PathVariable String fdAccountNo) {
+                        @PathVariable String fdAccountNo,
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
 
-                return ResponseEntity.ok(
-                                fixedDepositAccountService.getAccount(fdAccountNo));
+                var account = fixedDepositAccountService.getAccount(fdAccountNo);
+                roleAuthorization.authorizeCustomerOrStaffAccountRead(authorization, account.getCustomerId());
+                return ResponseEntity.ok(account);
         }
 
         @GetMapping("/customer/{customerId}")
         public ResponseEntity<List<FixedDepositAccountResponseDTO>> getAccountsByCustomer(
-                        @PathVariable String customerId) {
+                        @PathVariable String customerId,
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
 
+                roleAuthorization.authorizeCustomerOrStaffAccountRead(authorization, customerId);
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.getAccountsByCustomer(customerId));
         }
 
         @GetMapping("/status/{status}")
         public ResponseEntity<List<FixedDepositAccountResponseDTO>> getAccountsByStatus(
-                        @PathVariable String status) {
+                        @PathVariable String status,
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
 
+                roleAuthorization.requireStaffOperation(authorization);
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.getAccountsByStatus(status));
         }
@@ -101,8 +110,10 @@ public class FixedDepositAccountController {
         @GetMapping("/customer/{customerId}/status/{status}")
         public ResponseEntity<List<FixedDepositAccountResponseDTO>> getCustomerAccountsByStatus(
                         @PathVariable String customerId,
-                        @PathVariable String status) {
+                        @PathVariable String status,
+                        @RequestHeader(value = "Authorization", required = false) String authorization) {
 
+                roleAuthorization.authorizeCustomerOrStaffAccountRead(authorization, customerId);
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.getCustomerAccountsByStatus(
                                                 customerId,
