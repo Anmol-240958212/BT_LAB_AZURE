@@ -1,99 +1,72 @@
-# ==============================================================================
-# vaultOne Banking Platform — Universal Startup Script (Windows PowerShell)
-# ==============================================================================
+# vaultOne local launcher for Windows PowerShell
+$ErrorActionPreference = "Stop"
 
 $RootDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$LogDir = Join-Path $RootDir ".runlogs"
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 Set-Location $RootDir
 
-Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "  🚀 vaultOne Banking Platform — Starting All Local Services" -ForegroundColor Cyan
-Write-Host "=================================================================" -ForegroundColor Cyan
-
-$dbUser = if ($env:DB_USERNAME) { $env:DB_USERNAME } else { "root" }
-$dbPass = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "#Iamgood1" }
-
-# 1. Database & Kafka Check & Setup
-Write-Host ""
-Write-Host "[1/4] Checking MySQL Database (port 3306) and Kafka (port 9092)..." -ForegroundColor Yellow
-$mysqlUp = $false
-
-try {
-    mysql -u$dbUser -p$dbPass -e "SELECT 1;" 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        $mysqlUp = $true
-        Write-Host "  ✔ Local MySQL server is reachable." -ForegroundColor Green
-        mysql -u$dbUser -p$dbPass -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;" 2>$null
-        Get-Content "$RootDir\AUTHMODULET1\authandcustDB.sql" | mysql -u$dbUser -p$dbPass authandcust 2>$null
-        Write-Host "  ✔ Databases 'authandcust' & 'fdmodule' verified and seeded." -ForegroundColor Green
-    }
-} catch {
-    $mysqlUp = $false
-}
-
-if (-not $mysqlUp) {
-    if (Get-Command docker -ErrorAction SilentlyContinue) {
-        Write-Host "  -> Attempting to start MySQL via Docker Compose..." -ForegroundColor Gray
-        docker compose up -d mysql
-        Start-Sleep -Seconds 10
-        Write-Host "  ✔ Docker MySQL container initiated." -ForegroundColor Green
-    } else {
-        Write-Host "  ⚠ WARNING: MySQL not detected on port 3306. Ensure MySQL service is running." -ForegroundColor Red
+function Require-Command([string]$Name, [string]$InstallHint) {
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+        throw "Missing required command '$Name'. $InstallHint"
     }
 }
 
-# Check Kafka
-$kafkaUp = (Test-NetConnection -ComputerName 127.0.0.1 -Port 9092 -WarningAction SilentlyContinue).TcpTestSucceeded
-if ($kafkaUp) {
-    Write-Host "  ✔ Kafka broker is running on port 9092." -ForegroundColor Green
-} else {
-    if (Get-Command docker -ErrorAction SilentlyContinue) {
-        Write-Host "  -> Kafka not detected on port 9092. Starting Kafka via Docker Compose..." -ForegroundColor Gray
-        docker compose up -d kafka
-        Write-Host "  ✔ Kafka container started." -ForegroundColor Green
-    } else {
-        Write-Host "  ⚠ WARNING: Kafka is not running on port 9092. Start Kafka or run 'docker compose up -d kafka'." -ForegroundColor Red
-    }
+function Wait-ForPort([int]$Port, [string]$Name, [int]$TimeoutSeconds = 90) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        $open = (Test-NetConnection -ComputerName 127.0.0.1 -Port $Port -WarningAction SilentlyContinue).TcpTestSucceeded
+        if ($open) {
+            Write-Host "  OK $Name is listening on port $Port" -ForegroundColor Green
+            return
+        }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $deadline)
+    throw "$Name did not become ready on port $Port within $TimeoutSeconds seconds. Run 'docker compose ps' for details."
 }
 
-# 2. Start Backend 1 — Auth Service (Port 8080)
-Write-Host ""
-Write-Host "[2/4] Starting Auth Microservice (Port 8080)..." -ForegroundColor Yellow
-Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$RootDir\AUTHMODULET1\auth`" && mvnw.cmd spring-boot:run" -WindowStyle Minimized
-Write-Host "  ✔ Auth Microservice process spawned in background." -ForegroundColor Green
-
-# 3. Start Backend 2 — Fixed Deposit Service (Port 8081)
-Write-Host ""
-Write-Host "[3/4] Starting Fixed Deposit Microservice (Port 8081)..." -ForegroundColor Yellow
-Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$RootDir\FDMODULET2`" && mvnw.cmd spring-boot:run" -WindowStyle Minimized
-Write-Host "  ✔ Fixed Deposit Microservice process spawned in background." -ForegroundColor Green
-
-# 4. Start Frontend — Angular Web App (Port 4200)
-Write-Host ""
-Write-Host "[4/4] Starting Angular Frontend (Port 4200)..." -ForegroundColor Yellow
-if (-not (Test-Path "$RootDir\FRONTEND\node_modules")) {
-    Write-Host "  -> Installing frontend dependencies (npm install)..." -ForegroundColor Gray
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$RootDir\FRONTEND`" && npm install" -Wait
+function Start-LoggedProcess([string]$Name, [string]$Directory, [string]$Command) {
+    $logFile = Join-Path $LogDir "$Name.log"
+    $pidFile = Join-Path $LogDir "$Name.pid"
+    $cmdLine = "cd /d `"$Directory`" && $Command > `"$logFile`" 2>&1"
+    $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $cmdLine -WindowStyle Hidden -PassThru
+    Set-Content -LiteralPath $pidFile -Value $process.Id
+    Write-Host "  Started $Name (PID $($process.Id)); log: $logFile" -ForegroundColor Green
 }
-Start-Process -FilePath "cmd.exe" -ArgumentList "/c cd /d `"$RootDir\FRONTEND`" && npm start" -WindowStyle Minimized
-Write-Host "  ✔ Angular Frontend process spawned in background." -ForegroundColor Green
+
+Require-Command "docker" "Install Docker Desktop and ensure it is running."
+Require-Command "java" "Install JDK 17 or newer."
+Require-Command "mvn.cmd" "Install Maven 3.9+ and add it to PATH (Product & Pricing has no Maven wrapper)."
+Require-Command "npm.cmd" "Install a Node.js version supported by Angular 22, then install npm."
+
+$env:DB_USERNAME = if ($env:DB_USERNAME) { $env:DB_USERNAME } else { "root" }
+$env:DB_PASSWORD = if ($env:DB_PASSWORD) { $env:DB_PASSWORD } else { "#Iamgood1" }
+$env:KAFKA_BOOTSTRAP_SERVERS = if ($env:KAFKA_BOOTSTRAP_SERVERS) { $env:KAFKA_BOOTSTRAP_SERVERS } else { "localhost:9092" }
+$env:AUTH_JWT_SECRET = if ($env:AUTH_JWT_SECRET) { $env:AUTH_JWT_SECRET } else { "my-super-secret-key-for-authentication-123456789" }
+
+Write-Host "Starting vaultOne infrastructure..." -ForegroundColor Cyan
+docker compose up -d mysql kafka
+Wait-ForPort 3306 "MySQL"
+Wait-ForPort 9092 "Kafka"
+
+Write-Host "Starting three backend services..." -ForegroundColor Cyan
+Start-LoggedProcess "auth" (Join-Path $RootDir "AUTHMODULET1\auth") "call mvnw.cmd spring-boot:run"
+Start-LoggedProcess "fd" (Join-Path $RootDir "FDMODULET2") "call mvnw.cmd spring-boot:run"
+Start-LoggedProcess "product" (Join-Path $RootDir "PRODUCTMODULET3\product-pricing-service") "call mvn.cmd spring-boot:run"
+
+$frontendDir = Join-Path $RootDir "FRONTEND"
+if (-not (Test-Path (Join-Path $frontendDir "node_modules"))) {
+    Write-Host "Installing frontend dependencies..." -ForegroundColor Yellow
+    Push-Location $frontendDir
+    try { & npm.cmd install } finally { Pop-Location }
+}
+Start-LoggedProcess "frontend" $frontendDir "call npm.cmd start"
 
 Write-Host ""
-Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host "  🎉 All Services Successfully Launched!" -ForegroundColor Green
-Write-Host "=================================================================" -ForegroundColor Cyan
-Write-Host ""
-Write-Host "Endpoints:" -ForegroundColor Yellow
-Write-Host "  • Frontend Web App:     http://localhost:4200/" -ForegroundColor White
-Write-Host "  • Customer Login:       http://localhost:4200/login" -ForegroundColor White
-Write-Host "  • FD Simulator:         http://localhost:4200/fixed-deposit/calculator" -ForegroundColor White
-Write-Host "  • Auth Swagger UI:      http://localhost:8080/swagger-ui/index.html" -ForegroundColor White
-Write-Host "  • Auth OpenAPI Docs:    http://localhost:8080/v3/api-docs" -ForegroundColor White
-Write-Host "  • FD Swagger UI:        http://localhost:8081/swagger-ui/index.html" -ForegroundColor White
-Write-Host "  • FD OpenAPI Docs:      http://localhost:8081/v3/api-docs" -ForegroundColor White
-Write-Host "  • FD Health Check:      http://localhost:8081/actuator/health" -ForegroundColor White
-Write-Host ""
-Write-Host "Default Logins:" -ForegroundColor Yellow
-Write-Host "  • Admin:      bankadmin2026@gmail.com / Pass@123" -ForegroundColor White
-Write-Host "  • Officer:    jack.uat.2026@example.com / StaffPass@1" -ForegroundColor White
-Write-Host "  • Customer:   ram.uat.2026@example.com / Pass@123" -ForegroundColor White
-Write-Host "=================================================================" -ForegroundColor Cyan
+Write-Host "vaultOne processes have been launched." -ForegroundColor Green
+Write-Host "Frontend: http://localhost:4200" -ForegroundColor White
+Write-Host "Auth:     http://localhost:8080/swagger-ui/index.html" -ForegroundColor White
+Write-Host "FD:       http://localhost:8081/swagger-ui/index.html" -ForegroundColor White
+Write-Host "Product:  http://localhost:8082/swagger-ui/index.html" -ForegroundColor White
+Write-Host "Logs:     $LogDir" -ForegroundColor White
+Write-Host "Use .\stop.ps1 to stop the application and Docker infrastructure." -ForegroundColor White

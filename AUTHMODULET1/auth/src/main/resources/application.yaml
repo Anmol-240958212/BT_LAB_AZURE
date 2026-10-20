@@ -5,7 +5,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/authandcust
     username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:rish}
+    password: "${DB_PASSWORD:#Iamgood1}"
 
   jpa:
     hibernate:
@@ -26,8 +26,8 @@ spring:
   mail:
     host: ${BANKING_SMTP_HOST:smtp.gmail.com}
     port: ${BANKING_SMTP_PORT:587}
-    username: ${BANKING_SMTP_USERNAME:${MAIL_USERNAME:team4.bt.lab@gmail.com}}
-    password: ${BANKING_SMTP_PASSWORD:${MAIL_PASSWORD:pais tuny wywn cxxo}}
+    username: "${BANKING_SMTP_USERNAME:${MAIL_USERNAME:}}"
+    password: "${BANKING_SMTP_PASSWORD:${MAIL_PASSWORD:}}"
     properties:
       mail:
         smtp:

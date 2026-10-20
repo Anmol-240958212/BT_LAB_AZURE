@@ -37,8 +37,8 @@ public class ReportController {
     public ResponseEntity<?> interestHistory(@RequestHeader(value = "Authorization", required = false) String authorization,
             @RequestParam(defaultValue = "json") String format) {
         officer(authorization); List<InterestTransactionReportDto> data = reports.interestHistory();
-        return respond(format, "interest-transaction-history.csv", data, row -> csv(row.accountNo(), row.productCode(), row.currency(), row.interestAmount(), row.postedAt(), row.status()),
-                "accountNo,productCode,currency,interestAmount,postedAt,status", "Interest Transaction History");
+        return respond(format, "interest-transaction-history.csv", data, row -> csv(row.accountNo(), row.productCode(), row.currency(), row.principal(), row.interestAmount(), row.postedAt(), row.status()),
+                "accountNo,productCode,currency,principal,interestAmount,postedAt,status", "Interest Transaction History");
     }
 
     @GetMapping("/maturity-summary")
@@ -50,10 +50,19 @@ public class ReportController {
     }
 
     @GetMapping("/customer-portfolio")
-    public CustomerPortfolioDto customerPortfolio(@RequestHeader(value = "Authorization", required = false) String authorization) {
+    public ResponseEntity<?> customerPortfolio(@RequestHeader(value = "Authorization", required = false) String authorization,
+            @RequestParam(defaultValue = "json") String format) {
         var profile = auth.profile(authorization);
         if (!"CUSTOMER".equalsIgnoreCase(profile.role()) || profile.customerId() == null) forbidden();
-        return reports.portfolio(profile.customerId());
+        CustomerPortfolioDto portfolio = reports.portfolio(profile.customerId());
+        if (!"csv".equalsIgnoreCase(format) && !"pdf".equalsIgnoreCase(format)) {
+            return ResponseEntity.ok(portfolio);
+        }
+        return respond(format, "customer-fd-portfolio.csv", portfolio.accounts(),
+                row -> csv(row.accountNo(), row.productCode(), row.currency(), row.principal(), row.rate(),
+                        row.interestGenerated(), row.maturityDate(), row.status(), row.interestFrequency()),
+                "accountNo,productCode,currency,principal,rate,interestGenerated,maturityDate,status,interestFrequency",
+                "Customer Fixed Deposit Portfolio");
     }
 
     private void officer(String authorization) {

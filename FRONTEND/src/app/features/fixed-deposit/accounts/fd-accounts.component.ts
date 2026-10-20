@@ -21,7 +21,7 @@ import { UserApiService } from '../../../core/api/user-api.service';
             <span class="section-tag">{{ canCreate ? 'DEPOSIT LEDGER REGISTRY' : 'CUSTOMER DEPOSIT HOLDINGS' }}</span>
             <h1 class="card-title mt-1">{{ canCreate ? 'Fixed Deposit Accounts Portfolio' : 'My Fixed Deposit Portfolio' }}</h1>
             <p class="card-subtitle">
-              {{ canCreate ? 'Manage customer deposit accounts, terms, and premature liquidation workflows.' : 'View your active deposit instruments, contracted interest rates, and maturity statuses.' }}
+              {{ canCreate ? 'Manage customer deposit accounts, terms, and premature liquidation workflows.' : 'View your complete portfolio across active, pending, matured, and closed deposits.' }}
             </p>
           </div>
           <app-button
@@ -66,7 +66,7 @@ import { UserApiService } from '../../../core/api/user-api.service';
 
       <!-- Accounts Table -->
       <app-card
-        [title]="canCreate ? 'Fixed Deposit Holdings' : 'My Active Deposits'"
+        [title]="canCreate ? 'Fixed Deposit Holdings' : 'All My Fixed Deposits'"
         [subtitle]="filteredAccounts.length + ' deposit accounts match criteria'"
       >
         <app-table

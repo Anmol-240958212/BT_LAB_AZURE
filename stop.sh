@@ -1,20 +1,23 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# vaultOne Banking Platform — Stop All Local Services (macOS / Linux)
-# ==============================================================================
+set -u
 
-echo "Stopping vaultOne Banking Platform services..."
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LOG_DIR="$ROOT_DIR/.runlogs"
 
-# Stop Frontend
-pkill -f "ng serve" 2>/dev/null || true
-echo "  ✔ Stopped Angular frontend (port 4200)"
+for name in frontend product fd auth; do
+  pid_file="$LOG_DIR/$name.pid"
+  if [ -f "$pid_file" ]; then
+    pid="$(cat "$pid_file")"
+    if [[ "$pid" =~ ^[0-9]+$ ]]; then
+      kill "$pid" 2>/dev/null || true
+      echo "Stopped $name (PID $pid)."
+    fi
+    rm -f "$pid_file"
+  fi
+done
 
-# Stop Backend 1
-pkill -f "AUTHMODULET1" 2>/dev/null || pkill -f "auth-0.0.1" 2>/dev/null || true
-echo "  ✔ Stopped Auth microservice (port 8080)"
-
-# Stop Backend 2
-pkill -f "FDMODULET2" 2>/dev/null || pkill -f "demo-0.0.1" 2>/dev/null || true
-echo "  ✔ Stopped Fixed Deposit microservice (port 8081)"
-
-echo "All services stopped successfully."
+cd "$ROOT_DIR"
+if command -v docker >/dev/null 2>&1; then
+  docker compose stop mysql kafka >/dev/null
+  echo "Stopped MySQL and Kafka containers."
+fi
