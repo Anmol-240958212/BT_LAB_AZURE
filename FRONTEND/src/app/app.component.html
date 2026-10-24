@@ -1,0 +1,7 @@
+<div translocoAuto>
+  <div *ngIf="pageLoadFailed" class="page-load-recovery" role="alert">
+    <span>{{ 'errors.loadFailed' | transloco }}</span>
+    <button type="button" class="btn btn-primary" (click)="reloadPage()">{{ 'common.refresh' | transloco }}</button>
+  </div>
+  <router-outlet></router-outlet>
+</div>

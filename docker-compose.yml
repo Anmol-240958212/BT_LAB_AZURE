@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: vaultone-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: "#Iamgood1"
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./AUTHMODULET1/authandcustDB.sql:/docker-entrypoint-initdb.d/01-authandcust.sql:ro
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/02-init.sql:ro
+      - mysql_data:/var/lib/mysql
+
+  kafka:
+    image: apache/kafka:4.1.0
+    hostname: banking-kafka
+    container_name: banking-kafka
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_LISTENERS: CONTROLLER://:29093,INTERNAL://:19092,HOST://:9092
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://banking-kafka:19092,HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@banking-kafka:29093
+      CLUSTER_ID: 4L6g3nShT-eMCtK--X86sw
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_SHARE_COORDINATOR_STATE_TOPIC_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "localhost:9092", "--list"]
+      interval: 10s
+      timeout: 10s
+      start_period: 20s
+      retries: 12
+
+volumes:
+  mysql_data:
+  kafka-data:

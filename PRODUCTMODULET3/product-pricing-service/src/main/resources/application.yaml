@@ -1,0 +1,56 @@
+# =====================================================================
+# Product & Pricing Module - Banking Technology Lab (CSF 3142), Group 8
+# =====================================================================
+
+spring:
+  application:
+    name: product-pricing-service
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+      request.timeout.ms: ${KAFKA_REQUEST_TIMEOUT_MS:60000}
+      metadata.max.age.ms: ${KAFKA_METADATA_MAX_AGE_MS:180000}
+      connections.max.idle.ms: ${KAFKA_CONNECTIONS_MAX_IDLE_MS:180000}
+
+  datasource:
+    url: "jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/banking_product_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata"
+    username: ${DB_USERNAME:root}
+    password: "${DB_PASSWORD:#Iamgood1}"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  flyway:
+    enabled: false
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 1
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: ${PORT:8082}
+
+product:
+  jwt:
+    secret: ${AUTH_JWT_SECRET:my-super-secret-key-for-authentication-123456789}
+  cors:
+    allowed-origin-patterns: "${PRODUCT_CORS_ALLOWED_ORIGINS:${CORS_ALLOWED_ORIGINS:http://localhost:[*]|http://127.0.0.1:[*]}}"
+
+app:
+  kafka:
+    create-topics: ${KAFKA_CREATE_TOPICS:true}
+
+logging:
+  level:
+    org.flywaydb: INFO
+    org.hibernate.SQL: INFO

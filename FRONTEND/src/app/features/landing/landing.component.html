@@ -1,0 +1,1135 @@
+<!-- ==========================================================================
+     VAULT ONE — ENTERPRISE TERM DEPOSIT & CORE BANKING PLATFORM
+     Designed for Ultra-High Yields, Institutional Trust & Complete Safety
+     ========================================================================== -->
+
+<div class="landing-page-root">
+
+  <!-- ========================================================================
+       1. NAVIGATION HEADER
+       ======================================================================== -->
+  <header class="landing-header" [class.header-scrolled]="isScrolled">
+    <div class="header-inner">
+      <!-- Brand Logo using /logo.png -->
+      <a routerLink="/" class="brand-logo" id="landing-brand-logo">
+        <img src="/assets/vaultone-navbar.png" alt="VaultOne" class="brand-logo-img" />
+      </a>
+
+      <!-- Desktop Nav Links -->
+      <nav class="desktop-nav" [attr.aria-label]="'nav.mainNavigation' | transloco">
+        <a (click)="scrollTo('hero')" class="nav-link" [class.active]="activeNavSection === 'hero'">{{ 'nav.home' | transloco }}</a>
+        <a (click)="scrollTo('features')" class="nav-link" [class.active]="activeNavSection === 'features'">{{ 'nav.features' | transloco }}</a>
+        <a (click)="scrollTo('calculator')" class="nav-link" [class.active]="activeNavSection === 'calculator'">{{ 'nav.calculator' | transloco }}</a>
+        <a (click)="scrollTo('rates')" class="nav-link" [class.active]="activeNavSection === 'rates'">{{ 'nav.rates' | transloco }}</a>
+        <a (click)="scrollTo('solutions')" class="nav-link" [class.active]="activeNavSection === 'solutions'">{{ 'nav.solutions' | transloco }}</a>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="header-actions">
+        <!-- Currency Toggle -->
+        <button (click)="toggleCurrency()" class="btn-currency" [title]="'landing.toggleCurrency' | transloco">
+          <span [class.active-curr]="currency === 'INR'">₹</span>
+          <span class="curr-sep">/</span>
+          <span [class.active-curr]="currency === 'JPY'">¥</span>
+        </button>
+
+        <!-- 1 Collapsible Dark/Light Mode Switcher Button -->
+        <div class="theme-dropdown-container">
+          <button
+            type="button"
+            class="btn-theme-collapsible"
+            (click)="toggleThemeMenu($event)"
+            [title]="isDark ? ('nav.darkMode' | transloco) : ('nav.lightMode' | transloco)"
+            [attr.aria-label]="'nav.toggleTheme' | transloco"
+          >
+            <app-icon [name]="isDark ? 'moon' : 'sun'" [size]="14"></app-icon>
+            <app-icon name="chevron-down" [size]="11" class="theme-caret" [class.caret-open]="themeMenuOpen"></app-icon>
+          </button>
+
+          <!-- Collapsible Dropdown Menu -->
+          <div class="theme-dropdown-menu animate-fade-in" *ngIf="themeMenuOpen" (click)="$event.stopPropagation()">
+            <button
+              type="button"
+              class="theme-menu-item"
+              [class.item-active]="currentThemeMode === 'light'"
+              (click)="selectTheme('light')"
+            >
+              <app-icon name="sun" [size]="13"></app-icon>
+              <span>{{ 'nav.lightMode' | transloco }}</span>
+              <app-icon name="check" [size]="12" *ngIf="currentThemeMode === 'light'" class="item-check"></app-icon>
+            </button>
+
+            <button
+              type="button"
+              class="theme-menu-item"
+              [class.item-active]="currentThemeMode === 'dark'"
+              (click)="selectTheme('dark')"
+            >
+              <app-icon name="moon" [size]="13"></app-icon>
+              <span>{{ 'nav.darkMode' | transloco }}</span>
+              <app-icon name="check" [size]="12" *ngIf="currentThemeMode === 'dark'" class="item-check"></app-icon>
+            </button>
+
+            <button
+              type="button"
+              class="theme-menu-item"
+              [class.item-active]="currentThemeMode === 'system'"
+              (click)="selectTheme('system')"
+            >
+              <app-icon name="monitor" [size]="13"></app-icon>
+              <span>{{ 'nav.systemDefault' | transloco }}</span>
+              <app-icon name="check" [size]="12" *ngIf="currentThemeMode === 'system'" class="item-check"></app-icon>
+            </button>
+          </div>
+        </div>
+
+        <app-language-toggle></app-language-toggle>
+
+        <!-- Dynamic Auth Buttons -->
+        <ng-container *ngIf="!isLoggedIn; else loggedInTpl">
+          <a routerLink="/login" class="nav-link-sign-in" id="landing-sign-in-btn">{{ 'nav.signIn' | transloco }}</a>
+          <a routerLink="/register" class="btn-open-account" id="landing-open-account-btn">
+            <span>{{ 'nav.openAccount' | transloco }}</span>
+            <app-icon name="arrow-up-right" [size]="14"></app-icon>
+          </a>
+        </ng-container>
+
+        <ng-template #loggedInTpl>
+          <a routerLink="/dashboard" class="btn-dashboard-pill" id="landing-dashboard-btn">
+            <app-icon name="dashboard" [size]="14"></app-icon>
+            <span>{{ 'nav.dashboard' | transloco }} ({{ displayName }})</span>
+          </a>
+        </ng-template>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button class="mobile-menu-toggle" (click)="toggleMobileMenu()" [attr.aria-label]="'nav.toggleNavigation' | transloco">
+          <app-icon [name]="mobileMenuOpen ? 'x' : 'menu'" [size]="22"></app-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Drawer Navigation -->
+    <div class="mobile-drawer" *ngIf="mobileMenuOpen">
+      <div class="mobile-nav-links">
+        <a (click)="scrollTo('hero')" class="mobile-nav-link" [class.active]="activeNavSection === 'hero'">{{ 'nav.home' | transloco }}</a>
+        <a (click)="scrollTo('features')" class="mobile-nav-link" [class.active]="activeNavSection === 'features'">{{ 'nav.features' | transloco }}</a>
+        <a (click)="scrollTo('calculator')" class="mobile-nav-link" [class.active]="activeNavSection === 'calculator'">{{ 'nav.calculator' | transloco }}</a>
+        <a (click)="scrollTo('rates')" class="mobile-nav-link" [class.active]="activeNavSection === 'rates'">{{ 'nav.rates' | transloco }}</a>
+        <a (click)="scrollTo('solutions')" class="mobile-nav-link" [class.active]="activeNavSection === 'solutions'">{{ 'nav.solutions' | transloco }}</a>
+      </div>
+      <div class="mobile-drawer-actions">
+        <ng-container *ngIf="!isLoggedIn; else mobileLoggedInTpl">
+          <a routerLink="/login" (click)="closeMobileMenu()" class="btn-mobile-secondary">{{ 'nav.signIn' | transloco }}</a>
+          <a routerLink="/register" (click)="closeMobileMenu()" class="btn-mobile-primary">
+            <span>{{ 'nav.openAccount' | transloco }}</span>
+            <app-icon name="arrow-up-right" [size]="15"></app-icon>
+          </a>
+        </ng-container>
+        <ng-template #mobileLoggedInTpl>
+          <a routerLink="/dashboard" (click)="closeMobileMenu()" class="btn-mobile-primary">{{ 'nav.goToDashboard' | transloco }}</a>
+        </ng-template>
+      </div>
+    </div>
+  </header>
+
+
+  <!-- ========================================================================
+       2. HERO SECTION (1:1 FROM INSPO.PNG)
+       ======================================================================== -->
+  <section class="hero-section" id="hero">
+    <!-- Emerald Grid Overlay & Lighting Glow -->
+    <div class="hero-grid-bg"></div>
+    <div class="hero-glow-spot"></div>
+
+    <div class="hero-container">
+      <!-- Hero Headline & Subtitle -->
+      <div class="hero-content">
+        <div class="hero-tagline-badge">
+          <span class="badge-dot"></span>
+          <span>{{ 'landing.platformBadge' | transloco }}</span>
+        </div>
+
+        <h1 class="hero-title">
+          {{ 'landing.heroTitle' | transloco }}
+        </h1>
+
+        <p class="hero-subtitle">
+          {{ 'landing.heroSubtitle' | transloco }}
+        </p>
+
+        <!-- CTA Buttons -->
+        <div class="hero-cta-group">
+          <a routerLink="/register" class="btn-hero-primary" id="hero-get-started-btn">
+            {{ 'landing.getStarted' | transloco }}
+          </a>
+          <button (click)="scrollTo('calculator')" class="btn-hero-secondary" id="hero-demo-btn">
+            <app-icon name="calculator" [size]="16"></app-icon>
+            <span>{{ 'nav.calculator' | transloco }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           HERO VISUAL SHOWCASE: PHONE MOCKUP + 3 FLOATING STAT CARDS
+           (1:1 COMPOSITION MATCHING INSPO.PNG)
+           ==================================================================== -->
+      <div class="hero-showcase-wrapper">
+
+        <!-- FLOATING CARD 1: LEFT TOP (INCOME / ACCRUED INTEREST) -->
+        <div class="floating-card floating-card-top-left animate-float-slow">
+          <div class="float-card-header">
+            <span class="float-stat-val">
+              {{ currency === 'INR' ? '+₹37,400.00' : '+¥56,000' }}
+            </span>
+            <span class="float-badge-green">
+              <app-icon name="trending-up" [size]="11"></app-icon>
+              <span>+3.4%</span>
+            </span>
+          </div>
+          <span class="float-stat-label">{{ 'landing.incomeThisMonth' | transloco }}</span>
+        </div>
+
+        <!-- FLOATING CARD 2: LEFT MIDDLE (USERS / CUMULATIVE FD) -->
+        <div class="floating-card floating-card-mid-left animate-float-mid">
+          <!-- Stacked Avatars -->
+          <div class="avatar-stack-row">
+            <div class="avatar-stack">
+              <img src="/assets/images/avatar_woman.jpg" [alt]="'landing.investorAvatar' | transloco" class="stack-avatar" />
+              <img src="/assets/images/avatar_senior.jpg" [alt]="'landing.seniorAvatar' | transloco" class="stack-avatar" />
+              <div class="stack-avatar stack-avatar-more">50+</div>
+            </div>
+            <span class="asset-pair-tag">{{ 'landing.cumulativeFd' | transloco }}</span>
+          </div>
+          <div class="float-card-main-val">
+            <span class="pair-rate-val">
+              {{ currency === 'INR' ? '₹4,19,840.00' : '¥6,280,000' }}
+            </span>
+            <span class="float-badge-green">+18.25%</span>
+          </div>
+          <button class="btn-float-invest" (click)="scrollTo('calculator')">
+            {{ 'landing.investNow' | transloco }}
+          </button>
+        </div>
+
+        <!-- FLOATING CARD 3: RIGHT (MATURITY BALANCE) -->
+        <div class="floating-card floating-card-right animate-float-fast">
+          <span class="float-card-subhead">{{ 'landing.totalMaturity' | transloco }}</span>
+          <div class="float-balance-row">
+            <span class="float-balance-num">
+              {{ currency === 'INR' ? '64,57,300.00' : '¥9,670,000' }}
+            </span>
+            <span class="float-badge-green">+57%</span>
+          </div>
+          <div class="float-secure-note">
+            <app-icon name="shield" [size]="12" color="#4ade80"></app-icon>
+            <span>{{ 'landing.secureYield' | transloco }}</span>
+          </div>
+        </div>
+
+        <!-- ==================================================================
+             CENTERPHONE / ANALYTICS MOCKUP (EXACT MATCH OF INSPO.PNG)
+             ================================================================== -->
+        <div class="hero-phone-mockup">
+          <!-- Phone Speaker & Camera Notch -->
+          <div class="phone-notch"></div>
+
+          <!-- Inside Phone Screen Content -->
+          <div class="phone-screen">
+            <!-- App Header Inside Phone -->
+            <div class="phone-app-header">
+              <span class="phone-header-title">{{ 'landing.statistic' | transloco }}</span>
+              <div class="phone-header-icons">
+                <button class="phone-icon-btn" [attr.aria-label]="'landing.search' | transloco">
+                  <app-icon name="search" [size]="15" color="#94a3b8"></app-icon>
+                </button>
+                <button class="phone-icon-btn notification-btn" [attr.aria-label]="'common.notifications' | transloco">
+                  <app-icon name="bell" [size]="15" color="#94a3b8"></app-icon>
+                  <span class="notification-dot"></span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Timeframe Filter Pills -->
+            <div class="timeframe-pills">
+              <button
+                *ngFor="let tf of tfList"
+                (click)="setTimeframe(tf)"
+                class="timeframe-pill"
+                [class.pill-active]="activeTimeframeKey === tf"
+              >
+                {{ tf | titlecase }}
+              </button>
+            </div>
+
+            <!-- Total Spendings / Deposits Value -->
+            <div class="portfolio-summary-block">
+              <span class="portfolio-label">{{ 'landing.totalSpendings' | transloco }}</span>
+              <div class="portfolio-val-row">
+                <span class="portfolio-currency-symbol">
+                  {{ currency === 'INR' ? '₹' : '¥' }}
+                </span>
+                <span class="portfolio-amount">
+                  {{ currency === 'INR' ? (activeTimeframe.balanceInr | number:'1.2-2') : (activeTimeframe.balanceJpy | number:'1.0-0') }}
+                </span>
+                <span class="phone-growth-tag">{{ activeTimeframe.growthPct }}</span>
+              </div>
+            </div>
+
+            <!-- SVG Wave & Area Chart -->
+            <div class="phone-chart-container">
+              <svg class="chart-svg" viewBox="0 0 420 100" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#4ade80" stop-opacity="0.35"/>
+                    <stop offset="60%" stop-color="#2dd4bf" stop-opacity="0.10"/>
+                    <stop offset="100%" stop-color="#071b15" stop-opacity="0"/>
+                  </linearGradient>
+                  <linearGradient id="strokeGradient" x1="0" y1="0" x2="1" y2="0">
+                    <stop offset="0%" stop-color="#2dd4bf"/>
+                    <stop offset="50%" stop-color="#4ade80"/>
+                    <stop offset="100%" stop-color="#a3e635"/>
+                  </linearGradient>
+                </defs>
+
+                <!-- Area Fill Under Curve -->
+                <polygon
+                  [attr.points]="activeTimeframe.fillPoints"
+                  fill="url(#chartGradient)"
+                />
+
+                <!-- Vibrant Neon Wave Curve -->
+                <polyline
+                  [attr.points]="activeTimeframe.points"
+                  fill="none"
+                  stroke="url(#strokeGradient)"
+                  stroke-width="3.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+
+                <!-- Interactive Data Point Dot -->
+                <circle
+                  [attr.cx]="activeTimeframe.hoverPoint.x"
+                  [attr.cy]="activeTimeframe.hoverPoint.y"
+                  r="5.5"
+                  fill="#ffffff"
+                  stroke="#4ade80"
+                  stroke-width="3"
+                  class="chart-pulsing-point"
+                />
+              </svg>
+
+              <!-- Floating Tooltip Pill -->
+              <div
+                class="chart-tooltip-badge"
+                [style.left.px]="activeTimeframe.hoverPoint.x - 30"
+                [style.top.px]="activeTimeframe.hoverPoint.y - 34"
+              >
+                <span>{{ activeTimeframe.hoverPoint.label }}</span>
+              </div>
+
+              <!-- Payout Transaction Pill (matching inspo.png "Devil Ron") -->
+              <div class="chart-transfer-chip">
+                <img src="/assets/images/avatar_senior.jpg" alt="Customer" class="chip-avatar" />
+                <div class="chip-meta">
+                  <span class="chip-title">{{ 'landing.interestPayout' | transloco }}</span>
+                  <span class="chip-date">15-10-2026</span>
+                </div>
+                <div class="chip-sparkline">
+                  <svg width="34" height="14" viewBox="0 0 34 14" fill="none">
+                    <path d="M1 10L9 3L17 11L25 5L33 12" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round"/>
+                  </svg>
+                </div>
+                <span class="chip-amount-negative">
+                  {{ currency === 'INR' ? '-₹18,985.00' : '-¥2,850,000' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Bottom Sheet Peek: Transaction History -->
+            <div class="phone-bottom-sheet">
+              <div class="sheet-drag-handle"></div>
+              <div class="sheet-header">
+                <span class="sheet-title">{{ 'landing.transactionHistory' | transloco }}</span>
+                <a (click)="scrollTo('rates')" class="sheet-link">{{ 'landing.viewAll' | transloco }}</a>
+              </div>
+              <div class="sheet-item-preview">
+                <div class="sheet-item-left">
+                  <div class="sheet-item-icon">
+                    <app-icon name="coins" [size]="14" color="#4ade80"></app-icon>
+                  </div>
+                  <div class="sheet-item-text">
+                    <span class="sheet-item-name">{{ 'landing.quarterlyInterest' | transloco }}</span>
+                    <span class="sheet-item-sub">{{ 'landing.creditToDeposit' | transloco }}</span>
+                  </div>
+                </div>
+                <span class="sheet-item-amount positive">+₹8,560.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       3. PRODUCT ROADMAP SECTION
+       ======================================================================== -->
+  <section class="features-section" id="features">
+    <div class="section-container">
+      <div class="features-header-split">
+        <h2 class="features-main-title">
+          {{ 'landing.featuresHeading' | transloco }}<br>{{ 'landing.featuresHeadingLine2' | transloco }}
+        </h2>
+        <p class="features-header-desc">
+          {{ 'landing.featuresDescription' | transloco }}
+        </p>
+      </div>
+
+      <div class="feature-roadmap" [attr.aria-label]="'landing.roadmapLabel' | transloco">
+        <div class="roadmap-line" aria-hidden="true"></div>
+        <div class="roadmap-progress" aria-hidden="true"></div>
+
+        <article class="roadmap-step">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">01</span>
+            <app-icon name="pie-chart" [size]="20" color="#00E693"></app-icon>
+            <h3>{{ 'landing.smartPortfolio' | transloco }}</h3>
+            <p>{{ 'landing.smartPortfolioDescription' | transloco }}</p>
+          </div>
+        </article>
+
+        <article class="roadmap-step roadmap-step-offset">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">02</span>
+            <app-icon name="smartphone" [size]="20" color="#00E693"></app-icon>
+            <h3>{{ 'landing.accessAnywhere' | transloco }}</h3>
+            <p>{{ 'landing.accessAnywhereDescription' | transloco }}</p>
+          </div>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">03</span>
+            <app-icon name="shield" [size]="20" color="#00E693"></app-icon>
+            <h3>{{ 'landing.fastSecureTransactions' | transloco }}</h3>
+            <p>{{ 'landing.fastSecureDescription' | transloco }}</p>
+          </div>
+        </article>
+
+        <article class="roadmap-step roadmap-step-offset">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">04</span>
+            <app-icon name="zap" [size]="20" color="#00E693"></app-icon>
+            <h3>{{ 'landing.automatedCompounding' | transloco }}</h3>
+            <p>{{ 'landing.automatedCompoundingDescription' | transloco }}</p>
+          </div>
+        </article>
+
+        <article class="roadmap-step">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">05</span>
+            <app-icon name="trending-up" [size]="20" color="#00E693"></app-icon>
+            <h3>{{ 'landing.tieredYields' | transloco }}</h3>
+            <p>{{ 'landing.tieredYieldsDescription' | transloco }}</p>
+          </div>
+        </article>
+
+        <article class="roadmap-step roadmap-step-offset">
+          <div class="roadmap-dot"><span></span></div>
+          <div class="roadmap-card">
+            <span class="roadmap-index">06</span>
+            <app-icon name="lock" [size]="20" color="#00E693"></app-icon>
+            <h3>{{ 'landing.institutionalSafety' | transloco }}</h3>
+            <p>{{ 'landing.institutionalSafetyDescription' | transloco }}</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       5. SOCIAL PROOF & STATS SECTION (1:1 FROM INSPO.PNG RIGHT SCREEN)
+       ======================================================================== -->
+  <section class="stats-social-proof-section">
+    <div class="section-container">
+      <div class="stats-section-header">
+        <h2 class="stats-main-heading">{{ 'landing.trustedHeading' | transloco }}</h2>
+        <p class="stats-sub-heading">
+          {{ 'landing.trustedDescription' | transloco }}
+        </p>
+      </div>
+
+      <div class="stats-split-layout">
+        <!-- Left: Real Photography with Floating Stat Pill -->
+        <div class="stats-image-container">
+          <img
+            src="/assets/images/banking_customer_stats.jpg"
+            [alt]="'landing.customerPortfolioAlt' | transloco"
+            class="stats-featured-image"
+          />
+          <!-- Floating Badge on Photo -->
+          <div class="photo-floating-pill">
+            <div class="photo-pill-icon">
+              <app-icon name="check" [size]="14" color="#ffffff"></app-icon>
+            </div>
+            <div class="photo-pill-text">
+              <span class="photo-pill-num">2,420+</span>
+              <span class="photo-pill-desc">{{ 'landing.verifiedDepositsToday' | transloco }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: 4-Stat Metric Grid (1:1 with inspo.png) -->
+        <div class="metrics-grid">
+          <!-- Metric 1 -->
+          <div class="metric-card">
+            <div class="metric-number">3000+</div>
+            <div class="metric-title">{{ 'landing.monthlyUsers' | transloco }}</div>
+            <div class="metric-caption">
+              {{ 'landing.monthlyUsersDescription' | transloco }}
+            </div>
+          </div>
+
+          <!-- Metric 2 -->
+          <div class="metric-card">
+            <div class="metric-number">
+              {{ currency === 'INR' ? '₹950M+' : '¥14.2B+' }}
+            </div>
+            <div class="metric-title">{{ 'landing.fundingRaised' | transloco }}</div>
+            <div class="metric-caption">
+              {{ 'landing.fundingDescription' | transloco }}
+            </div>
+          </div>
+
+          <!-- Metric 3 -->
+          <div class="metric-card">
+            <div class="metric-number">99.9%</div>
+            <div class="metric-title">{{ 'landing.uptimePercentage' | transloco }}</div>
+            <div class="metric-caption">
+              {{ 'landing.uptimeDescription' | transloco }}
+            </div>
+          </div>
+
+          <!-- Metric 4 -->
+          <div class="metric-card">
+            <div class="metric-number">8.5%</div>
+            <div class="metric-title">{{ 'landing.peakInterestRate' | transloco }}</div>
+            <div class="metric-caption">
+              {{ 'landing.peakInterestDescription' | transloco }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       6. INTERACTIVE LIVE FIXED DEPOSIT CALCULATOR WIDGET
+       ======================================================================== -->
+  <section class="calculator-section" id="calculator">
+    <div class="section-container">
+      <div class="calc-header-center">
+        <span class="section-kicker">{{ 'landing.yieldSimulator' | transloco }}</span>
+        <h2 class="calc-title">{{ 'landing.growthHeading' | transloco }}</h2>
+        <p class="calc-subtitle">
+          {{ 'landing.calculatorDescription' | transloco }}
+        </p>
+      </div>
+
+      <div class="calc-box-card">
+        <div class="calc-inputs-col">
+          <!-- Deposit Amount Slider -->
+          <div class="calc-field-group">
+            <div class="calc-field-header">
+              <label for="deposit-slider" class="calc-label">{{ 'landing.depositPrincipal' | transloco }}</label>
+              <span class="calc-live-val">₹ {{ depositAmount | number }}</span>
+            </div>
+            <input
+              id="deposit-slider"
+              type="range"
+              min="10000"
+              max="2000000"
+              step="10000"
+              [(ngModel)]="depositAmount"
+              class="calc-slider"
+            />
+            <div class="calc-preset-pills">
+              <button (click)="setDepositPreset(50000)" class="preset-pill" [class.preset-active]="depositAmount === 50000">₹50K</button>
+              <button (click)="setDepositPreset(100000)" class="preset-pill" [class.preset-active]="depositAmount === 100000">₹1L</button>
+              <button (click)="setDepositPreset(200000)" class="preset-pill" [class.preset-active]="depositAmount === 200000">₹2L</button>
+              <button (click)="setDepositPreset(500000)" class="preset-pill" [class.preset-active]="depositAmount === 500000">₹5L</button>
+              <button (click)="setDepositPreset(1000000)" class="preset-pill" [class.preset-active]="depositAmount === 1000000">₹10L</button>
+            </div>
+          </div>
+
+          <!-- Tenure Slider -->
+          <div class="calc-field-group">
+            <div class="calc-field-header">
+              <label for="tenure-slider" class="calc-label">{{ 'landing.depositTenure' | transloco }}</label>
+              <span class="calc-live-val">
+                {{ tenureMonths }} Months ({{ (tenureMonths / 12) | number:'1.1-1' }} Yrs)
+              </span>
+            </div>
+            <input
+              id="tenure-slider"
+              type="range"
+              min="3"
+              max="120"
+              step="3"
+              [(ngModel)]="tenureMonths"
+              class="calc-slider"
+            />
+            <div class="calc-preset-pills">
+              <button (click)="setTenurePreset(12)" class="preset-pill" [class.preset-active]="tenureMonths === 12">1 {{ 'landing.year' | transloco }}</button>
+              <button (click)="setTenurePreset(24)" class="preset-pill" [class.preset-active]="tenureMonths === 24">2 {{ 'landing.years' | transloco }}</button>
+              <button (click)="setTenurePreset(36)" class="preset-pill" [class.preset-active]="tenureMonths === 36">3 {{ 'landing.years' | transloco }}</button>
+              <button (click)="setTenurePreset(60)" class="preset-pill" [class.preset-active]="tenureMonths === 60">5 {{ 'landing.years' | transloco }}</button>
+            </div>
+          </div>
+
+          <!-- Customer Category Pills -->
+          <div class="calc-field-group">
+            <label class="calc-label">{{ 'landing.depositorCategory' | transloco }}</label>
+            <div class="category-pill-group">
+              <button
+                type="button"
+                class="category-btn"
+                [class.cat-active]="customerType === 'GENERAL'"
+                (click)="customerType = 'GENERAL'"
+              >
+                <span>{{ 'landing.generalCitizen' | transloco }}</span>
+                <span class="cat-perk">{{ 'landing.baseRate' | transloco }}</span>
+              </button>
+              <button
+                type="button"
+                class="category-btn"
+                [class.cat-active]="customerType === 'SENIOR'"
+                (click)="customerType = 'SENIOR'"
+              >
+                <span>{{ 'landing.seniorCitizen' | transloco }}</span>
+                <span class="cat-perk text-lime">+0.50% p.a.</span>
+              </button>
+              <button
+                type="button"
+                class="category-btn"
+                [class.cat-active]="customerType === 'STAFF'"
+                (click)="customerType = 'STAFF'"
+              >
+                <span>{{ 'landing.preferredStaff' | transloco }}</span>
+                <span class="cat-perk text-lime">+0.75% p.a.</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Scheme Type Switcher -->
+          <div class="calc-field-group">
+            <label class="calc-label">{{ 'landing.compoundingScheme' | transloco }}</label>
+            <div class="scheme-toggle-box">
+              <button
+                type="button"
+                class="scheme-toggle-btn"
+                [class.scheme-active]="schemeType === 'COMPOUND'"
+                (click)="schemeType = 'COMPOUND'"
+              >
+                {{ 'landing.compoundQuarterly' | transloco }}
+              </button>
+              <button
+                type="button"
+                class="scheme-toggle-btn"
+                [class.scheme-active]="schemeType === 'SIMPLE'"
+                (click)="schemeType = 'SIMPLE'"
+              >
+                {{ 'landing.simpleRegular' | transloco }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Output Card -->
+        <div class="calc-results-col">
+          <div class="results-inner-card">
+            <div class="results-header">
+              <span class="results-label">{{ 'landing.estimatedMaturity' | transloco }}</span>
+              <div class="results-amount-display">
+                ₹ {{ maturityAmount | number }}
+              </div>
+              <div class="rate-badge-row">
+                <span class="rate-pill-applied">
+                  {{ appliedInterestRate }}% p.a.
+                </span>
+                <span class="apy-pill-applied" *ngIf="schemeType === 'COMPOUND'">
+                  {{ effectiveApy }}% APY
+                </span>
+              </div>
+            </div>
+
+            <!-- Rate Cap Notice -->
+            <div class="rate-cap-notice" *ngIf="rateCapWarning">
+              <app-icon name="info" [size]="14" color="#d97706"></app-icon>
+              <span>{{ 'landing.rateCapped' | transloco }}</span>
+            </div>
+
+            <!-- Breakdown Table -->
+            <div class="results-breakdown-list">
+              <div class="breakdown-item">
+                <span class="breakdown-label">{{ 'landing.principalAmount' | transloco }}</span>
+                <span class="breakdown-val">₹ {{ depositAmount | number }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">{{ 'landing.totalInterest' | transloco }}</span>
+                <span class="breakdown-val text-green">+₹ {{ totalInterest | number }}</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">{{ 'landing.tenureDuration' | transloco }}</span>
+                <span class="breakdown-val">{{ tenureMonths }} Months</span>
+              </div>
+              <div class="breakdown-item">
+                <span class="breakdown-label">{{ 'landing.compoundingCycle' | transloco }}</span>
+                <span class="breakdown-val">{{ schemeType === 'COMPOUND' ? ('landing.quarterlyCompounding' | transloco) : ('landing.simpleInterest' | transloco) }}</span>
+              </div>
+            </div>
+
+            <!-- Calculator CTAs -->
+            <div class="results-action-group">
+              <a routerLink="/register" class="btn-calc-primary">
+                <span>{{ 'landing.bookFixedDeposit' | transloco }}</span>
+                <app-icon name="arrow-up-right" [size]="14"></app-icon>
+              </a>
+              <a routerLink="/fixed-deposit/calculator" class="btn-calc-secondary">
+                <span>{{ 'landing.advancedYieldCalculator' | transloco }}</span>
+                <app-icon name="arrow-right" [size]="14"></app-icon>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       7. OFFICIAL TENURE & INTEREST RATES MATRIX
+       ======================================================================== -->
+  <section class="rates-section" id="rates">
+    <div class="section-container">
+      <div class="rates-header-center">
+        <span class="section-kicker">{{ 'landing.guaranteedReturns' | transloco }}</span>
+        <h2 class="rates-title">{{ 'landing.pricingMatrix' | transloco }}</h2>
+        <p class="rates-subtitle">
+          {{ 'landing.pricingDescription' | transloco }}
+        </p>
+      </div>
+
+      <div class="rates-table-wrapper">
+        <table class="rates-table">
+          <thead>
+            <tr>
+              <th>{{ 'landing.tenureSlab' | transloco }}</th>
+              <th>{{ 'landing.standardRate' | transloco }}</th>
+              <th>{{ 'landing.seniorCitizensRate' | transloco }}</th>
+              <th>{{ 'landing.compoundingSchedule' | transloco }}</th>
+              <th>{{ 'landing.prematureLiquidity' | transloco }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="tenure-cell">{{ 'landing.range7to45' | transloco }}</td>
+              <td>4.50%</td>
+              <td><span class="rate-perk">5.00%</span></td>
+              <td>{{ 'landing.simpleAtMaturity' | transloco }}</td>
+              <td>0.50% {{ 'landing.penalty' | transloco }}</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">{{ 'landing.range46to179' | transloco }}</td>
+              <td>5.25%</td>
+              <td><span class="rate-perk">5.75%</span></td>
+              <td>{{ 'landing.simpleAtMaturity' | transloco }}</td>
+              <td>0.50% {{ 'landing.penalty' | transloco }}</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">{{ 'landing.range180to364' | transloco }}</td>
+              <td>6.00%</td>
+              <td><span class="rate-perk">6.50%</span></td>
+              <td>{{ 'landing.quarterlyCompounding' | transloco }}</td>
+              <td>0.75% {{ 'landing.penalty' | transloco }}</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">{{ 'landing.range1to2' | transloco }}</td>
+              <td>6.80%</td>
+              <td><span class="rate-perk">7.30%</span></td>
+              <td>{{ 'landing.quarterlyCompounding' | transloco }}</td>
+              <td>1.00% {{ 'landing.penalty' | transloco }}</td>
+            </tr>
+            <tr class="highlight-row">
+              <td class="tenure-cell">
+                <strong>{{ 'landing.range2to5' | transloco }}</strong>
+                <span class="popular-pill">{{ 'landing.mostPopular' | transloco }}</span>
+              </td>
+              <td><strong>7.25%</strong></td>
+              <td><span class="rate-perk font-bold">7.75%</span></td>
+              <td>{{ 'landing.quarterlyCompounding' | transloco }}</td>
+              <td>1.00% {{ 'landing.penalty' | transloco }}</td>
+            </tr>
+            <tr>
+              <td class="tenure-cell">{{ 'landing.range5to10' | transloco }}</td>
+              <td>7.60%</td>
+              <td><span class="rate-perk">8.10%</span></td>
+              <td>{{ 'landing.quarterlyCompounding' | transloco }}</td>
+              <td>5-Year {{ 'landing.lockIn' | transloco }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       8. TAILORED BANKING SOLUTIONS SHOWCASE (PURE BUSINESS / CLIENT FOCUS)
+       ======================================================================== -->
+  <section class="architecture-section" id="solutions">
+    <div class="section-container">
+      <div class="arch-header-center">
+        <span class="section-kicker">{{ 'landing.tailoredSolutions' | transloco }}</span>
+        <h2 class="arch-title">{{ 'landing.growthSolutionsHeading' | transloco }}</h2>
+        <p class="arch-subtitle">
+          {{ 'landing.solutionsDescription' | transloco }}
+        </p>
+
+        <!-- Solutions Tab Switcher -->
+        <div class="role-nav-pills">
+          <button
+            class="role-pill"
+            [class.role-active]="activeRoleTab === 'PERSONAL'"
+            (click)="activeRoleTab = 'PERSONAL'"
+          >
+            <app-icon name="user" [size]="14"></app-icon>
+            <span>{{ 'landing.personalBanking' | transloco }}</span>
+          </button>
+          <button
+            class="role-pill"
+            [class.role-active]="activeRoleTab === 'WEALTH'"
+            (click)="activeRoleTab = 'WEALTH'"
+          >
+            <app-icon name="award" [size]="14"></app-icon>
+            <span>{{ 'landing.wealthPrivilege' | transloco }}</span>
+          </button>
+          <button
+            class="role-pill"
+            [class.role-active]="activeRoleTab === 'INSTITUTIONAL'"
+            (click)="activeRoleTab = 'INSTITUTIONAL'"
+          >
+            <app-icon name="shield" [size]="14"></app-icon>
+            <span>{{ 'landing.corporateTreasury' | transloco }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Personal Banking -->
+      <div class="arch-card animate-fade-in" *ngIf="activeRoleTab === 'PERSONAL'">
+        <div class="arch-card-split">
+          <div class="arch-text-col">
+            <div class="arch-role-badge">{{ 'landing.personalDepositors' | transloco }}</div>
+            <h3 class="arch-card-heading">{{ 'landing.personalHeading' | transloco }}</h3>
+            <p class="arch-card-body">
+              {{ 'landing.personalDescription' | transloco }}
+            </p>
+            <ul class="arch-checklist">
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.paperlessOnboarding' | transloco }}</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.quarterlyReinvestment' | transloco }}</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.transparentWithdrawal' | transloco }}</span>
+              </li>
+            </ul>
+            <a routerLink="/register" class="btn-arch-cta">{{ 'landing.openPersonal' | transloco }}</a>
+          </div>
+
+          <div class="arch-preview-col">
+            <div class="arch-mock-window">
+              <div class="window-bar">
+                <span class="win-dot red"></span>
+                <span class="win-dot yellow"></span>
+                <span class="win-dot green"></span>
+                <span class="win-title">{{ 'landing.personalPortfolio' | transloco }}</span>
+              </div>
+              <div class="window-body">
+                <div class="mock-stat-tile">
+                  <span class="tile-label">{{ 'landing.activeDeposits' | transloco }}</span>
+                  <span class="tile-val">₹ 14,50,000.00</span>
+                  <span class="tile-sub">{{ 'landing.effectiveApy' | transloco }}</span>
+                </div>
+                <div class="mock-table-mini">
+                  <div class="mock-tr mock-th">
+                    <span>{{ 'landing.depositScheme' | transloco }}</span>
+                    <span>{{ 'landing.principal' | transloco }}</span>
+                    <span>{{ 'landing.maturity' | transloco }}</span>
+                    <span>{{ 'common.status' | transloco }}</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>{{ 'landing.taxSaver5Y' | transloco }}</span>
+                    <span>₹ 5,00,000</span>
+                    <span>₹ 7,32,450</span>
+                    <span class="status-active">{{ 'landing.active' | transloco }}</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>{{ 'landing.cumulative3Y' | transloco }}</span>
+                    <span>₹ 2,50,000</span>
+                    <span>₹ 3,18,900</span>
+                    <span class="status-active">{{ 'landing.active' | transloco }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Wealth & Senior Privilege -->
+      <div class="arch-card animate-fade-in" *ngIf="activeRoleTab === 'WEALTH'">
+        <div class="arch-card-split">
+          <div class="arch-text-col">
+            <div class="arch-role-badge officer-badge">{{ 'landing.seniorPrivilege' | transloco }}</div>
+            <h3 class="arch-card-heading">{{ 'landing.seniorHeading' | transloco }}</h3>
+            <p class="arch-card-body">
+              {{ 'landing.seniorDescription' | transloco }}
+            </p>
+            <ul class="arch-checklist">
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.interestBonus' | transloco }}</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.payoutOptions' | transloco }}</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.relationshipDesk' | transloco }}</span>
+              </li>
+            </ul>
+            <a routerLink="/register" class="btn-arch-cta">{{ 'landing.explorePrivilege' | transloco }}</a>
+          </div>
+
+          <div class="arch-preview-col">
+            <div class="arch-mock-window">
+              <div class="window-bar">
+                <span class="win-dot red"></span>
+                <span class="win-dot yellow"></span>
+                <span class="win-dot green"></span>
+                <span class="win-title">{{ 'landing.seniorPortfolio' | transloco }}</span>
+              </div>
+              <div class="window-body">
+                <div class="mock-stat-tile officer-tile">
+                  <span class="tile-label">{{ 'landing.quarterlyCredited' | transloco }}</span>
+                  <span class="tile-val">+₹ 48,250.00</span>
+                  <span class="tile-sub">{{ 'landing.seniorRate' | transloco }}</span>
+                </div>
+                <div class="mock-table-mini">
+                  <div class="mock-tr mock-th">
+                    <span>{{ 'landing.beneficiary' | transloco }}</span>
+                    <span>{{ 'landing.scheme' | transloco }}</span>
+                    <span>{{ 'landing.monthlyCredit' | transloco }}</span>
+                    <span>{{ 'common.status' | transloco }}</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>{{ 'landing.retirementFund' | transloco }}</span>
+                    <span>{{ 'landing.seniorCareFd' | transloco }}</span>
+                    <span>₹ 16,080 / mo</span>
+                    <span class="status-active">{{ 'landing.credited' | transloco }}</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>{{ 'landing.familyTrust' | transloco }}</span>
+                    <span>{{ 'landing.cumulative5Y' | transloco }}</span>
+                    <span>{{ 'landing.compounded' | transloco }}</span>
+                    <span class="status-active">{{ 'landing.growing' | transloco }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Corporate Treasury -->
+      <div class="arch-card animate-fade-in" *ngIf="activeRoleTab === 'INSTITUTIONAL'">
+        <div class="arch-card-split">
+          <div class="arch-text-col">
+            <div class="arch-role-badge admin-badge">{{ 'landing.institutionalCorporate' | transloco }}</div>
+            <h3 class="arch-card-heading">{{ 'landing.treasuryHeading' | transloco }}</h3>
+            <p class="arch-card-body">
+              {{ 'landing.treasuryDescription' | transloco }}
+            </p>
+            <ul class="arch-checklist">
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.liquiditySweeps' | transloco }}</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.corporateApprovals' | transloco }}</span>
+              </li>
+              <li>
+                <app-icon name="check" [size]="15" color="#4ade80"></app-icon>
+                <span>{{ 'landing.tenureMatching' | transloco }}</span>
+              </li>
+            </ul>
+            <a routerLink="/login" class="btn-arch-cta">{{ 'landing.corporateSignIn' | transloco }}</a>
+          </div>
+
+          <div class="arch-preview-col">
+            <div class="arch-mock-window">
+              <div class="window-bar">
+                <span class="win-dot red"></span>
+                <span class="win-dot yellow"></span>
+                <span class="win-dot green"></span>
+                <span class="win-title">{{ 'landing.treasuryTerminal' | transloco }}</span>
+              </div>
+              <div class="window-body">
+                <div class="mock-stat-tile admin-tile">
+                  <span class="tile-label">{{ 'landing.treasuryReserves' | transloco }}</span>
+                  <span class="tile-val">₹ 125,000,000.00</span>
+                  <span class="tile-sub">{{ 'landing.weightedYield' | transloco }}</span>
+                </div>
+                <div class="mock-table-mini">
+                  <div class="mock-tr mock-th">
+                    <span>{{ 'landing.allocation' | transloco }}</span>
+                    <span>{{ 'landing.depositTenure' | transloco }}</span>
+                    <span>{{ 'landing.maturityDate' | transloco }}</span>
+                    <span>{{ 'common.status' | transloco }}</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>{{ 'landing.q4TaxReserves' | transloco }}</span>
+                    <span>90 {{ 'landing.days' | transloco }}</span>
+                    <span>15-{{ 'landing.jan' | transloco }}-2027</span>
+                    <span class="status-active">{{ 'landing.locked' | transloco }}</span>
+                  </div>
+                  <div class="mock-tr">
+                    <span>{{ 'landing.capexFacility' | transloco }}</span>
+                    <span>180 {{ 'landing.days' | transloco }}</span>
+                    <span>15-{{ 'landing.apr' | transloco }}-2027</span>
+                    <span class="status-active">{{ 'landing.locked' | transloco }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       9. HIGH-CONVERSION CTA BANNER
+       ======================================================================== -->
+  <section class="cta-banner-section">
+    <div class="section-container">
+      <div class="cta-banner-box">
+        <div class="cta-banner-grid-glow"></div>
+        <div class="cta-banner-content">
+          <span class="cta-kicker">{{ 'landing.capitalGrowth' | transloco }}</span>
+          <h2 class="cta-title">{{ 'landing.ctaHeading' | transloco }}</h2>
+          <p class="cta-subtitle">
+            {{ 'landing.ctaDescription' | transloco }}
+          </p>
+          <div class="cta-buttons">
+            <a routerLink="/register" class="btn-cta-primary" id="cta-open-account-btn">
+              <span>{{ 'landing.openNow' | transloco }}</span>
+              <app-icon name="arrow-up-right" [size]="16"></app-icon>
+            </a>
+            <a routerLink="/login" class="btn-cta-secondary" id="cta-sign-in-btn">
+              {{ 'landing.signInPortal' | transloco }}
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ========================================================================
+       10. ENTERPRISE FOOTER (PURE BUSINESS & REGULATORY TRUST)
+       ======================================================================== -->
+  <footer class="landing-footer">
+    <div class="section-container">
+      <div class="footer-grid">
+        <!-- Col 1: Brand Info -->
+        <div class="footer-col brand-col">
+          <div class="footer-brand-logo">
+            <img src="/logo.png" alt="vaultOne Logo" class="footer-logo-img" />
+            <span class="footer-brand-name">vaultOne</span>
+          </div>
+          <p class="footer-desc">{{ 'landing.footerDescription' | transloco }}</p>
+          <div class="footer-badges">
+            <span class="footer-chip">256-Bit SSL</span>
+            <span class="footer-chip">DICGC {{ 'landing.insured' | transloco }}</span>
+            <span class="footer-chip">ISO 27001 {{ 'landing.certified' | transloco }}</span>
+          </div>
+        </div>
+
+        <!-- Col 2: Banking Products -->
+        <div class="footer-col">
+          <h4 class="footer-heading">{{ 'landing.bankingProductsHeading' | transloco }}</h4>
+          <ul class="footer-links">
+            <li><a (click)="scrollTo('calculator')">{{ 'landing.cumulativeTermDeposits' | transloco }}</a></li>
+            <li><a (click)="scrollTo('rates')">{{ 'landing.taxSaverDeposits' | transloco }}</a></li>
+            <li><a (click)="scrollTo('rates')">{{ 'landing.seniorPrivilege' | transloco }} (+0.5%)</a></li>
+            <li><a (click)="scrollTo('calculator')">{{ 'landing.monthlyPayout' | transloco }}</a></li>
+            <li><a (click)="scrollTo('features')">{{ 'landing.corporateDeposits' | transloco }}</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Wealth Solutions -->
+        <div class="footer-col">
+          <h4 class="footer-heading">{{ 'landing.wealthSolutionsHeading' | transloco }}</h4>
+          <ul class="footer-links">
+            <li><a (click)="scrollTo('features')">{{ 'landing.portfolioIntelligence' | transloco }}</a></li>
+            <li><a (click)="scrollTo('features')">{{ 'landing.automatedDaily' | transloco }}</a></li>
+            <li><a (click)="scrollTo('calculator')">{{ 'landing.fdYieldCalculator' | transloco }}</a></li>
+            <li><a (click)="scrollTo('rates')">{{ 'landing.prematureOptions' | transloco }}</a></li>
+            <li><a (click)="scrollTo('features')">{{ 'landing.taxCertificates' | transloco }}</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 4: Portals -->
+        <div class="footer-col">
+          <h4 class="footer-heading">{{ 'landing.clientPortalsHeading' | transloco }}</h4>
+          <ul class="footer-links">
+            <li><a routerLink="/login">{{ 'landing.personalSignIn' | transloco }}</a></li>
+            <li><a routerLink="/register">{{ 'landing.openNewAccount' | transloco }}</a></li>
+            <li><a routerLink="/login">{{ 'landing.corporatePortal' | transloco }}</a></li>
+            <li><a routerLink="/login">{{ 'landing.relationshipDeskPortal' | transloco }}</a></li>
+            <li><a routerLink="/fixed-deposit/calculator">{{ 'landing.publicYieldSimulator' | transloco }}</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom-bar">
+        <div class="footer-regulatory-note">
+          {{ 'landing.regulatoryNote' | transloco }}
+        </div>
+        <div class="footer-copyright">
+          {{ 'landing.copyright' | transloco }}
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</div>

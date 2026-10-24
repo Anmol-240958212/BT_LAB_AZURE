@@ -1,0 +1,95 @@
+server:
+  port: ${PORT:8081}
+
+spring:
+  application:
+    name: demo
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:fdmodule}
+    username: ${DB_USERNAME:root}
+    password: "${DB_PASSWORD:#Iamgood1}"
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  mail:
+    host: ${BANKING_SMTP_HOST:smtp.gmail.com}
+    port: ${BANKING_SMTP_PORT:587}
+    username: "${BANKING_SMTP_USERNAME:${MAIL_USERNAME:}}"
+    password: "${BANKING_SMTP_PASSWORD:${MAIL_PASSWORD:}}"
+    properties:
+      mail:
+        smtp:
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+          auth: ${BANKING_SMTP_AUTH:true}
+          starttls:
+            enable: ${BANKING_SMTP_STARTTLS:true}
+            required: ${BANKING_SMTP_STARTTLS:true}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+      request.timeout.ms: ${KAFKA_REQUEST_TIMEOUT_MS:60000}
+      metadata.max.age.ms: ${KAFKA_METADATA_MAX_AGE_MS:180000}
+      connections.max.idle.ms: ${KAFKA_CONNECTIONS_MAX_IDLE_MS:180000}
+    listener:
+      missing-topics-fatal: false
+    consumer:
+      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+      group-id: fd-service-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.BankingTech.demo"
+        reconnect.backoff.ms: 10000
+        reconnect.backoff.max.ms: 60000
+        retry.backoff.ms: 10000
+
+logging:
+  level:
+    org.springframework.kafka: INFO
+    org.apache.kafka.clients.consumer: WARN
+
+banking:
+  mail:
+    from: "${BANKING_MAIL_FROM:${BANKING_SMTP_USERNAME:${MAIL_USERNAME:}}}"
+
+app:
+  cors:
+    allowed-origin-patterns: "${CORS_ALLOWED_ORIGINS:http://localhost:[*]|http://127.0.0.1:[*]}"
+  kafka:
+    create-topics: ${KAFKA_CREATE_TOPICS:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    try-it-out-enabled: true
+    urls-primary-name: Fixed Deposit
+    urls:
+      - name: Fixed Deposit
+        url: /v3/api-docs
+      - name: Auth and Customer
+        url: ${AUTH_OPENAPI_URL:http://localhost:8080/v3/api-docs}
