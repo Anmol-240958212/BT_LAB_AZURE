@@ -1,8 +1,8 @@
 export const environment = {
   production: true,
   api: {
-    authBaseUrl: 'https://replace-with-auth-container-app-url',
-    fdBaseUrl: 'https://replace-with-fd-container-app-url',
-    productBaseUrl: 'https://replace-with-product-container-app-url'
+    authBaseUrl: 'https://vaultone-auth.jollybush-2b2bef4c.centralindia.azurecontainerapps.io',
+    fdBaseUrl: 'https://vaultone-fd.jollybush-2b2bef4c.centralindia.azurecontainerapps.io',
+    productBaseUrl: 'https://vaultone-product.jollybush-2b2bef4c.centralindia.azurecontainerapps.io'
   }
 };
