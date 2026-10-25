@@ -452,8 +452,11 @@ export class FDAccountsComponent implements OnInit {
       }
     } else {
       // Bank Officer / Admin
-      this.allAccounts = [...this.mockAccounts];
-      this.filteredAccounts = [...this.allAccounts];
+      // Operational users must see the server ledger only.  Starting with
+      // mock rows hid real data whenever the request was slower than the
+      // former 2.5-second timeout.
+      this.allAccounts = [];
+      this.filteredAccounts = [];
       this.loadAccounts();
     }
   }
@@ -541,23 +544,19 @@ export class FDAccountsComponent implements OnInit {
       : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
     fetch$.pipe(
-      timeout(2500),
+      // A cold Azure Container App can take a few seconds to serve its first
+      // request.  Do not turn a valid, slightly slow response into mock data.
+      timeout(12000),
       catchError(() => of([]))
     ).subscribe({
       next: (data) => {
         this.loading = false;
-        if (data && data.length > 0) {
-          this.allAccounts = data;
-        } else if (this.allAccounts.length === 0) {
-          this.allAccounts = [...this.mockAccounts];
-        }
+        this.allAccounts = data || [];
         this.applyFilters();
       },
       error: () => {
         this.loading = false;
-        if (this.allAccounts.length === 0) {
-          this.allAccounts = [...this.mockAccounts];
-        }
+        this.allAccounts = [];
         this.applyFilters();
       }
     });
