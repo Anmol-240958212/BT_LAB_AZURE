@@ -243,68 +243,9 @@ export class DashboardComponent implements OnInit {
     { field: 'status', header: 'Status', translationKey: 'common.status', type: 'badge', align: 'center' }
   ];
 
-  allLoadedAccounts: FixedDepositAccountResponse[] = [
-    {
-      fdAccountNo: 'FD-100293847',
-      customerId: '9',
-      productCode: 'PROD_FD_CUMULATIVE',
-      principalAmount: 250000,
-      interestRate: 7.25,
-      termMonths: 24,
-      status: 'ACTIVE',
-      interestType: 'COMPOUND',
-      interestPayoutType: 'MATURITY',
-      accruedInterest: 18125
-    },
-    {
-      fdAccountNo: 'FD-100492817',
-      customerId: '9',
-      productCode: 'PROD_FD_SENIOR',
-      principalAmount: 500000,
-      interestRate: 8.00,
-      termMonths: 36,
-      status: 'ACTIVE',
-      interestType: 'COMPOUND',
-      interestPayoutType: 'ANNUAL',
-      accruedInterest: 40000
-    },
-    {
-      fdAccountNo: 'FD-100583920',
-      customerId: '8',
-      productCode: 'PROD_FD_STANDARD',
-      principalAmount: 1000000,
-      interestRate: 7.50,
-      termMonths: 12,
-      status: 'ACTIVE',
-      interestType: 'SIMPLE',
-      interestPayoutType: 'MATURITY',
-      accruedInterest: 75000
-    },
-    {
-      fdAccountNo: 'FD-100612984',
-      customerId: '4',
-      productCode: 'PROD_FD_QUARTERLY',
-      principalAmount: 125000,
-      interestRate: 6.80,
-      termMonths: 6,
-      status: 'ACTIVE',
-      interestType: 'SIMPLE',
-      interestPayoutType: 'QUARTERLY',
-      accruedInterest: 4250
-    },
-    {
-      fdAccountNo: 'FD-100741295',
-      customerId: '10',
-      productCode: 'PROD_FD_STANDARD',
-      principalAmount: 300000,
-      interestRate: 7.10,
-      termMonths: 18,
-      status: 'ACTIVE',
-      interestType: 'COMPOUND',
-      interestPayoutType: 'MATURITY',
-      accruedInterest: 15975
-    }
-  ];
+  // Production data must always come from the FD service. Keeping sample accounts
+  // here caused a slow request to look like successful, but incorrect, live data.
+  allLoadedAccounts: FixedDepositAccountResponse[] = [];
 
   recentAccounts: FixedDepositAccountResponse[] = [];
   userCustomerId: string | null = null;
@@ -359,7 +300,7 @@ export class DashboardComponent implements OnInit {
       if (!this.userCustomerId) return;
       this.loadingAccounts = true;
       this.fdAccountApi.getAccountsByCustomer(this.userCustomerId).pipe(
-        timeout(3500),
+        timeout(12000),
         catchError(() => of([]))
       ).subscribe({
         next: (data) => {
@@ -383,14 +324,12 @@ export class DashboardComponent implements OnInit {
     }
 
     this.fdAccountApi.getAccountsByStatus('ACTIVE').pipe(
-      timeout(2500),
+      timeout(12000),
       catchError(() => of([]))
     ).subscribe({
       next: (data) => {
         this.loadingAccounts = false;
-        if (data && data.length > 0) {
-          this.allLoadedAccounts = data;
-        }
+        this.allLoadedAccounts = data || [];
         this.filterAccountsForCustomer();
         this.recalculateStats();
       },
