@@ -576,7 +576,9 @@ export class FDAccountsComponent implements OnInit {
       : this.fdAccountApi.getCustomerAccountsByStatus(this.userCustomerId, this.selectedStatus);
 
     fetch$.pipe(
-      timeout(3500),
+      // Customer portfolio calls are also routed through the FD Container App.
+      // Allow for an Azure cold start instead of showing a false empty portfolio.
+      timeout(12000),
       catchError(() => of([]))
     ).subscribe({
       next: (data) => {
