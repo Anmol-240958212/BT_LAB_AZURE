@@ -76,7 +76,7 @@ public class AuthProfileKafkaService {
                     if (customer != null) {
                         profile.put("customerAge", customer.getDateOfBirth() == null ? null
                                 : java.time.Period.between(customer.getDateOfBirth(), java.time.LocalDate.now()).getYears());
-                        profile.put("customerGender", customer.getGender());
+                        profile.put("customerGender", normalizedGender(customer.getGender()));
                         profile.put("pricingCategories", CustomerBenefitServiceImpl.categoriesFor(customer));
                     }
                     response.put("profile", profile); response.put("valid", true); response.put("status", 200);
@@ -84,5 +84,16 @@ public class AuthProfileKafkaService {
             } catch (Exception unavailable) { response.put("status", 503); }
         }
         kafka.send("auth-profile-replies-v1", id, json.writeValueAsString(response)).get(12, TimeUnit.SECONDS);
+    }
+
+    /** Product Pricing uses compact gender codes, while legacy KYC rows may store full labels. */
+    private String normalizedGender(String gender) {
+        if (gender == null || gender.isBlank()) return null;
+        return switch (gender.trim().toUpperCase(Locale.ROOT)) {
+            case "M", "MALE" -> "M";
+            case "F", "FEMALE" -> "F";
+            case "X", "OTHER", "NON_BINARY", "NON-BINARY" -> "X";
+            default -> null;
+        };
     }
 }
