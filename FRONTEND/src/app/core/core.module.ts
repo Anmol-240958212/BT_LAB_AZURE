@@ -5,6 +5,7 @@ import { HTTP_INTERCEPTORS } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { JwtInterceptor } from './jwt.interceptor';
 import { ErrorInterceptor } from './error.interceptor';
+import { ApiBaseUrlInterceptor } from './api-base-url.interceptor';
 import { AuthGuard } from './auth.guard';
 import { RoleGuard } from './role.guard';
 
@@ -35,6 +36,11 @@ import { FDMaturityApiService } from './api/fd-maturity-api.service';
     FDTransactionApiService,
     FDInterestApiService,
     FDMaturityApiService,
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ApiBaseUrlInterceptor,
+      multi: true
+    },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: JwtInterceptor,
