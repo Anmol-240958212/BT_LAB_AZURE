@@ -243,68 +243,7 @@ export class DashboardComponent implements OnInit {
     { field: 'status', header: 'Status', translationKey: 'common.status', type: 'badge', align: 'center' }
   ];
 
-  allLoadedAccounts: FixedDepositAccountResponse[] = [
-    {
-      fdAccountNo: 'FD-100293847',
-      customerId: '9',
-      productCode: 'PROD_FD_CUMULATIVE',
-      principalAmount: 250000,
-      interestRate: 7.25,
-      termMonths: 24,
-      status: 'ACTIVE',
-      interestType: 'COMPOUND',
-      interestPayoutType: 'MATURITY',
-      accruedInterest: 18125
-    },
-    {
-      fdAccountNo: 'FD-100492817',
-      customerId: '9',
-      productCode: 'PROD_FD_SENIOR',
-      principalAmount: 500000,
-      interestRate: 8.00,
-      termMonths: 36,
-      status: 'ACTIVE',
-      interestType: 'COMPOUND',
-      interestPayoutType: 'ANNUAL',
-      accruedInterest: 40000
-    },
-    {
-      fdAccountNo: 'FD-100583920',
-      customerId: '8',
-      productCode: 'PROD_FD_STANDARD',
-      principalAmount: 1000000,
-      interestRate: 7.50,
-      termMonths: 12,
-      status: 'ACTIVE',
-      interestType: 'SIMPLE',
-      interestPayoutType: 'MATURITY',
-      accruedInterest: 75000
-    },
-    {
-      fdAccountNo: 'FD-100612984',
-      customerId: '4',
-      productCode: 'PROD_FD_QUARTERLY',
-      principalAmount: 125000,
-      interestRate: 6.80,
-      termMonths: 6,
-      status: 'ACTIVE',
-      interestType: 'SIMPLE',
-      interestPayoutType: 'QUARTERLY',
-      accruedInterest: 4250
-    },
-    {
-      fdAccountNo: 'FD-100741295',
-      customerId: '10',
-      productCode: 'PROD_FD_STANDARD',
-      principalAmount: 300000,
-      interestRate: 7.10,
-      termMonths: 18,
-      status: 'ACTIVE',
-      interestType: 'COMPOUND',
-      interestPayoutType: 'MATURITY',
-      accruedInterest: 15975
-    }
-  ];
+  allLoadedAccounts: FixedDepositAccountResponse[] = [];
 
   recentAccounts: FixedDepositAccountResponse[] = [];
   userCustomerId: string | null = null;
@@ -324,11 +263,9 @@ export class DashboardComponent implements OnInit {
       this.authState = state;
       this.currentRole = state.role;
       if (this.currentRole === 'CUSTOMER') {
-        if (!this.isDemoUser()) {
-          // Real customer: initialize empty
-          this.recentAccounts = [];
-          this.recalculateStats();
-        }
+        this.allLoadedAccounts = [];
+        this.recentAccounts = [];
+        this.recalculateStats();
         this.userApi.getMe().subscribe({
           next: (profile) => {
             if (profile && profile.customerId) {
@@ -346,16 +283,15 @@ export class DashboardComponent implements OnInit {
             this.recalculateStats();
           }
         });
+      } else if (this.currentRole) {
+        this.userCustomerId = null;
+        this.loadAccounts();
       }
-      this.filterAccountsForCustomer();
-      this.recalculateStats();
     });
-
-    this.loadAccounts(false);
   }
 
   loadAccounts(isManualRefresh = false): void {
-    if (this.currentRole === 'CUSTOMER' && !this.isDemoUser()) {
+    if (this.currentRole === 'CUSTOMER') {
       if (!this.userCustomerId) return;
       this.loadingAccounts = true;
       this.fdAccountApi.getAccountsByCustomer(this.userCustomerId).pipe(
@@ -388,23 +324,18 @@ export class DashboardComponent implements OnInit {
     ).subscribe({
       next: (data) => {
         this.loadingAccounts = false;
-        if (data && data.length > 0) {
-          this.allLoadedAccounts = data;
-        }
+        this.allLoadedAccounts = data || [];
         this.filterAccountsForCustomer();
         this.recalculateStats();
       },
       error: () => {
         this.loadingAccounts = false;
+        this.allLoadedAccounts = [];
+        this.recentAccounts = [];
         this.filterAccountsForCustomer();
         this.recalculateStats();
       }
     });
-  }
-
-  private isDemoUser(): boolean {
-    const username = (this.authService.getUsername() || '').toLowerCase();
-    return username === 'alice@test.com' || username === 'alice' || username.startsWith('demo');
   }
 
   private filterAccountsForCustomer(): void {
@@ -413,20 +344,11 @@ export class DashboardComponent implements OnInit {
     );
 
     if (this.currentRole === 'CUSTOMER') {
-      if (!this.isDemoUser()) {
-        if (this.userCustomerId) {
-          const id = this.userCustomerId.trim().toLowerCase();
-          this.recentAccounts = activeAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
-        } else {
-          this.recentAccounts = [];
-        }
+      if (this.userCustomerId) {
+        const id = this.userCustomerId.trim().toLowerCase();
+        this.recentAccounts = activeAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
       } else {
-        if (this.userCustomerId) {
-          const id = this.userCustomerId.trim().toLowerCase();
-          this.recentAccounts = activeAccounts.filter(a => a.customerId && a.customerId.toLowerCase().trim() === id);
-        } else {
-          this.recentAccounts = activeAccounts.filter(a => a.customerId && (a.customerId === '9' || a.customerId.includes('1001')));
-        }
+        this.recentAccounts = [];
       }
     } else {
       this.recentAccounts = activeAccounts;

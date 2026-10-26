@@ -6,7 +6,7 @@ spring:
     name: demo
 
   datasource:
-    url: jdbc:mysql://localhost:3306/${DB_NAME:fdmodule}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:fdmodule}
     username: ${DB_USERNAME:root}
     password: "${DB_PASSWORD:#Iamgood1}"
     driver-class-name: com.mysql.cj.jdbc.Driver
