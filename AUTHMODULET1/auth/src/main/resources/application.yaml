@@ -3,7 +3,7 @@ spring:
     name: auth
 
   datasource:
-    url: jdbc:mysql://localhost:3306/authandcust
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:authandcust}
     username: ${DB_USERNAME:root}
     password: "${DB_PASSWORD:#Iamgood1}"
 
@@ -16,6 +16,14 @@ spring:
         format_sql: true
 
   kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+      request.timeout.ms: ${KAFKA_REQUEST_TIMEOUT_MS:60000}
+      metadata.max.age.ms: ${KAFKA_METADATA_MAX_AGE_MS:180000}
+      connections.max.idle.ms: ${KAFKA_CONNECTIONS_MAX_IDLE_MS:180000}
     producer:
       bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -40,4 +48,24 @@ spring:
             required: ${BANKING_SMTP_STARTTLS:true}
 
 server:
-  port: 8080
+  port: ${PORT:8080}
+
+security:
+  jwt:
+    secret: ${AUTH_JWT_SECRET:my-super-secret-key-for-authentication-123456789}
+
+app:
+  cors:
+    allowed-origin-patterns: "${CORS_ALLOWED_ORIGINS:http://localhost:[*]|http://127.0.0.1:[*]}"
+  kafka:
+    create-topics: ${KAFKA_CREATE_TOPICS:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

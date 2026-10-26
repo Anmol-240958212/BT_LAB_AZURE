@@ -37,6 +37,13 @@ spring:
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    properties:
+      security.protocol: ${KAFKA_SECURITY_PROTOCOL:PLAINTEXT}
+      sasl.mechanism: ${KAFKA_SASL_MECHANISM:}
+      sasl.jaas.config: ${KAFKA_SASL_JAAS_CONFIG:}
+      request.timeout.ms: ${KAFKA_REQUEST_TIMEOUT_MS:60000}
+      metadata.max.age.ms: ${KAFKA_METADATA_MAX_AGE_MS:180000}
+      connections.max.idle.ms: ${KAFKA_CONNECTIONS_MAX_IDLE_MS:180000}
     listener:
       missing-topics-fatal: false
     consumer:
