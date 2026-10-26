@@ -59,6 +59,12 @@
     "switchToHindi": "Switch to Hindi",
     "switchToEnglish": "Switch to English"
   },
+  "validation": {
+    "passwordRequired": "Password is required.",
+    "min6Chars": "Password must contain at least 6 characters.",
+    "max20Chars": "Password cannot exceed 20 characters.",
+    "passwordPattern": "Include at least one letter, one number, and one special character."
+  },
   "nav": {
     "mainNavigation": "MAIN NAVIGATION",
     "home": "Home",
