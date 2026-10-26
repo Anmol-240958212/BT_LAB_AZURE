@@ -409,6 +409,12 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       roles: ['STAFF', 'BANK_OFFICER', 'ADMIN']
     },
     {
+      label: 'Transaction Ledger',
+      route: '/admin/ledger',
+      icon: 'clipboard',
+      roles: ['ADMIN']
+    },
+    {
       label: 'Create FD Account', translationKey: 'sidebar.createAccount',
       route: '/fixed-deposit/create',
       icon: 'plus',
@@ -442,12 +448,6 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       label: 'Employee Management', translationKey: 'sidebar.employees',
       route: '/admin/employees',
       icon: 'shield',
-      roles: ['ADMIN']
-    },
-    {
-      label: 'Transaction Ledger',
-      route: '/admin/ledger',
-      icon: 'clipboard',
       roles: ['ADMIN']
     },
     {
