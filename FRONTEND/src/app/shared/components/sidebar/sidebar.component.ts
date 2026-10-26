@@ -397,6 +397,12 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       roles: ['CUSTOMER']
     },
     {
+      label: 'My Profile',
+      route: '/profile',
+      icon: 'user',
+      roles: ['CUSTOMER']
+    },
+    {
       label: 'FD Accounts (All)', translationKey: 'sidebar.allAccounts',
       route: '/fixed-deposit/accounts',
       icon: 'clipboard',
