@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FDTransactionApiService } from '../../../core/api/fd-transaction-api.service';
 import { FDTransactionLedgerEntry } from '../../../core/models/fd.models';
 
@@ -65,7 +65,10 @@ export class TransactionLedgerComponent implements OnInit {
   loadedAt?: Date;
   errorMessage = '';
 
-  constructor(private readonly transactions: FDTransactionApiService) {}
+  constructor(
+    private readonly transactions: FDTransactionApiService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void { this.loadLedger(); }
 
@@ -73,8 +76,21 @@ export class TransactionLedgerComponent implements OnInit {
     this.loading = true;
     this.errorMessage = '';
     this.transactions.ledger(this.accountNo).subscribe({
-      next: entries => { this.entries = entries; this.loadedAt = new Date(); this.loading = false; },
-      error: error => { this.entries = []; this.loading = false; this.errorMessage = error?.status === 403 ? 'Only administrators can view the transaction ledger.' : 'The transaction ledger could not be loaded. Please refresh and try again.'; }
+      next: entries => {
+        this.entries = entries || [];
+        this.loadedAt = new Date();
+        this.loading = false;
+        // HTTP callbacks do not automatically refresh this zoneless application.
+        this.cdr.markForCheck();
+      },
+      error: error => {
+        this.entries = [];
+        this.loading = false;
+        this.errorMessage = error?.status === 403
+          ? 'Only administrators can view the transaction ledger.'
+          : 'The transaction ledger could not be loaded. Please refresh and try again.';
+        this.cdr.markForCheck();
+      }
     });
   }
 
