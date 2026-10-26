@@ -167,6 +167,23 @@ export class LandingComponent implements OnInit, OnDestroy {
     this.currency = this.currency === 'INR' ? 'JPY' : 'INR';
   }
 
+  get calculatorCurrencySymbol(): string {
+    return this.currency === 'JPY' ? '¥' : '₹';
+  }
+
+  get calculatorCurrencyName(): string {
+    return this.currency === 'JPY' ? 'Japanese Yen' : 'Indian Rupees';
+  }
+
+  depositPresetLabel(amount: number): string {
+    if (this.currency === 'JPY') {
+      return `${this.calculatorCurrencySymbol}${new Intl.NumberFormat('ja-JP', { maximumFractionDigits: 0 }).format(amount)}`;
+    }
+
+    if (amount >= 100000) return `${this.calculatorCurrencySymbol}${amount / 100000}L`;
+    return `${this.calculatorCurrencySymbol}${amount / 1000}K`;
+  }
+
   toggleMobileMenu(): void {
     this.mobileMenuOpen = !this.mobileMenuOpen;
   }

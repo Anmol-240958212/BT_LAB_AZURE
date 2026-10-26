@@ -551,8 +551,8 @@
           <!-- Deposit Amount Slider -->
           <div class="calc-field-group">
             <div class="calc-field-header">
-              <label for="deposit-slider" class="calc-label">{{ 'landing.depositPrincipal' | transloco }}</label>
-              <span class="calc-live-val">₹ {{ depositAmount | number }}</span>
+              <label for="deposit-slider" class="calc-label">{{ 'landing.depositPrincipal' | transloco }} ({{ calculatorCurrencyName }})</label>
+              <span class="calc-live-val">{{ calculatorCurrencySymbol }} {{ depositAmount | number }}</span>
             </div>
             <input
               id="deposit-slider"
@@ -564,11 +564,11 @@
               class="calc-slider"
             />
             <div class="calc-preset-pills">
-              <button (click)="setDepositPreset(50000)" class="preset-pill" [class.preset-active]="depositAmount === 50000">₹50K</button>
-              <button (click)="setDepositPreset(100000)" class="preset-pill" [class.preset-active]="depositAmount === 100000">₹1L</button>
-              <button (click)="setDepositPreset(200000)" class="preset-pill" [class.preset-active]="depositAmount === 200000">₹2L</button>
-              <button (click)="setDepositPreset(500000)" class="preset-pill" [class.preset-active]="depositAmount === 500000">₹5L</button>
-              <button (click)="setDepositPreset(1000000)" class="preset-pill" [class.preset-active]="depositAmount === 1000000">₹10L</button>
+              <button (click)="setDepositPreset(50000)" class="preset-pill" [class.preset-active]="depositAmount === 50000">{{ depositPresetLabel(50000) }}</button>
+              <button (click)="setDepositPreset(100000)" class="preset-pill" [class.preset-active]="depositAmount === 100000">{{ depositPresetLabel(100000) }}</button>
+              <button (click)="setDepositPreset(200000)" class="preset-pill" [class.preset-active]="depositAmount === 200000">{{ depositPresetLabel(200000) }}</button>
+              <button (click)="setDepositPreset(500000)" class="preset-pill" [class.preset-active]="depositAmount === 500000">{{ depositPresetLabel(500000) }}</button>
+              <button (click)="setDepositPreset(1000000)" class="preset-pill" [class.preset-active]="depositAmount === 1000000">{{ depositPresetLabel(1000000) }}</button>
             </div>
           </div>
 
@@ -661,7 +661,7 @@
             <div class="results-header">
               <span class="results-label">{{ 'landing.estimatedMaturity' | transloco }}</span>
               <div class="results-amount-display">
-                ₹ {{ maturityAmount | number }}
+                {{ calculatorCurrencySymbol }} {{ maturityAmount | number }}
               </div>
               <div class="rate-badge-row">
                 <span class="rate-pill-applied">
@@ -683,11 +683,11 @@
             <div class="results-breakdown-list">
               <div class="breakdown-item">
                 <span class="breakdown-label">{{ 'landing.principalAmount' | transloco }}</span>
-                <span class="breakdown-val">₹ {{ depositAmount | number }}</span>
+                <span class="breakdown-val">{{ calculatorCurrencySymbol }} {{ depositAmount | number }}</span>
               </div>
               <div class="breakdown-item">
                 <span class="breakdown-label">{{ 'landing.totalInterest' | transloco }}</span>
-                <span class="breakdown-val text-green">+₹ {{ totalInterest | number }}</span>
+                <span class="breakdown-val text-green">+{{ calculatorCurrencySymbol }} {{ totalInterest | number }}</span>
               </div>
               <div class="breakdown-item">
                 <span class="breakdown-label">{{ 'landing.tenureDuration' | transloco }}</span>

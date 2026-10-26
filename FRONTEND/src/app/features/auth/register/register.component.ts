@@ -66,7 +66,16 @@ export class RegisterComponent implements OnInit {
   get nameError(): string | null { const c = this.registerForm.get('name'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.fullNameRequired') : c.errors['minlength'] ? this.transloco.translate('validation.min2Chars') : this.transloco.translate('validation.tooLong')) : null; }
   get phoneError(): string | null { const c = this.registerForm.get('phoneNumber'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.phoneRequired') : this.transloco.translate('validation.phoneDigits')) : null; }
   get emailError(): string | null { const c = this.registerForm.get('email'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.emailRequired') : this.transloco.translate('validation.invalidEmail')) : null; }
-  get passwordError(): string | null { const c = this.registerForm.get('password'); if (!c?.touched || !c.errors) return null; if (c.errors['required']) return this.transloco.translate('validation.passwordRequired'); if (c.errors['minlength']) return this.transloco.translate('validation.min6Chars'); if (c.errors['maxlength']) return this.transloco.translate('validation.max20Chars'); if (c.errors['pattern']) return this.transloco.translate('validation.passwordPattern'); return null; }
+  get passwordError(): string | null {
+    const control = this.registerForm.get('password');
+    if (!control?.touched || !control.errors) return null;
+
+    if (control.errors['required']) return 'Password is required.';
+    if (control.errors['minlength']) return 'Password must contain at least 6 characters.';
+    if (control.errors['maxlength']) return 'Password cannot exceed 20 characters.';
+    if (control.errors['pattern']) return 'Include at least one letter, one number, and one special character.';
+    return null;
+  }
   get otpError(): string | null { const c = this.otpForm.get('otp'); return (c?.touched && c.errors) ? (c.errors['required'] ? this.transloco.translate('validation.otpRequired') : this.transloco.translate('validation.otpDigits')) : null; }
 
   onRegister(): void {
