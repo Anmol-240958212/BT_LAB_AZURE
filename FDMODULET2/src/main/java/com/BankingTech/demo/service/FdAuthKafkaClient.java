@@ -24,6 +24,9 @@ public class FdAuthKafkaClient {
         if (future != null) future.complete(json.convertValue(reply, Map.class));
     }
     public FdCreationAuthorization.Profile profile(String authorization) {
+        return profile(authorization, null);
+    }
+    public FdCreationAuthorization.Profile profile(String authorization, String customerId) {
         if (authorization == null || authorization.isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentication is required");
         }
@@ -32,9 +35,11 @@ public class FdAuthKafkaClient {
         pending.put(id, future);
         Map<String, Object> reply;
         try {
-            kafka.send("auth-profile-requests-v1", id, json.writeValueAsString(Map.of(
-                "schemaVersion", 1, "correlationId", id, "authorization", authorization,
-                "expiresAt", System.currentTimeMillis() + 15000)))
+            Map<String, Object> request = new LinkedHashMap<>();
+            request.put("schemaVersion", 1); request.put("correlationId", id); request.put("authorization", authorization);
+            request.put("expiresAt", System.currentTimeMillis() + 15000);
+            if (customerId != null && !customerId.isBlank()) request.put("customerId", customerId);
+            kafka.send("auth-profile-requests-v1", id, json.writeValueAsString(request))
                 .whenComplete((sent, error) -> { if (error != null) future.completeExceptionally(error); });
             reply = future.get(12, TimeUnit.SECONDS);
         } catch (InterruptedException error) {

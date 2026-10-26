@@ -21,7 +21,17 @@ public class FdCreationAuthorization {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account role is unavailable");
         }
         if ("ADMIN".equals(profile.role()) || "BANK_OFFICER".equals(profile.role())
-                || "STAFF".equals(profile.role())) return profile;
+                || "STAFF".equals(profile.role())) {
+            Profile targetCustomer = authClient.profile(authorization, request.getCustomerId());
+            if (targetCustomer == null || targetCustomer.customerId() == null
+                    || !request.getCustomerId().equals(targetCustomer.customerId().toString())) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Target customer profile is unavailable");
+            }
+            if (!"ACTIVE".equals(targetCustomer.customerStatus())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Target customer must complete KYC before creating a fixed deposit");
+            }
+            return targetCustomer;
+        }
         if (!"CUSTOMER".equals(profile.role()) || profile.customerId() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "A customer profile is required");
         }

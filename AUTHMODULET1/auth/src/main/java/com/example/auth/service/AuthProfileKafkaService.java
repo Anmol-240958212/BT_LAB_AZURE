@@ -10,6 +10,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import com.example.auth.repository.AuthUsrRepository;
+import com.example.auth.repository.CustDtlRepository;
 import com.example.auth.serviceimpl.CustomerBenefitServiceImpl;
 
 @Service
@@ -18,17 +19,19 @@ public class AuthProfileKafkaService {
     private final AuthService auth;
     private final KafkaTemplate<String, String> kafka;
     private final AuthUsrRepository users;
+    private final CustDtlRepository customers;
     private final JsonMapper json = new JsonMapper();
     @Autowired
     public AuthProfileKafkaService(JwtService jwt, AuthService auth,
-            @Qualifier("authProfileKafkaTemplate") KafkaTemplate<String, String> kafka, AuthUsrRepository users) {
-        this.jwt = jwt; this.auth = auth; this.kafka = kafka; this.users = users;
+            @Qualifier("authProfileKafkaTemplate") KafkaTemplate<String, String> kafka, AuthUsrRepository users,
+            CustDtlRepository customers) {
+        this.jwt = jwt; this.auth = auth; this.kafka = kafka; this.users = users; this.customers = customers;
     }
 
     /** Compatibility constructor retained for focused unit tests. */
     public AuthProfileKafkaService(JwtService jwt, AuthService auth,
             KafkaTemplate<String, String> kafka) {
-        this(jwt, auth, kafka, null);
+        this(jwt, auth, kafka, null, null);
     }
     @KafkaListener(topics = "auth-profile-requests-v1", containerFactory = "authProfileRequestsFactory")
     public void profile(String message) throws Exception {
@@ -51,16 +54,31 @@ public class AuthProfileKafkaService {
         if (username != null) {
             try {
                 var user = auth.getUserProfile(username);
-                Map<String, Object> profile = new LinkedHashMap<>();
-                profile.put("role", user.getRole()); profile.put("customerId", user.getCustomerId());
-                profile.put("customerStatus", user.getCustomerStatus());
-                if (users != null) users.findByUsername(username).map(value -> value.getCustomer()).ifPresent(customer -> {
-                    profile.put("customerAge", customer.getDateOfBirth() == null ? null
-                            : java.time.Period.between(customer.getDateOfBirth(), java.time.LocalDate.now()).getYears());
-                    profile.put("customerGender", customer.getGender());
-                    profile.put("pricingCategories", CustomerBenefitServiceImpl.categoriesFor(customer));
-                });
-                response.put("profile", profile); response.put("valid", true); response.put("status", 200);
+                Long requestedCustomerId = request.path("customerId").canConvertToLong()
+                        ? request.path("customerId").asLong() : null;
+                boolean privileged = "ADMIN".equals(user.getRole()) || "BANK_OFFICER".equals(user.getRole())
+                        || "STAFF".equals(user.getRole());
+                if (requestedCustomerId != null && requestedCustomerId > 0
+                        && !requestedCustomerId.equals(user.getCustomerId()) && !privileged) {
+                    response.put("status", 403);
+                } else {
+                    var customer = requestedCustomerId != null && requestedCustomerId > 0 && customers != null
+                            ? customers.findById(requestedCustomerId).orElse(null)
+                            : users == null ? null : users.findByUsername(username)
+                                    .map(value -> value.getCustomer()).orElse(null);
+                    Map<String, Object> profile = new LinkedHashMap<>();
+                    profile.put("role", user.getRole());
+                    profile.put("customerId", customer == null ? user.getCustomerId() : customer.getCustomerIdentifier());
+                    profile.put("customerStatus", customer == null ? user.getCustomerStatus()
+                            : customer.getCustomerStatus() == null ? null : customer.getCustomerStatus().getStatusCode());
+                    if (customer != null) {
+                        profile.put("customerAge", customer.getDateOfBirth() == null ? null
+                                : java.time.Period.between(customer.getDateOfBirth(), java.time.LocalDate.now()).getYears());
+                        profile.put("customerGender", customer.getGender());
+                        profile.put("pricingCategories", CustomerBenefitServiceImpl.categoriesFor(customer));
+                    }
+                    response.put("profile", profile); response.put("valid", true); response.put("status", 200);
+                }
             } catch (Exception unavailable) { response.put("status", 503); }
         }
         kafka.send("auth-profile-replies-v1", id, json.writeValueAsString(response)).get(12, TimeUnit.SECONDS);
