@@ -9,13 +9,6 @@ import { ToastService } from '../../../shared/services/toast.service';
 import { of } from 'rxjs';
 import { catchError, take } from 'rxjs/operators';
 
-function generateDemoJwt(username: string, role: UserRole): string {
-  const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
-  const exp = Math.floor(Date.now() / 1000) + 24 * 3600; // 24hr validity
-  const payload = btoa(JSON.stringify({ sub: username, username, role, exp }));
-  return `${header}.${payload}.demoSignature`;
-}
-
 @Component({
   selector: 'app-login',
   standalone: false,
@@ -232,16 +225,6 @@ export class LoginComponent implements OnInit {
     this.loginForm.markAsDirty();
   }
 
-  directDemoLogin(username: string, role: UserRole): void {
-    const mockToken = generateDemoJwt(username, role);
-    this.authService.setSession({
-      accessToken: mockToken,
-      refreshToken: 'demo-refresh-token'
-    });
-    this.toastService.info(`Signed in as ${username} (Lab Mode)`, 'Session Active');
-    this.navigateAfterLogin(role);
-  }
-
   onSubmit(): void {
     if (this.loginForm.invalid || this.loading) {
       this.loginForm.markAllAsTouched();
@@ -297,21 +280,10 @@ export class LoginComponent implements OnInit {
           return;
         }
 
-        const lower = username.toLowerCase();
-        const inferredRole: UserRole = (lower.includes('admin') || lower.includes('root') || lower.includes('headadmin'))
-          ? 'ADMIN'
-          : (lower.includes('officer') || lower.includes('jack') || lower.includes('staff'))
-          ? 'BANK_OFFICER'
-          : 'CUSTOMER';
-
-        const mockToken = generateDemoJwt(username, inferredRole);
-        this.authService.setSession({
-          accessToken: mockToken,
-          refreshToken: 'demo-refresh-token'
-        });
-
-        this.toastService.info(`Connected in offline standby mode as ${inferredRole}.`, 'Offline Session');
-        this.navigateAfterLogin(inferredRole);
+        this.toastService.error(
+          'The sign-in service could not be reached. Please retry in a moment.',
+          'Connection Error'
+        );
       }
     });
   }
