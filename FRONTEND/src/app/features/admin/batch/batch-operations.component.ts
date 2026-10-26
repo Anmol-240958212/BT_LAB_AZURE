@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit } from '@angular/core';
 import { FDInterestApiService } from '../../../core/api/fd-interest-api.service';
 import { FDMaturityApiService } from '../../../core/api/fd-maturity-api.service';
 import { ToastService } from '../../../shared/services/toast.service';
@@ -173,7 +173,8 @@ interface BatchLog {
   `]
 })
 export class BatchOperationsComponent implements OnInit {
-  businessDate = new Date().toISOString().substring(0, 10);
+  // Use the user's calendar date rather than UTC, which can otherwise select yesterday after midnight in India.
+  businessDate = this.currentLocalDate();
   runningInterest = false;
   runningMaturity = false;
 
@@ -182,7 +183,8 @@ export class BatchOperationsComponent implements OnInit {
   constructor(
     private readonly interestApi: FDInterestApiService,
     private readonly maturityApi: FDMaturityApiService,
-    private readonly toastService: ToastService
+    private readonly toastService: ToastService,
+    private readonly cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit(): void {
@@ -200,12 +202,14 @@ export class BatchOperationsComponent implements OnInit {
         const msg = res || `FD interest batch processed successfully for ${this.businessDate}`;
         this.addLog('INTEREST', 'SUCCESS', msg);
         this.toastService.success(msg, 'Interest Accrual Complete');
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (error) => {
         this.runningInterest = false;
-        const fallbackMsg = `FD interest batch calculated for 5 active accounts on ${this.businessDate}`;
-        this.addLog('INTEREST', 'SUCCESS', fallbackMsg);
-        this.toastService.success(fallbackMsg, 'Accrual Complete');
+        const message = this.errorMessage(error, 'Interest batch could not be completed. No account changes were made.');
+        this.addLog('INTEREST', 'ERROR', message);
+        this.toastService.error(message, 'Interest Accrual Failed');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -220,12 +224,14 @@ export class BatchOperationsComponent implements OnInit {
         const msg = res?.message || `Maturity batch processing complete for ${this.businessDate}`;
         this.addLog('MATURITY', 'SUCCESS', msg);
         this.toastService.success(msg, 'Maturity Processed');
+        this.cdr.markForCheck();
       },
-      error: () => {
+      error: (error) => {
         this.runningMaturity = false;
-        const fallbackMsg = `Maturity processing completed. 1 account matured and settled for ${this.businessDate}`;
-        this.addLog('MATURITY', 'SUCCESS', fallbackMsg);
-        this.toastService.success(fallbackMsg, 'Maturity Processed');
+        const message = this.errorMessage(error, 'Maturity processing could not be completed. No account changes were made.');
+        this.addLog('MATURITY', 'ERROR', message);
+        this.toastService.error(message, 'Maturity Processing Failed');
+        this.cdr.markForCheck();
       }
     });
   }
@@ -237,5 +243,16 @@ export class BatchOperationsComponent implements OnInit {
       status,
       message
     });
+    this.cdr?.markForCheck();
+  }
+
+  private currentLocalDate(): string {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 10);
+  }
+
+  private errorMessage(error: any, fallback: string): string {
+    return error?.error?.message || error?.error?.detail || error?.message || fallback;
   }
 }
