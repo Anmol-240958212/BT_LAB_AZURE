@@ -1,199 +1,221 @@
-# 🚀 vaultOne Core Banking Platform — System Startup Guide
+# vaultOne local startup guide
 
-> **Target Audience**: Human Developers & Autonomous AI Agents.  
-> **Supported Environments**: macOS, Linux, Windows (PowerShell / CMD), and Docker.  
-> **Architecture**: Distributed microservices architecture composed of MySQL 8.0, Apache Kafka 4.1.0 (KRaft mode), 2 Spring Boot microservices, and an Angular 19+ SPA frontend.
+This guide is the source of truth for running a fresh clone. The platform consists of MySQL, Kafka, three Spring Boot services, and one Angular application.
 
----
+## 1. Prerequisites
 
-## ⚡ Quick Endpoints Summary
+- Git
+- Docker Desktop or Docker Engine with the Compose plugin
+- JDK 17 or newer
+- Maven 3.9 or newer; the Product & Pricing service currently uses the system `mvn` command
+- Node.js supported by Angular 22: Node `22.22.3+`, `24.15.0+`, or `26+`
+- npm
 
-Once all services are started, the entire platform is accessible via these URLs:
+Confirm the tools are visible in a new terminal:
 
-| Service / Layer | Component | URL | Description |
-|---|---|---|---|
-| **Frontend Web App** | Landing Page | [http://localhost:4200/](http://localhost:4200/) | Commercial customer landing page & yield simulator |
-| **Frontend Web App** | Login Portal | [http://localhost:4200/login](http://localhost:4200/login) | Role-based authentication entry point |
-| **Frontend Web App** | FD Calculator | [http://localhost:4200/fixed-deposit/calculator](http://localhost:4200/fixed-deposit/calculator) | Public fixed deposit projection tool |
-| **Auth Microservice** | Swagger UI | [http://localhost:8080/swagger-ui/index.html](http://localhost:8080/swagger-ui/index.html) | Interactive API tester for Auth & Customer APIs |
-| **Auth Microservice** | OpenAPI JSON | [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs) | OpenAPI 3.0 specification contract |
-| **Fixed Deposit Service** | Swagger UI | [http://localhost:8081/swagger-ui/index.html](http://localhost:8081/swagger-ui/index.html) | Interactive API tester for FD & Interest Engine |
-| **Fixed Deposit Service** | OpenAPI JSON | [http://localhost:8081/v3/api-docs](http://localhost:8081/v3/api-docs) | OpenAPI 3.0 specification contract |
-| **Fixed Deposit Service** | Actuator Health | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) | Spring Boot health check (`{"status":"UP"}`) |
-| **Kafka Broker** | Event Stream | `localhost:9092` | Event broker for KYC events & FD maturity notifications |
-| **MySQL Database** | RDBMS | `localhost:3306` | Databases: `authandcust` & `fdmodule` |
+```text
+docker --version
+docker compose version
+java -version
+mvn -version
+node --version
+npm --version
+```
 
----
+Ports `3306`, `9092`, `8080`, `8081`, `8082`, and `4200` must be available.
 
-## 🔑 Pre-Seeded Test Credentials
+## 2. One-command startup
 
-| Role | Username / Email | Password | Access Scope |
-|---|---|---|---|
-| **Super Admin** | `bankadmin2026@gmail.com` | `Pass@123` | System management, batch processing, audit logs |
-| **Branch Officer / Staff** | `jack.uat.2026@example.com` | `StaffPass@1` | KYC verification, assisted account booking |
-| **Customer (KYC Verified)**| `ram.uat.2026@example.com` | `Pass@123` | Portfolio tracker, new FD application, premature closure |
-| **Customer (Standby)**| `customer1` | `password123` | Fast simulation testing |
+The launchers use Docker for MySQL and Kafka, apply development defaults, start all three backends, install frontend dependencies when needed, and write logs to `.runlogs/`.
 
----
+### Windows PowerShell
 
-## 🤖 Instructions for AI Agents (Automated Execution)
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start.ps1
+```
 
-When an AI Agent is asked to **"Read startup.md and start the project locally"**, the agent must execute these steps sequentially:
+### macOS / Linux
 
-### Option 1: Using the Automated Turnkey Launch Script (Recommended)
-
-#### On macOS or Linux:
 ```bash
-chmod +x start.sh AUTHMODULET1/auth/mvnw FDMODULET2/mvnw
+chmod +x start.sh stop.sh AUTHMODULET1/auth/mvnw FDMODULET2/mvnw
 ./start.sh
 ```
 
-#### On Windows (PowerShell):
-```powershell
-.\start.ps1
-```
+Startup is asynchronous. The processes are launched after MySQL and Kafka accept connections; the Spring applications can take another minute to finish initialization. Check `.runlogs/auth.log`, `.runlogs/fd.log`, `.runlogs/product.log`, and `.runlogs/frontend.log` if a service does not appear.
 
----
+## 3. Services and URLs
 
-### Option 2: Step-by-Step Autonomous Execution
+| Component | URL / address | Purpose |
+|---|---|---|
+| Angular frontend | `http://localhost:4200` | Browser application |
+| Auth Swagger | `http://localhost:8080/swagger-ui/index.html` | Auth, customer, KYC and employee APIs |
+| FD Swagger | `http://localhost:8081/swagger-ui/index.html` | FD, batch, withdrawal and report APIs |
+| Product Swagger | `http://localhost:8082/swagger-ui/index.html` | Product and pricing APIs |
+| Product health | `http://localhost:8082/api/health` | Product service liveness |
+| Kafka | `localhost:9092` | Inter-module messaging |
+| MySQL | `localhost:3306` | Local databases |
 
-If running step-by-step or in environments where granular process control is preferred:
+The databases are:
 
-#### Step 1: Ensure MySQL & Kafka Broker are Running
-Default database credentials expected by Spring Boot:
-- Host: `localhost:3306`
-- User: `root` (or `$DB_USERNAME`)
-- Password: `#Iamgood1` (or `$DB_PASSWORD`)
+- `authandcust` for Auth and customer data
+- `fdmodule` for fixed-deposit data
+- `banking_product_db` for Product & Pricing
 
-Kafka broker:
-- Host: `localhost:9092`
-- Run via Docker: `docker compose up -d kafka`
+On the first Docker startup, `AUTHMODULET1/authandcustDB.sql` initializes Auth data and `docker/init-db.sql` creates the FD database. Hibernate creates or updates the FD and Product schemas. Docker volumes preserve data across normal stop/start cycles.
 
-**If using local MySQL:**
+## 4. Development credentials
+
+The checked-in Auth seed includes these local accounts:
+
+| Role | Username | Password |
+|---|---|---|
+| Admin | `bankadmin2026@gmail.com` | `Pass@123` |
+| Staff / officer | `jack.uat.2026@example.com` | `StaffPass@1` |
+| Customer | `ram.uat.2026@example.com` | `Pass@123` |
+
+These credentials are for local development only.
+
+## 5. Manual startup
+
+Use five terminals from the repository root.
+
+### Terminal 1: MySQL and Kafka
+
 ```bash
-# macOS / Linux
-mysql -u root -p"#Iamgood1" -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;"
-mysql -u root -p"#Iamgood1" authandcust < AUTHMODULET1/authandcustDB.sql
-```
-```powershell
-# Windows PowerShell
-mysql -u root -p"#Iamgood1" -e "CREATE DATABASE IF NOT EXISTS authandcust; CREATE DATABASE IF NOT EXISTS fdmodule;"
-Get-Content AUTHMODULET1\authandcustDB.sql | mysql -u root -p"#Iamgood1" authandcust
+docker compose up -d mysql kafka
+docker compose ps
 ```
 
-**If using Docker for Kafka & MySQL:**
-```bash
-docker compose up -d kafka
-# (Optionally run 'docker compose up -d mysql' if local MySQL is not installed)
-```
-*(The included `docker-compose.yml` provides KRaft Kafka 4.1.0 on port 9092 and provisions both MySQL databases).*
+Wait until both containers are running and Kafka is healthy.
 
----
+### Terminal 2: Auth service
 
-#### Step 2: Start Backend 1 — Auth & Customer Service (Port 8080)
-- Directory: `AUTHMODULET1/auth`
-- Run as background process / daemon:
+Windows:
 
-**macOS / Linux:**
-```bash
-cd AUTHMODULET1/auth
-chmod +x mvnw
-./mvnw spring-boot:run
-```
-
-**Windows:**
 ```powershell
 cd AUTHMODULET1\auth
 .\mvnw.cmd spring-boot:run
 ```
 
-*Health Check URL:* `http://localhost:8080/swagger-ui/index.html`
+macOS / Linux:
 
----
-
-#### Step 3: Start Backend 2 — Fixed Deposit Service (Port 8081)
-- Directory: `FDMODULET2`
-- Run as background process / daemon:
-
-**macOS / Linux:**
 ```bash
-cd FDMODULET2
-chmod +x mvnw
+cd AUTHMODULET1/auth
 ./mvnw spring-boot:run
 ```
 
-**Windows:**
+### Terminal 3: Fixed Deposit service
+
+Windows:
+
 ```powershell
 cd FDMODULET2
 .\mvnw.cmd spring-boot:run
 ```
 
-*Health Check URL:* `http://localhost:8081/actuator/health` (Wait until status is `UP`)  
-*Swagger UI:* `http://localhost:8081/swagger-ui/index.html`
+macOS / Linux:
 
----
+```bash
+cd FDMODULET2
+./mvnw spring-boot:run
+```
 
-#### Step 4: Start Frontend — Angular Web Application (Port 4200)
-- Directory: `FRONTEND`
-- Run as background process / daemon:
+### Terminal 4: Product & Pricing service
 
-**All Platforms:**
+```bash
+cd PRODUCTMODULET3/product-pricing-service
+mvn spring-boot:run
+```
+
+### Terminal 5: Angular frontend
+
 ```bash
 cd FRONTEND
 npm install
 npm start
 ```
-*(The dev server is configured with `proxy.conf.json`, which automatically proxies API routes `/auth/**`, `/customer/**`, `/users/**` to `8080` and `/api/fd/**` to `8081`).*
 
-*Access URL:* `http://localhost:4200/`
+Start Kafka before the backends. Start all three backends before testing account creation or reports because FD uses Kafka request/reply calls to Auth and Product & Pricing.
 
----
+## 6. Environment variables
 
-#### Step 5: Verification & Output Generation
-The agent should verify readiness via HTTP and network checks:
-1. `curl -s -I http://localhost:8080/swagger-ui/index.html` (returns 200 or 302)
-2. `curl -s http://localhost:8081/actuator/health` (returns `{"status":"UP"}`)
-3. `curl -s -I http://localhost:4200/` (returns 200)
-4. `nc -z 127.0.0.1 9092` (Kafka broker port listening)
+The launch scripts set usable development defaults for the current terminal and their child processes.
 
-Once all checks pass, output the **Endpoints Summary table** and **Pre-Seeded Test Credentials table** to the user.
+| Variable | Development default | Used by |
+|---|---|---|
+| `DB_USERNAME` | `root` | All backends |
+| `DB_PASSWORD` | `#Iamgood1` | All backends and Docker MySQL |
+| `DB_NAME` | `fdmodule` | FD service |
+| `DB_HOST` | `localhost` | Product service |
+| `DB_PORT` | `3306` | Product service |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | All backends |
+| `AUTH_JWT_SECRET` | local development signing key | Product JWT validation |
+| `BANKING_SMTP_HOST` | `smtp.gmail.com` | Auth and FD mail |
+| `BANKING_SMTP_PORT` | `587` | Auth and FD mail |
+| `BANKING_SMTP_USERNAME` | empty | Auth and FD mail |
+| `BANKING_SMTP_PASSWORD` | empty | Auth and FD mail |
+| `BANKING_MAIL_FROM` | SMTP username | FD notifications |
 
----
+Email is optional for startup. Set the SMTP variables before launching if OTP and FD maturity/premature-withdrawal emails must be delivered. Do not commit mail credentials.
 
-## 🛑 Stopping All Services
+PowerShell example for the current terminal:
 
-#### On macOS / Linux:
-```bash
-chmod +x stop.sh
-./stop.sh
+```powershell
+$env:BANKING_SMTP_USERNAME = "sender@example.com"
+$env:BANKING_SMTP_PASSWORD = "app-password"
+.\start.ps1
 ```
-Or manually:
+
+Bash example:
+
 ```bash
-pkill -f "ng serve" || true
-pkill -f "AUTHMODULET1" || pkill -f "auth-0.0.1" || true
-pkill -f "FDMODULET2" || pkill -f "demo-0.0.1" || true
-docker compose stop kafka || true
+export BANKING_SMTP_USERNAME='sender@example.com'
+export BANKING_SMTP_PASSWORD='app-password'
+./start.sh
 ```
 
-#### On Windows (PowerShell):
+## 7. Verify the running system
+
+```bash
+docker compose ps
+curl http://localhost:8082/api/health
+curl -I http://localhost:4200
+```
+
+Open the three Swagger URLs from the service table. For Kafka topic and pipeline checks, follow [KAFKA_SETUP.md](KAFKA_SETUP.md).
+
+## 8. Stop and reset
+
+Stop application processes and infrastructure:
+
 ```powershell
 .\stop.ps1
 ```
-Or manually:
-```powershell
-Get-Process -Name "node", "java" -ErrorAction SilentlyContinue | Stop-Process -Force
-docker compose stop kafka
+
+or:
+
+```bash
+./stop.sh
 ```
 
----
+To start again, rerun the matching start script. Data remains in Docker volumes.
 
-## 🔧 Environment Variables Reference
+To deliberately erase all local MySQL and Kafka data and recreate a clean database, stop the application and run:
 
-Both Spring Boot services allow overriding database and email configurations via environment variables:
+```bash
+docker compose down -v
+```
 
-| Variable | Default Value | Description |
-|---|---|---|
-| `DB_USERNAME` | `root` | MySQL username |
-| `DB_PASSWORD` | `#Iamgood1` | MySQL password |
-| `MAIL_USERNAME`| `bankingtech@demo.local` | SMTP sender email (FD Service) |
-| `MAIL_PASSWORD`| `demo123` | SMTP password (FD Service) |
+This command permanently deletes the local Docker data volumes.
+
+## 9. Common problems
+
+| Symptom | Resolution |
+|---|---|
+| `npm.ps1 cannot be loaded because running scripts is disabled` | Use `npm.cmd install` / `npm.cmd start`, or run the supplied `start.ps1` through the bypass command shown above. |
+| Angular reports an unsupported Node version | Install one of the Node versions listed in prerequisites and open a new terminal. |
+| FD account creation times out | Confirm Kafka, Auth, FD and Product are all running. Account creation needs Auth and Product Kafka replies. |
+| Reports stay on loading | Check FD and Auth logs, then confirm the Auth report request/reply topics exist. |
+| MySQL access denied | Ensure `DB_PASSWORD` matches the Docker value `#Iamgood1`; remove an old incompatible volume only if its data can be discarded. |
+| Product service cannot start | Confirm the system `mvn` command exists and port `8082` is free. |
+| Emails fail | Set valid SMTP environment variables; mail credentials are intentionally not stored in Git. |

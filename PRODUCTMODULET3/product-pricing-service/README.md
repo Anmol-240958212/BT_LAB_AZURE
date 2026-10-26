@@ -9,7 +9,7 @@ Requirements: Java 17+, Maven, and MySQL 8.0.16+.
 1. Start MySQL and set `DB_USERNAME` / `DB_PASSWORD` if they differ from the local defaults.
 2. Run `mvn spring-boot:run` from this folder. Flyway applies V1/V2/V3 and Hibernate validates entity mappings. Service listens on port 8082.
 3. Obtain a JWT from the Auth service. For local integration, the product service's `AUTH_JWT_SECRET` must match the Auth service signing secret. The fallback value is only for local development; configure a shared secret through environment variables in a deployed environment.
-4. Open `/swagger-ui/index.html` for interactive API documentation or `/v3/api-docs` for OpenAPI JSON. Start this service separately with `mvn spring-boot:run`; the root startup scripts currently launch Auth, FD, and Angular only.
+4. Open `/swagger-ui/index.html` for interactive API documentation or `/v3/api-docs` for OpenAPI JSON. The root `start.ps1` and `start.sh` launch this service together with Auth, FD, Kafka, MySQL, and Angular.
 
 ## Authentication and roles
 
@@ -27,7 +27,7 @@ FD account creation now uses Kafka integration described below. The separate FD 
 
 ## Kafka integration with FD account creation
 
-Product publishes committed catalogue snapshots to `product-catalogue-v1` every five seconds, keyed by product code. The topic is compacted with one partition. Periodic reconciliation automatically includes existing products and retries after broker outages without relying on an in-memory change notification. FD persists snapshots in `fd_product_catalogue`, ignores duplicate/older offsets, and exposes active, currently effective FD products through `/api/fd/products`. The account form refreshes this catalogue every ten seconds. Products in other currencies display their pricing, but booking is restricted to INR because FD accounts currently store rupee deposits.
+Product publishes committed catalogue snapshots to `product-catalogue-v1` every five seconds, keyed by product code. The topic is compacted with one partition. Periodic reconciliation automatically includes existing products and retries after broker outages without relying on an in-memory change notification. FD persists snapshots in `fd_product_catalogue`, ignores duplicate/older offsets, and exposes active, currently effective FD products through `/api/fd/products`. The account form refreshes this catalogue every ten seconds. FD booking and reporting support both INR and JPY products.
 
 For pricing, FD sends a correlated request over `product-quote-requests-v1` and receives the authoritative answer over `product-quote-replies-v1`. The form displays the selected product's term/rate limits, charges, current rate, interest type, and compounding frequency. Amount/tenure changes request a new quote. `ANNUALLY` maps to FD's `ANNUAL`. Payout frequency remains a separate choice because the product has no payout-frequency field. Category bonuses are not automatically inferred for account creation.
 

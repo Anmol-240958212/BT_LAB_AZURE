@@ -35,3 +35,5 @@ NEW/
 
 # Local run output, backups, and downloaded development runtimes
 .runlogs/
+.docx-work/
+tmp/

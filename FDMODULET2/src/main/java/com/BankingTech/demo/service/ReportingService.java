@@ -47,6 +47,7 @@ public class ReportingService {
                 .map(tx -> { FixedDepositAccountEntity a = accountByNo.get(tx.getFdInterestTransactionFdAccountNo());
                     return new InterestTransactionReportDto(tx.getFdInterestTransactionFdAccountNo(),
                             a == null ? null : a.getFdAccountProductCode(), a == null ? null : a.getFdAccountCurrency(),
+                            a == null ? BigDecimal.ZERO : zero(a.getFdAccountPrincipal()),
                             tx.getFdInterestTransactionInterestAmount(), tx.getFdInterestTransactionDate(), tx.getFdInterestTransactionStatus()); })
                 .toList();
     }
@@ -62,14 +63,25 @@ public class ReportingService {
     public CustomerPortfolioDto portfolio(Long customerId) {
         var customer = customerReports.customer(customerId);
         List<FixedDepositAccountEntity> items = accounts.findByFdAccountCustomerId(String.valueOf(customerId));
+        Set<String> accountNumbers = items.stream().map(FixedDepositAccountEntity::getFdAccountNo).collect(Collectors.toSet());
+        Map<String, BigDecimal> generatedInterestByAccount = interestTransactions.findAll().stream()
+                .filter(tx -> accountNumbers.contains(tx.getFdInterestTransactionFdAccountNo()))
+                .filter(tx -> "ACCRUED".equalsIgnoreCase(tx.getFdInterestTransactionStatus())
+                        || "CAPITALIZED".equalsIgnoreCase(tx.getFdInterestTransactionStatus()))
+                .collect(Collectors.groupingBy(FDInterestTransactionEntity::getFdInterestTransactionFdAccountNo,
+                        Collectors.reducing(BigDecimal.ZERO,
+                                tx -> zero(tx.getFdInterestTransactionInterestAmount()), BigDecimal::add)));
         List<CustomerPortfolioDto.Account> accountDtos = items.stream().map(a -> new CustomerPortfolioDto.Account(a.getFdAccountNo(),
                 a.getFdAccountProductCode(), a.getFdAccountCurrency(), a.getFdAccountPrincipal(), a.getFdAccountRate(),
-                a.getFdAccountAccruedInterest(), a.getFdAccountMaturityDate(), a.getFdAccountStatus(), a.getFdAccountInterestFrequency())).toList();
+                generatedInterestByAccount.getOrDefault(a.getFdAccountNo(), BigDecimal.ZERO), a.getFdAccountMaturityDate(),
+                a.getFdAccountStatus(), a.getFdAccountInterestFrequency())).toList();
+        BigDecimal totalInterestGenerated = accountDtos.stream().map(CustomerPortfolioDto.Account::interestGenerated)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
         String classification = customer.classificationType() == null ? customer.classificationValue()
                 : customer.classificationType() + (customer.classificationValue() == null ? "" : ": " + customer.classificationValue());
         return new CustomerPortfolioDto(customer.customerId(), customer.fullName(), customer.customerTypeName(), customer.customerStatus(),
                 classification, customer.kycStatus(), customer.preferredLanguage(), customer.countryOfOrigin(),
-                items.size(), sumPrincipal(items), sumAccrued(items), accountDtos);
+                items.size(), sumPrincipal(items), totalInterestGenerated, accountDtos);
     }
 
     /** Builds a final maturity or premature-withdrawal settlement report without persisting Auth's customer reply. */
