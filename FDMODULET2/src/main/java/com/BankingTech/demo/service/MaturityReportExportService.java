@@ -36,8 +36,9 @@ public class MaturityReportExportService {
             document.add(new Paragraph("Account " + report.fdAccount().accountNo() + " | Generated " + DATE_TIME.format(report.reportGeneratedAt())));
             document.add(new Paragraph(" "));
             section(document, "Customer and account", heading);
-            table(document, new String[]{"Customer", "Product", "Currency", "Principal", "Term", "Maturity date"}, new String[][]{{
-                    value(report.customer().fullName()), value(report.fdAccount().productCode()), value(report.fdAccount().currency()),
+            table(document, new String[]{"Customer", "Email", "Phone", "Product", "Currency", "Principal", "Term", "Maturity date"}, new String[][]{{
+                    value(report.customer().fullName()), value(report.customer().email()), value(report.customer().phoneNumber()),
+                    value(report.fdAccount().productCode()), value(report.fdAccount().currency()),
                     money(report.fdAccount().principal(), report.fdAccount().currency()), report.fdAccount().termMonths() + " months",
                     value(report.fdAccount().maturityDate())}});
             document.add(new Paragraph("Customer status: " + value(report.customer().customerStatus()) + " | KYC: " + value(report.customer().kycStatus())));
@@ -72,12 +73,13 @@ public class MaturityReportExportService {
             String reportLabel = premature ? "Fixed Deposit Premature Withdrawal Report" : "Fixed Deposit Maturity Report";
             Sheet summary = workbook.createSheet(premature ? "Withdrawal report" : "Maturity report");
             row(summary, 0, reportLabel, report.fdAccount().accountNo());
-            row(summary, 2, "Customer", report.customer().fullName()); row(summary, 3, "Customer status", report.customer().customerStatus());
-            row(summary, 4, "Product", report.fdAccount().productCode()); row(summary, 5, "Currency", currency);
-            row(summary, 6, "Opening date", report.fdAccount().openedAt()); row(summary, 7, "Maturity date", report.fdAccount().maturityDate());
-            row(summary, 9, "Gross payout", report.maturity().grossPayout(), money); row(summary, 10, "Principal", report.maturity().principalComponent(), money);
-            row(summary, 11, "Interest", report.maturity().interestComponent(), money); row(summary, 12, "Penalty", report.maturity().penaltyAmount(), money);
-            row(summary, 13, "Net payout", report.maturity().netPayout(), money); summary.autoSizeColumn(0); summary.autoSizeColumn(1);
+            row(summary, 2, "Customer", report.customer().fullName()); row(summary, 3, "Email", report.customer().email());
+            row(summary, 4, "Phone number", report.customer().phoneNumber()); row(summary, 5, "Customer status", report.customer().customerStatus());
+            row(summary, 6, "Product", report.fdAccount().productCode()); row(summary, 7, "Currency", currency);
+            row(summary, 8, "Opening date", report.fdAccount().openedAt()); row(summary, 9, "Maturity date", report.fdAccount().maturityDate());
+            row(summary, 11, "Gross payout", report.maturity().grossPayout(), money); row(summary, 12, "Principal", report.maturity().principalComponent(), money);
+            row(summary, 13, "Interest", report.maturity().interestComponent(), money); row(summary, 14, "Penalty", report.maturity().penaltyAmount(), money);
+            row(summary, 15, "Net payout", report.maturity().netPayout(), money); summary.autoSizeColumn(0); summary.autoSizeColumn(1);
             Sheet interest = workbook.createSheet("Interest postings"); header(interest, header, "Interest ID", "Date", "Amount (" + currency + ")", "Status");
             int interestRow = 1; for (var tx : report.interestTransactions()) { Row row = interest.createRow(interestRow++); cell(row, 0, tx.id()); cell(row, 1, dateTime(tx.postedAt())); cell(row, 2, tx.amount(), money); cell(row, 3, tx.status()); } size(interest, 4);
             Sheet transactions = workbook.createSheet("Transactions"); header(transactions, header, "Transaction ID", "Date", "Type", "Amount (" + currency + ")", "Penalty (" + currency + ")", "Remarks");
