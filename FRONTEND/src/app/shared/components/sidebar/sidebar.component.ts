@@ -51,6 +51,16 @@ export interface NavItem {
 
       <!-- User Role Indicator & Collapsible Theme Toggle at bottom -->
       <div class="sidebar-footer">
+        <a
+          routerLink="/profile"
+          routerLinkActive="active"
+          class="profile-link"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <app-icon name="user" [size]="16" class="profile-link-icon"></app-icon>
+          <span>My Profile</span>
+        </a>
+
         <!-- Collapsible Theme Toggle Button -->
         <div class="theme-collapse-container">
           <button
@@ -232,6 +242,34 @@ export interface NavItem {
       display: flex;
       flex-direction: column;
       gap: var(--space-3);
+    }
+    .profile-link {
+      display: flex;
+      align-items: center;
+      gap: var(--space-3);
+      width: 100%;
+      padding: 8px var(--space-3);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-input);
+      color: var(--color-text-secondary);
+      background-color: var(--color-bg-base);
+      font-size: var(--text-xs);
+      font-weight: 500;
+      text-decoration: none;
+      transition: background-color var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+    }
+    .profile-link:hover,
+    .profile-link.active {
+      background-color: var(--color-bg-elevated);
+      border-color: var(--color-border-focus);
+      color: var(--color-text-primary);
+    }
+    .profile-link-icon {
+      color: var(--color-text-secondary);
+      flex-shrink: 0;
+    }
+    .profile-link.active .profile-link-icon {
+      color: var(--color-accent);
     }
     .theme-collapse-container {
       display: flex;

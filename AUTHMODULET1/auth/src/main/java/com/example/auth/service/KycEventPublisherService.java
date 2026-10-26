@@ -34,8 +34,8 @@ public class KycEventPublisherService {
      * and performs immediate direct registry sync fallback for seamless FD creation.
      */
     public void publishKycEvent(KycCustomerEventDto event) {
-        // Immediate sync fallback so FD module recognizes the approved customer even if Kafka is down
-        syncToFdCustomerRegistry(event);
+        // Temporarily disabled: FD should receive and persist this event through Kafka only.
+        // syncToFdCustomerRegistry(event);
 
         // Send to Kafka in a separate thread with graceful error handling
         CompletableFuture.runAsync(() -> {

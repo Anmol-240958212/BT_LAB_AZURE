@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { AuthApiService } from './api/auth-api.service';
 import { AuthState, LoginResponse, UserRole } from './models/auth.models';
 
 const ACCESS_TOKEN_KEY = 'btlab_access_token';
@@ -56,7 +57,7 @@ export class AuthService {
     });
   }
 
-  constructor() {
+  constructor(private readonly authApi: AuthApiService) {
     this.restoreSessionFromStorage();
   }
 
@@ -288,7 +289,11 @@ export class AuthService {
    * Logs out the user
    */
   public logout(): void {
-    this.clearSession();
+    // Keep the token until the backend records the logout timestamp.
+    this.authApi.logout().subscribe({
+      next: () => this.clearSession(),
+      error: () => this.clearSession()
+    });
   }
 
   /**

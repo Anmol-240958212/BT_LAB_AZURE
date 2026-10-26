@@ -7,28 +7,63 @@ import {
   HttpErrorResponse
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, finalize, map, shareReplay, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { AuthService } from './auth.service';
+import { AuthApiService } from './api/auth-api.service';
+import { LoginResponse } from './models/auth.models';
 
 @Injectable()
 export class ErrorInterceptor implements HttpInterceptor {
   constructor(
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly authApiService: AuthApiService
   ) {}
+
+  // Shared by simultaneous 401 responses so only one refresh request is sent.
+  private refreshRequest$: Observable<string> | null = null;
 
   intercept(request: HttpRequest<unknown>, next: HttpHandler): Observable<HttpEvent<unknown>> {
     return next.handle(request).pipe(
       catchError((error: HttpErrorResponse) => {
-        if (error.status === 401) {
-          // Auto logout on 401 response if not already on an auth page
-          if (!request.url.includes('/login') && !request.url.includes('/register') && !request.url.includes('/auth/')) {
-            this.authService.clearSession();
-            this.router.navigate(['/login'], {
-              queryParams: { returnUrl: this.router.url }
-            });
+        const isAuthEndpoint = request.url.includes('/auth/');
+
+        if (error.status === 401 && !isAuthEndpoint) {
+          const refreshToken = this.authService.getRefreshToken();
+
+          if (refreshToken) {
+            if (!this.refreshRequest$) {
+              this.refreshRequest$ = this.authApiService.refreshToken({ refreshToken }).pipe(
+                map((response: LoginResponse) => {
+                  this.authService.updateAccessToken(response.accessToken);
+                  return response.accessToken;
+                }),
+                catchError(refreshError => {
+                  this.clearSessionAndRedirect();
+                  return throwError(() => refreshError);
+                }),
+                finalize(() => {
+                  this.refreshRequest$ = null;
+                }),
+                shareReplay(1)
+              );
+            }
+
+            return this.refreshRequest$.pipe(
+              switchMap(newAccessToken => {
+                const retryRequest = request.clone({
+                  setHeaders: {
+                    Authorization: `Bearer ${newAccessToken}`
+                  }
+                });
+                return next.handle(retryRequest);
+              }),
+              catchError(() => throwError(() => error))
+            );
           }
+
+          this.clearSessionAndRedirect();
         }
 
         let errorMessage = error.error?.detail || error.error?.message;
@@ -57,5 +92,12 @@ export class ErrorInterceptor implements HttpInterceptor {
         return throwError(() => errObj);
       })
     );
+  }
+
+  private clearSessionAndRedirect(): void {
+    this.authService.clearSession();
+    this.router.navigate(['/login'], {
+      queryParams: { returnUrl: this.router.url }
+    });
   }
 }
