@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -34,6 +35,7 @@ public class AuthProfileKafkaService {
         this(jwt, auth, kafka, null, null);
     }
     @KafkaListener(topics = "auth-profile-requests-v1", containerFactory = "authProfileRequestsFactory")
+    @Transactional(readOnly = true)
     public void profile(String message) throws Exception {
         var request = json.readTree(message);
         String id = request.path("correlationId").asText();
@@ -62,10 +64,10 @@ public class AuthProfileKafkaService {
                         && !requestedCustomerId.equals(user.getCustomerId()) && !privileged) {
                     response.put("status", 403);
                 } else {
-                    var customer = requestedCustomerId != null && requestedCustomerId > 0 && customers != null
-                            ? customers.findById(requestedCustomerId).orElse(null)
-                            : users == null ? null : users.findByUsername(username)
-                                    .map(value -> value.getCustomer()).orElse(null);
+                    Long profileCustomerId = requestedCustomerId != null && requestedCustomerId > 0
+                            ? requestedCustomerId : user.getCustomerId();
+                    var customer = profileCustomerId == null || customers == null ? null
+                            : customers.findById(profileCustomerId).orElse(null);
                     Map<String, Object> profile = new LinkedHashMap<>();
                     profile.put("role", user.getRole());
                     profile.put("customerId", customer == null ? user.getCustomerId() : customer.getCustomerIdentifier());
