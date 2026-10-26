@@ -60,7 +60,7 @@ public class FixedDepositAccountController {
         public ResponseEntity<FixedDepositAccountResponseDTO> createAccount(
                         @Valid @RequestBody FixedDepositAccountRequestDTO request,
                         @RequestHeader(value = "Authorization", required = false) String authorization) {
-                creationAuthorization.authorize(authorization, request);
+                applyVerifiedPricingProfile(creationAuthorization.authorize(authorization, request), request);
 
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.createAccount(request));
@@ -71,10 +71,16 @@ public class FixedDepositAccountController {
         public ResponseEntity<FDAccountCreationResponseDTO> createAccountWithTransaction(
                         @Valid @RequestBody FixedDepositAccountRequestDTO request,
                         @RequestHeader(value = "Authorization", required = false) String authorization) {
-                creationAuthorization.authorize(authorization, request);
+                applyVerifiedPricingProfile(creationAuthorization.authorize(authorization, request), request);
 
                 return ResponseEntity.ok(
                                 fixedDepositAccountService.createAccountWithTransaction(request));
+        }
+
+        private void applyVerifiedPricingProfile(FdCreationAuthorization.Profile profile, FixedDepositAccountRequestDTO request) {
+                request.setVerifiedPricingCategories(profile.pricingCategories());
+                request.setVerifiedCustomerAge(profile.customerAge());
+                request.setVerifiedCustomerGender(profile.customerGender());
         }
 
         @GetMapping("/{fdAccountNo}")

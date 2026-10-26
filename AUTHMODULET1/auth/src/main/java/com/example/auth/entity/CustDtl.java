@@ -40,6 +40,13 @@ public class CustDtl {
     @Column(name = "CUST_CNTRY_ORGTN", length = 100)
     private String countryOfOrigin;
 
+    /** Benefits that require bank verification; customers cannot update these fields themselves. */
+    @Column(name = "CUST_BANK_EMPLOYEE", nullable = false)
+    private boolean bankEmployee;
+
+    @Column(name = "CUST_PREMIUM_WEALTH", nullable = false)
+    private boolean premiumWealthCustomer;
+
     @Column(name = "CUST_EFCTV_DT")
     private LocalDate effectiveDate;
 
@@ -141,6 +148,11 @@ public class CustDtl {
 	public void setCountryOfOrigin(String countryOfOrigin) {
 		this.countryOfOrigin = countryOfOrigin;
 	}
+
+    public boolean isBankEmployee() { return bankEmployee; }
+    public void setBankEmployee(boolean bankEmployee) { this.bankEmployee = bankEmployee; }
+    public boolean isPremiumWealthCustomer() { return premiumWealthCustomer; }
+    public void setPremiumWealthCustomer(boolean premiumWealthCustomer) { this.premiumWealthCustomer = premiumWealthCustomer; }
 
 	public LocalDate getEffectiveDate() {
 		return effectiveDate;

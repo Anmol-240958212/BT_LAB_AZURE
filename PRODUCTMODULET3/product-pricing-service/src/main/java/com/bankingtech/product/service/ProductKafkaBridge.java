@@ -20,12 +20,15 @@ public class ProductKafkaBridge {
     private final ObjectMapper json;
     private final KafkaTemplate<String, String> kafka;
     private final TransactionTemplate transaction;
+    private final CategoryPricingService categoryPricing;
 
     public ProductKafkaBridge(ProductService products, ProductRepository repository, ObjectMapper json,
-            KafkaTemplate<String, String> kafka, PlatformTransactionManager manager) {
+            KafkaTemplate<String, String> kafka, PlatformTransactionManager manager,
+            CategoryPricingService categoryPricing) {
         this.products = products; this.repository = repository; this.json = json; this.kafka = kafka;
         this.transaction = new TransactionTemplate(manager);
         this.transaction.setReadOnly(true);
+        this.categoryPricing = categoryPricing;
     }
 
     @Scheduled(fixedDelayString = "${product.catalogue.sync-ms:5000}", initialDelay = 3000)
@@ -57,10 +60,18 @@ public class ProductKafkaBridge {
                 request.path("termMonths").asInt(), request.path("amount").decimalValue(),
                 product.currency());
             boolean valid = result.valid() && "FD".equals(product.productType());
+            var categories = new ArrayList<String>();
+            request.path("categories").forEach(value -> categories.add(value.asText()));
+            var effectiveRate = categoryPricing.effectiveRate(request.path("productCode").asText(), categories,
+                    request.hasNonNull("customerAge") ? request.path("customerAge").asInt() : null,
+                    request.path("customerGender").asText(null), java.time.LocalDate.now(),
+                    request.path("amount").decimalValue(), request.path("termMonths").asInt(),
+                    com.bankingtech.product.entity.enums.DurationUnit.MONTHS);
             response.put("valid", valid);
             response.put("message", valid ? result.message() : (result.valid() ? "Only fixed-deposit products can be booked" : result.message()));
             response.put("productCode", result.productCode());
-            response.put("interestRate", result.applicableRate());
+            response.put("interestRate", effectiveRate.effectiveRate());
+            response.put("appliedPricingCategories", effectiveRate.appliedCategories());
             response.put("interestType", result.rateType());
             response.put("interestFrequency", result.frequency());
             response.put("termLimit", result.termLimit());

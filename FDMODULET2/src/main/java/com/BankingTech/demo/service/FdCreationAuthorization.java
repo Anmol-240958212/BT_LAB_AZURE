@@ -12,7 +12,7 @@ public class FdCreationAuthorization {
 
     public FdCreationAuthorization(FdAuthKafkaClient authClient) { this.authClient = authClient; }
 
-    public void authorize(String authorization, FixedDepositAccountRequestDTO request) {
+    public Profile authorize(String authorization, FixedDepositAccountRequestDTO request) {
         if (authorization == null || !authorization.startsWith("Bearer ") || authorization.substring(7).isBlank()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Sign in to create a fixed deposit");
         }
@@ -21,7 +21,7 @@ public class FdCreationAuthorization {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Account role is unavailable");
         }
         if ("ADMIN".equals(profile.role()) || "BANK_OFFICER".equals(profile.role())
-                || "STAFF".equals(profile.role())) return;
+                || "STAFF".equals(profile.role())) return profile;
         if (!"CUSTOMER".equals(profile.role()) || profile.customerId() == null) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "A customer profile is required");
         }
@@ -33,8 +33,10 @@ public class FdCreationAuthorization {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Complete KYC before creating a fixed deposit");
         }
         request.setCustomerId(customerId);
+        return profile;
     }
 
     @com.fasterxml.jackson.annotation.JsonIgnoreProperties(ignoreUnknown = true)
-    public record Profile(String role, Long customerId, String customerStatus) {}
+    public record Profile(String role, Long customerId, String customerStatus, Integer customerAge,
+            String customerGender, java.util.List<String> pricingCategories) {}
 }

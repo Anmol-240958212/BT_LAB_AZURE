@@ -27,7 +27,8 @@ public class FdProductPricingService {
         if (future != null) future.complete(json.convertValue(reply, Map.class));
     }
 
-    public Map<String, Object> quote(String code, BigDecimal amount, Integer termMonths) {
+    public Map<String, Object> quote(String code, BigDecimal amount, Integer termMonths,
+            List<String> verifiedCategories, Integer customerAge, String customerGender) {
         if (code == null || code.isBlank() || amount == null || amount.signum() <= 0 || termMonths == null || termMonths <= 0)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Select a product and enter a positive amount and term");
         String correlation = UUID.randomUUID().toString();
@@ -37,8 +38,12 @@ public class FdProductPricingService {
             // The product catalogue is the source of truth for currency. Do not constrain a
             // quote to INR here: that would make a valid JPY product fail before Product &
             // Pricing can return its authoritative currency.
-            var request = Map.of("schemaVersion", 1, "correlationId", correlation, "productCode", code,
-                "amount", amount, "termMonths", termMonths);
+            Map<String, Object> request = new LinkedHashMap<>();
+            request.put("schemaVersion", 1); request.put("correlationId", correlation); request.put("productCode", code);
+            request.put("amount", amount); request.put("termMonths", termMonths);
+            request.put("categories", verifiedCategories == null ? List.of() : List.copyOf(verifiedCategories));
+            if (customerAge != null) request.put("customerAge", customerAge);
+            if (customerGender != null && !customerGender.isBlank()) request.put("customerGender", customerGender);
             kafka.send("product-quote-requests-v1", code, json.writeValueAsString(request))
                 .whenComplete((sent, error) -> { if (error != null) future.completeExceptionally(error); });
             return future.get(12, TimeUnit.SECONDS);
@@ -51,8 +56,14 @@ public class FdProductPricingService {
         } finally { pending.remove(correlation); }
     }
 
+    /** Public product preview has no authenticated customer context, so it receives the base rate only. */
+    public Map<String, Object> quote(String code, BigDecimal amount, Integer termMonths) {
+        return quote(code, amount, termMonths, List.of(), null, null);
+    }
+
     public void applyAuthoritativePricing(FixedDepositAccountRequestDTO request) {
-        var quote = quote(request.getProductCode(), request.getPrincipalAmount(), request.getTermMonths());
+        var quote = quote(request.getProductCode(), request.getPrincipalAmount(), request.getTermMonths(),
+                request.getVerifiedPricingCategories(), request.getVerifiedCustomerAge(), request.getVerifiedCustomerGender());
         if (!Boolean.TRUE.equals(quote.get("valid")) || quote.get("interestRate") == null)
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, String.valueOf(quote.get("message")));
         String currency = String.valueOf(quote.get("currency")).trim().toUpperCase(Locale.ROOT);

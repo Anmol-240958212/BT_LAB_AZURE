@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class FixedDepositAccountRequestDTO {
 
@@ -66,6 +67,14 @@ public class FixedDepositAccountRequestDTO {
     @NotBlank(message = "Interest frequency is required")
     @io.swagger.v3.oas.annotations.media.Schema(example = "MONTHLY")
     private String interestFrequency;
+
+    /** Server-provided through Auth Kafka; never accepted as an eligibility claim from a browser. */
+    @io.swagger.v3.oas.annotations.media.Schema(hidden = true)
+    private List<String> verifiedPricingCategories;
+    @io.swagger.v3.oas.annotations.media.Schema(hidden = true)
+    private Integer verifiedCustomerAge;
+    @io.swagger.v3.oas.annotations.media.Schema(hidden = true)
+    private String verifiedCustomerGender;
 
     public String getInterestFrequency() {
         return interestFrequency;
@@ -146,4 +155,11 @@ public class FixedDepositAccountRequestDTO {
     public void setInterestPayoutType(String interestPayoutType) {
         this.interestPayoutType = interestPayoutType;
     }
+
+    public List<String> getVerifiedPricingCategories() { return verifiedPricingCategories; }
+    public void setVerifiedPricingCategories(List<String> value) { this.verifiedPricingCategories = value == null ? List.of() : List.copyOf(value); }
+    public Integer getVerifiedCustomerAge() { return verifiedCustomerAge; }
+    public void setVerifiedCustomerAge(Integer value) { this.verifiedCustomerAge = value; }
+    public String getVerifiedCustomerGender() { return verifiedCustomerGender; }
+    public void setVerifiedCustomerGender(String value) { this.verifiedCustomerGender = value; }
 }

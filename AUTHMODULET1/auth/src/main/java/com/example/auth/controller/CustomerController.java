@@ -26,6 +26,25 @@ public class CustomerController {
     @Autowired
     private com.example.auth.service.CustomerEventSyncService customerEventSyncService;
 
+    @Autowired
+    private com.example.auth.service.CustomerBenefitService customerBenefitService;
+
+    @PutMapping("/{customerId}/pricing-benefits")
+    @PreAuthorize("hasAnyRole('ADMIN', 'HEAD_ADMIN')")
+    @Operation(summary = "Assign verified pricing benefits", description = "Only an administrator may mark a customer as a verified bank employee or premium-wealth customer.", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<com.example.auth.dto.CustomerBenefitResponseDto> updatePricingBenefits(
+            @PathVariable Long customerId,
+            @RequestBody com.example.auth.dto.CustomerBenefitUpdateRequestDto request,
+            Authentication authentication) {
+        return ResponseEntity.ok(customerBenefitService.update(customerId, request, authentication.getName()));
+    }
+
+    @GetMapping("/{customerId}/pricing-benefits")
+    @PreAuthorize("hasAnyRole('STAFF', 'ADMIN', 'HEAD_ADMIN')")
+    public ResponseEntity<com.example.auth.dto.CustomerBenefitResponseDto> getPricingBenefits(@PathVariable Long customerId) {
+        return ResponseEntity.ok(customerBenefitService.get(customerId));
+    }
+
     @PostMapping("/sync")
     @Operation(summary = "Synchronize approved customer and registered email to FD through Kafka",
             security = @SecurityRequirement(name = "bearerAuth"))
