@@ -1,9 +1,6 @@
 package com.BankingTech.demo.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
@@ -18,7 +15,18 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "fd_customer_registry")
-public class FdCustomerRegistry {
+@AttributeOverrides({
+        @AttributeOverride(name = "crudValue", column = @Column(name = "fd_customer_registry_crud_value")),
+        @AttributeOverride(name = "userId", column = @Column(name = "fd_customer_registry_user_id")),
+        @AttributeOverride(name = "wsId", column = @Column(name = "fd_customer_registry_ws_id")),
+        @AttributeOverride(name = "hostTs", column = @Column(name = "fd_customer_registry_host_ts")),
+        @AttributeOverride(name = "localTs", column = @Column(name = "fd_customer_registry_local_ts")),
+        @AttributeOverride(name = "ruleSystemId", column = @Column(name = "fd_customer_registry_rule_system_id")),
+        @AttributeOverride(name = "acptTs", column = @Column(name = "fd_customer_registry_acpt_ts")),
+        @AttributeOverride(name = "acptTsUtcOfst", column = @Column(name = "fd_customer_registry_acpt_ts_utc_ofst")),
+        @AttributeOverride(name = "uuid", column = @Column(name = "fd_customer_registry_uuid"))
+})
+public class FdCustomerRegistry extends AuditEntity {
 
     @Id
     @Column(name = "customer_id", length = 30, nullable = false)

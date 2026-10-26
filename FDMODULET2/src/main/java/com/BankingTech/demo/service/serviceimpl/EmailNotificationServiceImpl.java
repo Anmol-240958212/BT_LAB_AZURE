@@ -23,16 +23,24 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
     private final JavaMailSender mailSender;
     private final NotificationLogRepository logs;
     private final FdCustomerRegistryRepository customers;
-    @org.springframework.beans.factory.annotation.Autowired
-    private FixedDepositAccountRepository accounts;
+    private final FixedDepositAccountRepository accounts;
     private final String sender;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public EmailNotificationServiceImpl(JavaMailSender mailSender, NotificationLogRepository logs,
-            FdCustomerRegistryRepository customers, @Value("${banking.mail.from:${spring.mail.username:}}") String sender) {
+            FdCustomerRegistryRepository customers, FixedDepositAccountRepository accounts,
+            @Value("${banking.mail.from:${spring.mail.username:}}") String sender) {
         this.mailSender = mailSender;
         this.logs = logs;
         this.customers = customers;
+        this.accounts = accounts;
         this.sender = sender;
+    }
+
+    /** Compatibility constructor for focused notification tests. */
+    public EmailNotificationServiceImpl(JavaMailSender mailSender, NotificationLogRepository logs,
+            FdCustomerRegistryRepository customers, String sender) {
+        this(mailSender, logs, customers, null, sender);
     }
 
     /** Saved with the payout and closure; SMTP and Kafka run only after commit. */
@@ -122,7 +130,7 @@ public class EmailNotificationServiceImpl implements EmailNotificationService {
             if (sender.isBlank()) {
                 throw new IllegalStateException("Configure BANKING_SMTP_USERNAME or BANKING_MAIL_FROM before sending emails");
             }
-            String currency = accounts.findByFdAccountNo(log.getNotificationLogFdAccountNo())
+            String currency = accounts == null ? "INR" : accounts.findByFdAccountNo(log.getNotificationLogFdAccountNo())
                     .map(account -> account.getFdAccountCurrency()).orElse("INR");
             boolean premature = "PREMATURE_WITHDRAWAL_NOTICE".equals(log.getNotificationLogNotificationType());
             var mail = new SimpleMailMessage();

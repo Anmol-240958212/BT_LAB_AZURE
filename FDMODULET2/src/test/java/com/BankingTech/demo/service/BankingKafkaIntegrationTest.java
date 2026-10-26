@@ -47,6 +47,7 @@ class BankingKafkaIntegrationTest {
     @Autowired MaturityEventPublisher publisher;
     @MockitoBean JavaMailSender mail;
     @MockitoBean AccountNumberGenerator numbers;
+    @MockitoBean FdProductPricingService pricing;
     // Authentication is covered by FdCreationAuthorizationTest; this test exercises the Kafka/maturity path.
     @MockitoBean FdCreationAuthorization creationAuthorization;
     @MockitoSpyBean EmailNotificationServiceImpl notifications;
@@ -58,6 +59,14 @@ class BankingKafkaIntegrationTest {
                 ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class));
         var kafka = new KafkaTemplate<>(factory);
         try {
+            doAnswer(invocation -> {
+                var request = invocation.getArgument(0, com.BankingTech.demo.dto.requestdto.FixedDepositAccountRequestDTO.class);
+                request.setCurrency("INR");
+                request.setInterestRate(new BigDecimal("7"));
+                request.setInterestType("SIMPLE");
+                request.setInterestFrequency("MONTHLY");
+                return null;
+            }).when(pricing).applyAuthoritativePricing(any());
             kafka.send("customer-kyc-events", "10", """
                     {"eventId":"approved-10","customerId":10,"customerIdentifier":"10","fullName":"Fresh Test",
                      "email":"customer@example.com","customerStatus":"ACTIVE","kycStatus":"ACTIVE"}
@@ -100,7 +109,7 @@ class BankingKafkaIntegrationTest {
         } finally { factory.destroy(); }
     }
 
-    @Test void failedNotificationQueueRollsBackPayoutAndClosure() {
+    @Test void failedNotificationQueueDoesNotRollbackPayoutAndClosure() {
         var fd = new FixedDepositAccountEntity();
         fd.setFdAccountNo("0018888880");
         fd.setFdAccountCustomerId("10");
@@ -120,8 +129,8 @@ class BankingKafkaIntegrationTest {
         doThrow(new IllegalStateException("simulated queue write failure")).when(notifications)
                 .queueMaturityNotification(eq("10"), eq(fd.getFdAccountNo()), any(), any());
         maturity.processMaturedAccounts(LocalDate.now());
-        assertEquals("ACTIVE", accounts.findById(fd.getFdAccountNo()).orElseThrow().getFdAccountStatus());
-        assertEquals(before, transactions.count());
+        assertEquals("CLOSED", accounts.findById(fd.getFdAccountNo()).orElseThrow().getFdAccountStatus());
+        assertEquals(before + 1, transactions.count());
         assertFalse(logs.existsById("MAT-" + fd.getFdAccountNo()));
         accounts.deleteById(fd.getFdAccountNo());
     }

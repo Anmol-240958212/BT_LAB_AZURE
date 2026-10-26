@@ -85,6 +85,19 @@ export interface FDTransactionRequest {
   remarks?: string;
 }
 
+/** A persisted financial event shown in the administrator's read-only ledger. */
+export interface FDTransactionLedgerEntry {
+  transactionId: string;
+  fdAccountNo: string;
+  customerId?: string;
+  currency: string;
+  transactionType: string;
+  amount: number;
+  penaltyAmount: number;
+  transactionDate: string;
+  remarks?: string;
+}
+
 export interface BatchProcessResponse {
   status: string;
   businessDate: string;

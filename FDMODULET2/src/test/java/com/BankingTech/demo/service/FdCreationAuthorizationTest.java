@@ -66,8 +66,12 @@ class FdCreationAuthorizationTest {
     }
     @Test void staffCanStillSelectCustomer() {
         for (String role : new String[]{"ADMIN", "BANK_OFFICER", "STAFF"}) {
-            profile = "{\"role\":\"" + role + "\"}";
-            authorization.authorize("Bearer valid", request("18"));
+            var client = mock(FdAuthKafkaClient.class);
+            when(client.profile("Bearer valid")).thenReturn(
+                    new FdCreationAuthorization.Profile(role, null, null));
+            var privilegedAuthorization = new FdCreationAuthorization(client);
+            privilegedAuthorization.authorize("Bearer valid", request("18"));
+            verify(client).profile("Bearer valid");
         }
     }
     @Test void bothEndpointsPassAuthorizedRequestsToExistingService() {

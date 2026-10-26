@@ -2,8 +2,11 @@ package com.BankingTech.demo.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @MappedSuperclass
@@ -137,5 +140,43 @@ public abstract class AuditEntity {
 
     public void setUuid(UUID uuid) {
         this.uuid = uuid;
+    }
+
+    /**
+     * Guarantees that every FD-owned row has a complete audit trail, including
+     * rows created by Kafka consumers and batch jobs where no browser user is
+     * available. Explicit values supplied by a business service are preserved.
+     */
+    @PrePersist
+    protected void populateAuditFieldsOnCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        if (crudValue == null || crudValue.isBlank()) crudValue = "CREATE";
+        if (userId == null || userId.isBlank()) userId = "SYSTEM";
+        if (wsId == null || wsId.isBlank()) wsId = "FD_MODULE";
+        if (ruleSystemId == null || ruleSystemId.isBlank()) ruleSystemId = getClass().getSimpleName();
+        if (hostTs == null) hostTs = now;
+        if (localTs == null) localTs = now;
+        if (acptTs == null) acptTs = now;
+        if (acptTsUtcOfst == null || acptTsUtcOfst.isBlank()) {
+            acptTsUtcOfst = ZoneOffset.systemDefault().getRules().getOffset(now).toString();
+        }
+        if (uuid == null) uuid = UUID.randomUUID();
+    }
+
+    /** Records the most recent persistence operation without losing its immutable correlation UUID. */
+    @PreUpdate
+    protected void populateAuditFieldsOnUpdate() {
+        LocalDateTime now = LocalDateTime.now();
+        crudValue = "UPDATE";
+        hostTs = now;
+        localTs = now;
+        acptTs = now;
+        if (userId == null || userId.isBlank()) userId = "SYSTEM";
+        if (wsId == null || wsId.isBlank()) wsId = "FD_MODULE";
+        if (ruleSystemId == null || ruleSystemId.isBlank()) ruleSystemId = getClass().getSimpleName();
+        if (acptTsUtcOfst == null || acptTsUtcOfst.isBlank()) {
+            acptTsUtcOfst = ZoneOffset.systemDefault().getRules().getOffset(now).toString();
+        }
+        if (uuid == null) uuid = UUID.randomUUID();
     }
 }

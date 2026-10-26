@@ -10,6 +10,7 @@ public interface FDTransactionRepository
         extends JpaRepository<FDTransactionEntity, String> {
     List<FDTransactionEntity> findByFdTransactionFdAccountNoOrderByFdTransactionTxnDateDesc(String fdAccountNo);
     List<FDTransactionEntity> findByFdTransactionFdAccountNoOrderByFdTransactionTxnDateAsc(String fdAccountNo);
+    List<FDTransactionEntity> findAllByOrderByFdTransactionTxnDateDesc();
     java.util.Optional<FDTransactionEntity> findFirstByFdTransactionFdAccountNoAndFdTransactionTxnTypeOrderByFdTransactionTxnDateAsc(
             String fdAccountNo, String txnType);
 }

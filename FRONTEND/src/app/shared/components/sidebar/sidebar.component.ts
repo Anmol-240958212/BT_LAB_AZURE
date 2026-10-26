@@ -439,6 +439,12 @@ export class AppSidebarComponent implements OnInit, OnDestroy {
       roles: ['ADMIN']
     },
     {
+      label: 'Transaction Ledger',
+      route: '/admin/ledger',
+      icon: 'clipboard',
+      roles: ['ADMIN']
+    },
+    {
       label: 'Analytics & Reports', translationKey: 'sidebar.reports',
       route: '/reports',
       icon: 'bar-chart',

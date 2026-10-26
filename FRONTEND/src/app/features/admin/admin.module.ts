@@ -5,11 +5,13 @@ import { SharedModule } from '../../shared/shared.module';
 import { AdminRoutingModule } from './admin-routing.module';
 import { EmployeeManagementComponent } from './employees/employee-management.component';
 import { BatchOperationsComponent } from './batch/batch-operations.component';
+import { TransactionLedgerComponent } from './ledger/transaction-ledger.component';
 
 @NgModule({
   declarations: [
     EmployeeManagementComponent,
-    BatchOperationsComponent
+    BatchOperationsComponent,
+    TransactionLedgerComponent
   ],
   imports: [
     CommonModule,
