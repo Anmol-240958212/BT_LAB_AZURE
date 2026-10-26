@@ -436,7 +436,9 @@ export class FDAccountsComponent implements OnInit {
       : this.fdAccountApi.getAccountsByStatus(this.selectedStatus);
 
     fetch$.pipe(
-      timeout(2500),
+      // The FD service validates staff access through the Auth Kafka pipeline.
+      // Allow enough time for that cross-module round trip before treating it as unavailable.
+      timeout(15000),
       catchError(() => of([]))
     ).subscribe({
       next: (data) => {
@@ -466,7 +468,8 @@ export class FDAccountsComponent implements OnInit {
       : this.fdAccountApi.getCustomerAccountsByStatus(this.userCustomerId, this.selectedStatus);
 
     fetch$.pipe(
-      timeout(3500),
+      // Customer account reads use the same Kafka-backed profile validation.
+      timeout(15000),
       catchError(() => of([]))
     ).subscribe({
       next: (data) => {

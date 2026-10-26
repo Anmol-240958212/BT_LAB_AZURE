@@ -295,7 +295,8 @@ export class DashboardComponent implements OnInit {
       if (!this.userCustomerId) return;
       this.loadingAccounts = true;
       this.fdAccountApi.getAccountsByCustomer(this.userCustomerId).pipe(
-        timeout(3500),
+        // Wait for the Kafka-backed Auth profile verification used by FD reads.
+        timeout(15000),
         catchError(() => of([]))
       ).subscribe({
         next: (data) => {
@@ -319,7 +320,8 @@ export class DashboardComponent implements OnInit {
     }
 
     this.fdAccountApi.getAccountsByStatus('ACTIVE').pipe(
-      timeout(2500),
+      // Wait for the Kafka-backed Auth profile verification used by FD reads.
+      timeout(15000),
       catchError(() => of([]))
     ).subscribe({
       next: (data) => {
