@@ -2,6 +2,7 @@ package com.example.auth.service;
 
 import com.example.auth.security.JwtService;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -18,6 +19,7 @@ public class AuthProfileKafkaService {
     private final KafkaTemplate<String, String> kafka;
     private final AuthUsrRepository users;
     private final JsonMapper json = new JsonMapper();
+    @Autowired
     public AuthProfileKafkaService(JwtService jwt, AuthService auth,
             @Qualifier("authProfileKafkaTemplate") KafkaTemplate<String, String> kafka, AuthUsrRepository users) {
         this.jwt = jwt; this.auth = auth; this.kafka = kafka; this.users = users;
