@@ -81,6 +81,7 @@ public class ReportingService {
                 : customer.classificationType() + (customer.classificationValue() == null ? "" : ": " + customer.classificationValue());
         return new CustomerPortfolioDto(customer.customerId(), customer.fullName(), customer.customerTypeName(), customer.customerStatus(),
                 classification, customer.kycStatus(), customer.preferredLanguage(), customer.countryOfOrigin(),
+                customer.email(), customer.phoneNumber(),
                 items.size(), sumPrincipal(items), totalInterestGenerated, accountDtos);
     }
 

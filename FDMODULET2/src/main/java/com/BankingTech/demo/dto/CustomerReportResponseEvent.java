@@ -29,6 +29,7 @@ public record CustomerReportResponseEvent(
             String preferredLanguage,
             String countryOfOrigin,
             String email,
+            String phoneNumber,
             List<Contact> contacts,
             List<Address> addresses,
             List<Identification> identifications) {

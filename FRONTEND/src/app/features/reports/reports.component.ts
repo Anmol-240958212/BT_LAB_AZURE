@@ -44,6 +44,10 @@ type CurrencyTotal = { currency: string; value: number; };
             </div>
           </div>
           <div *ngIf="!loading && !portfolio" class="empty-state">Your portfolio could not be loaded yet. Use <strong>Refresh data</strong> to try again.</div>
+          <div class="details-grid customer-contact" *ngIf="portfolio && (portfolio.email || portfolio.phoneNumber)">
+            <div><span>Email</span><strong>{{ portfolio.email || '—' }}</strong></div>
+            <div><span>Phone number</span><strong>{{ portfolio.phoneNumber || '—' }}</strong></div>
+          </div>
           <div class="table-scroll" *ngIf="portfolio">
             <table>
               <thead><tr><th>Account</th><th>Product</th><th>Principal</th><th>Interest Generated</th><th>Maturity</th><th>Status</th><th>Individual report</th></tr></thead>
@@ -120,7 +124,7 @@ type CurrencyTotal = { currency: string; value: number; };
           <article class="metric-card"><span>Interest</span><strong>{{ money(maturityReport.maturity.interestComponent, maturityReport.fdAccount.currency) }}</strong></article>
           <article class="metric-card"><span>Net payout</span><strong>{{ money(maturityReport.maturity.netPayout, maturityReport.fdAccount.currency) }}</strong></article>
         </div>
-        <div class="details-grid"><div><span>Customer</span><strong>{{ maturityReport.customer.fullName }}</strong></div><div><span>KYC status</span><strong>{{ maturityReport.customer.kycStatus || '—' }}</strong></div><div><span>Interest postings</span><strong>{{ maturityReport.interestTransactions.length }}</strong></div><div><span>Transactions</span><strong>{{ maturityReport.transactions.length }}</strong></div></div>
+        <div class="details-grid"><div><span>Customer</span><strong>{{ maturityReport.customer.fullName }}</strong></div><div><span>Email</span><strong>{{ maturityReport.customer.email || '—' }}</strong></div><div><span>Phone number</span><strong>{{ maturityReport.customer.phoneNumber || '—' }}</strong></div><div><span>KYC status</span><strong>{{ maturityReport.customer.kycStatus || '—' }}</strong></div><div><span>Interest postings</span><strong>{{ maturityReport.interestTransactions.length }}</strong></div><div><span>Transactions</span><strong>{{ maturityReport.transactions.length }}</strong></div></div>
         <h3>Interest postings</h3><div class="table-scroll"><table><thead><tr><th>ID</th><th>Amount</th><th>Posted at</th><th>Status</th></tr></thead><tbody><tr *ngFor="let item of maturityReport.interestTransactions"><td>{{ item.id }}</td><td>{{ money(item.amount, maturityReport.fdAccount.currency) }}</td><td>{{ item.postedAt | date:'medium' }}</td><td>{{ item.status }}</td></tr><tr *ngIf="!maturityReport.interestTransactions.length"><td colspan="4" class="empty-cell">No interest postings.</td></tr></tbody></table></div>
         <h3>Transactions</h3><div class="table-scroll"><table><thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Date</th><th>Remarks</th></tr></thead><tbody><tr *ngFor="let item of maturityReport.transactions"><td>{{ item.id }}</td><td>{{ item.type }}</td><td>{{ money(item.amount, maturityReport.fdAccount.currency) }}</td><td>{{ item.occurredAt | date:'medium' }}</td><td>{{ item.remarks || '—' }}</td></tr><tr *ngIf="!maturityReport.transactions.length"><td colspan="5" class="empty-cell">No transactions.</td></tr></tbody></table></div>
       </section>

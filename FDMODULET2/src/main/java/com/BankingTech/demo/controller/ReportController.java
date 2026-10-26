@@ -59,9 +59,9 @@ public class ReportController {
             return ResponseEntity.ok(portfolio);
         }
         return respond(format, "customer-fd-portfolio.csv", portfolio.accounts(),
-                row -> csv(row.accountNo(), row.productCode(), row.currency(), row.principal(), row.rate(),
+                row -> csv(portfolio.customerName(), portfolio.email(), portfolio.phoneNumber(), row.accountNo(), row.productCode(), row.currency(), row.principal(), row.rate(),
                         row.interestGenerated(), row.maturityDate(), row.status(), row.interestFrequency()),
-                "accountNo,productCode,currency,principal,rate,interestGenerated,maturityDate,status,interestFrequency",
+                "customerName,email,phoneNumber,accountNo,productCode,currency,principal,rate,interestGenerated,maturityDate,status,interestFrequency",
                 "Customer Fixed Deposit Portfolio");
     }
 

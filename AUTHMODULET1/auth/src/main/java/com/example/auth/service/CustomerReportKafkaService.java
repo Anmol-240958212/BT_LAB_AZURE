@@ -65,6 +65,7 @@ public class CustomerReportKafkaService {
     }
 
     private CustomerReportResponseEvent.Customer map(CustDtl customer) {
+        var user = users.findByCustomerCustomerIdentifier(customer.getCustomerIdentifier()).orElse(null);
         return new CustomerReportResponseEvent.Customer(customer.getCustomerIdentifier(), customer.getFullName(),
                 customer.getDateOfBirth(), customer.getGender(),
                 customer.getCustomerType() == null ? null : customer.getCustomerType().getTypeCode(),
@@ -74,7 +75,7 @@ public class CustomerReportKafkaService {
                 customer.getCustomerStatus() == null ? null : customer.getCustomerStatus().getStatusCode(),
                 customer.getCustomerStatus() == null ? null : customer.getCustomerStatus().getStatusCode(),
                 customer.getPreferredLanguage(), customer.getCountryOfOrigin(),
-                users.findByCustomerCustomerIdentifier(customer.getCustomerIdentifier()).map(user -> user.getEmail()).orElse(null),
+                user == null ? null : user.getEmail(), user == null ? null : user.getPhoneNumber(),
                 contacts.findByCustomer(customer).stream().map(contact -> new CustomerReportResponseEvent.Contact(
                         contact.getContactType() == null ? null : contact.getContactType().getContactType(), contact.getContactValue())).toList(),
                 addresses.findByCustomer(customer).stream().map(address -> new CustomerReportResponseEvent.Address(

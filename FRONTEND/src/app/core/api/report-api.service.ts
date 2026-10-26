@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 export interface FdSummary { productCode: string; currency: string; totalAccounts: number; totalPrincipal: number; totalInterestAccrued: number; }
 export interface InterestHistory { accountNo: string; productCode: string; currency: string; principal: number; interestAmount: number; postedAt: string; status: string; }
 export interface MaturitySummary { maturityDate: string; currency: string; totalAccounts: number; totalPrincipal: number; accruedInterest: number; }
-export interface CustomerPortfolio { customerId: number; customerName: string; customerType: string; customerStatus: string; customerClassification: string; kycStatus: string; preferredLanguage: string; countryOfOrigin: string; totalAccounts: number; totalPrincipal: number; totalInterestGenerated: number; accounts: PortfolioAccount[]; }
+export interface CustomerPortfolio { customerId: number; customerName: string; customerType: string; customerStatus: string; customerClassification: string; kycStatus: string; preferredLanguage: string; countryOfOrigin: string; email?: string; phoneNumber?: string; totalAccounts: number; totalPrincipal: number; totalInterestGenerated: number; accounts: PortfolioAccount[]; }
 export interface PortfolioAccount { accountNo: string; productCode: string; currency: string; principal: number; rate: number; interestGenerated: number; maturityDate: string; status: string; interestFrequency: string; }
 export interface FdMaturityReport { reportType: string; reportGeneratedAt: string; customer: any; fdAccount: any; interestTransactions: any[]; transactions: any[]; maturity: any; notifications: any[]; }
 @Injectable({ providedIn: 'root' })
