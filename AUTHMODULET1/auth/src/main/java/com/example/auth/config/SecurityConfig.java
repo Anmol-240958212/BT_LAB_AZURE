@@ -17,7 +17,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 @EnableMethodSecurity
 public class SecurityConfig {
 
-    @Value("${app.cors.allowed-origin-patterns:http://localhost:[*],http://127.0.0.1:[*]}")
+    @Value("${app.cors.allowed-origin-patterns:http://localhost:4200,http://127.0.0.1:4200}")
     private String allowedOriginPatterns;
 
     @Autowired
@@ -73,8 +73,7 @@ public class SecurityConfig {
     @Bean
     public org.springframework.web.cors.CorsConfigurationSource swaggerCors() {
         var cors = new org.springframework.web.cors.CorsConfiguration();
-        cors.setAllowedOriginPatterns(java.util.Arrays.stream(allowedOriginPatterns.split(","))
-                .map(String::trim).filter(value -> !value.isBlank()).toList());
+        cors.setAllowedOriginPatterns(java.util.List.of("*"));
         cors.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         cors.setAllowedHeaders(java.util.List.of("*"));
         cors.setAllowCredentials(true);

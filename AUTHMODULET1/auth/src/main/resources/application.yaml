@@ -56,7 +56,7 @@ security:
 
 app:
   cors:
-    allowed-origin-patterns: "${CORS_ALLOWED_ORIGINS:http://localhost:[*]|http://127.0.0.1:[*]}"
+    allowed-origin-patterns: "${CORS_ALLOWED_ORIGINS:http://localhost:4200,http://127.0.0.1:4200}"
   kafka:
     create-topics: ${KAFKA_CREATE_TOPICS:true}
 
