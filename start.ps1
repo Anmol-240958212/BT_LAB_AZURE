@@ -25,10 +25,14 @@ function Wait-ForPort([int]$Port, [string]$Name, [int]$TimeoutSeconds = 90) {
     throw "$Name did not become ready on port $Port within $TimeoutSeconds seconds. Run 'docker compose ps' for details."
 }
 
-function Start-LoggedProcess([string]$Name, [string]$Directory, [string]$Command) {
+function Start-LoggedProcess([string]$Name, [string]$Directory, [string]$Command, [hashtable]$EnvironmentVariables) {
     $logFile = Join-Path $LogDir "$Name.log"
     $pidFile = Join-Path $LogDir "$Name.pid"
-    $cmdLine = "cd /d `"$Directory`" && $Command > `"$logFile`" 2>&1"
+    $environmentSetup = ($EnvironmentVariables.GetEnumerator() | ForEach-Object {
+        "set `"$($_.Key)=$($_.Value)`""
+    }) -join " && "
+    $prefix = if ([string]::IsNullOrWhiteSpace($environmentSetup)) { "" } else { "$environmentSetup && " }
+    $cmdLine = "$prefix" + "cd /d `"$Directory`" && $Command > `"$logFile`" 2>&1"
     $process = Start-Process -FilePath "cmd.exe" -ArgumentList "/c", $cmdLine -WindowStyle Hidden -PassThru
     Set-Content -LiteralPath $pidFile -Value $process.Id
     Write-Host "  Started $Name (PID $($process.Id)); log: $logFile" -ForegroundColor Green
@@ -45,14 +49,29 @@ $env:KAFKA_BOOTSTRAP_SERVERS = if ($env:KAFKA_BOOTSTRAP_SERVERS) { $env:KAFKA_BO
 $env:AUTH_JWT_SECRET = if ($env:AUTH_JWT_SECRET) { $env:AUTH_JWT_SECRET } else { "my-super-secret-key-for-authentication-123456789" }
 
 Write-Host "Starting vaultOne infrastructure..." -ForegroundColor Cyan
-docker compose up -d mysql kafka
+if (-not (Test-NetConnection -ComputerName 127.0.0.1 -Port 3306 -WarningAction SilentlyContinue).TcpTestSucceeded) {
+    docker compose up -d mysql
+} else {
+    Write-Host "  Using the existing local MySQL service on port 3306" -ForegroundColor Green
+}
+docker compose up -d kafka
 Wait-ForPort 3306 "MySQL"
 Wait-ForPort 9092 "Kafka"
 
 Write-Host "Starting three backend services..." -ForegroundColor Cyan
-Start-LoggedProcess "auth" (Join-Path $RootDir "AUTHMODULET1\auth") "call mvnw.cmd spring-boot:run"
-Start-LoggedProcess "fd" (Join-Path $RootDir "FDMODULET2") "call mvnw.cmd spring-boot:run"
-Start-LoggedProcess "product" (Join-Path $RootDir "PRODUCTMODULET3\product-pricing-service") "call mvn.cmd spring-boot:run"
+$localCommon = @{
+    DB_HOST = "localhost"
+    DB_PORT = "3306"
+    DB_USERNAME = $env:DB_USERNAME
+    DB_PASSWORD = $env:DB_PASSWORD
+    KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
+    AUTH_JWT_SECRET = $env:AUTH_JWT_SECRET
+}
+$authEnvironment = @{}; $localCommon.GetEnumerator() | ForEach-Object { $authEnvironment[$_.Key] = $_.Value }; $authEnvironment["DB_NAME"] = "authandcust"
+$fdEnvironment = @{}; $localCommon.GetEnumerator() | ForEach-Object { $fdEnvironment[$_.Key] = $_.Value }; $fdEnvironment["DB_NAME"] = "fdmodule"
+Start-LoggedProcess "auth" (Join-Path $RootDir "AUTHMODULET1\auth") "call mvnw.cmd spring-boot:run" $authEnvironment
+Start-LoggedProcess "fd" (Join-Path $RootDir "FDMODULET2") "call mvnw.cmd spring-boot:run" $fdEnvironment
+Start-LoggedProcess "product" (Join-Path $RootDir "PRODUCTMODULET3\product-pricing-service") "call mvn.cmd spring-boot:run" $localCommon
 
 $frontendDir = Join-Path $RootDir "FRONTEND"
 if (-not (Test-Path (Join-Path $frontendDir "node_modules"))) {
@@ -60,7 +79,7 @@ if (-not (Test-Path (Join-Path $frontendDir "node_modules"))) {
     Push-Location $frontendDir
     try { & npm.cmd install } finally { Pop-Location }
 }
-Start-LoggedProcess "frontend" $frontendDir "call npm.cmd start"
+Start-LoggedProcess "frontend" $frontendDir "call npm.cmd start" @{}
 
 Write-Host ""
 Write-Host "vaultOne processes have been launched." -ForegroundColor Green
