@@ -597,6 +597,27 @@
             </div>
           </div>
 
+          <!-- Interest Rate Slider -->
+          <div class="calc-field-group">
+            <div class="calc-field-header">
+              <label for="interest-rate-slider" class="calc-label">Interest rate</label>
+              <span class="calc-live-val">{{ selectedInterestRate | number:'1.0-2' }}% p.a.</span>
+            </div>
+            <input
+              id="interest-rate-slider"
+              type="range"
+              min="0"
+              max="8.5"
+              step="0.05"
+              [ngModel]="selectedInterestRate"
+              (ngModelChange)="setInterestRate($event)"
+              class="calc-slider"
+            />
+            <div class="calc-slider-hint">
+              Select a rate from 0% to 8.5% p.a. Suggested for this tenure: {{ suggestedInterestRate }}% p.a.
+            </div>
+          </div>
+
           <!-- Customer Category Pills -->
           <div class="calc-field-group">
             <label class="calc-label">{{ 'landing.depositorCategory' | transloco }}</label>

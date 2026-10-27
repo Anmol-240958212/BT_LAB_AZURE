@@ -96,6 +96,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   // Interactive Live Calculator State
   depositAmount: number = 200000;
   tenureMonths: number = 36;
+  selectedInterestRate: number = 7.60;
   customerType: 'GENERAL' | 'SENIOR' | 'STAFF' = 'GENERAL';
   schemeType: 'COMPOUND' | 'SIMPLE' = 'COMPOUND';
   rateCapWarning: boolean = false;
@@ -201,7 +202,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   // Calculator Logic adhering to commercial deposit pricing
-  get baseInterestRate(): number {
+  get suggestedInterestRate(): number {
     const months = this.tenureMonths;
     if (months < 3) return 4.50;
     if (months < 6) return 5.25;
@@ -213,7 +214,7 @@ export class LandingComponent implements OnInit, OnDestroy {
   }
 
   get appliedInterestRate(): number {
-    let rate = this.baseInterestRate;
+    let rate = Math.min(8.50, Math.max(0, Number(this.selectedInterestRate) || 0));
     if (this.customerType === 'SENIOR') {
       rate += 0.50; // +50 bps for senior citizens
     } else if (this.customerType === 'STAFF') {
@@ -226,6 +227,10 @@ export class LandingComponent implements OnInit, OnDestroy {
     }
     this.rateCapWarning = false;
     return Number(rate.toFixed(2));
+  }
+
+  setInterestRate(rate: number): void {
+    this.selectedInterestRate = Number(Math.min(8.50, Math.max(0, rate)).toFixed(2));
   }
 
   get maturityAmount(): number {

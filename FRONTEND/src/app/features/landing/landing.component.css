@@ -1714,6 +1714,12 @@
   accent-color: #255f48;
 }
 
+.calc-slider-hint {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    color: var(--text-muted, #667085);
+}
+
 :host-context([data-theme="dark"]) .calc-slider,
 :host-context(.dark-theme) .calc-slider {
   background: #23312a;
